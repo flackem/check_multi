@@ -432,10 +432,6 @@ sub do_report {
 	#--- print general errors if any occured
 	print " [" . join(",",@{$rc{error}}) . "]" if (defined($rc{error}[0]));
 	
-	#--- report performance data?
-	if ($opt{performance}) {
-		print "\|$opt{name}:$MYSELF:plugins=" . int(keys(%cmds)) . ",time=" . int(time - $rc{starttime});
-	}
 
 	#--- loop over commands: report particular results for long plugin output
 	foreach $no (sort numerically keys %cmds) {
@@ -451,10 +447,10 @@ sub do_report {
 
 	#--- report performance data?
 	if ($opt{performance}) {
-		print "\|"; # start performance part
+		print "\|$opt{name}:$MYSELF:plugins=" . int(keys(%cmds)) . ",time=" . int(time - $rc{starttime}) . " \n";
 		#--- one line per command, format: tag=output
 		foreach $no (sort numerically keys %cmds) {
-			print "$cmds{$no}{name}:$cmds{$no}{plugin}:$cmds{$no}{performance}\n" if (defined($cmds{$no}{performance}));
+			print "$cmds{$no}{name}:$cmds{$no}{plugin}:$cmds{$no}{performance} \n" if (defined($cmds{$no}{performance}));
 		}
 	}
 	print "\n";
