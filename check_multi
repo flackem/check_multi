@@ -19,7 +19,7 @@
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #
 #
-# $Id: check_multi 18 2007-07-22 06:16:49Z flackem $
+# $Id$
 #
 #nagios: -epn
 #
@@ -44,7 +44,7 @@ use vars qw($MYSELF %cmds $returncode %rc $no $VERSION
 #-------------------------------------------------------------------------------
 
 $MYSELF="check_multi";
-$VERSION='$Revision: 18 $ $Date: 2007-07-22 08:16:49 +0200 (Sun, 22 Jul 2007) $ $Author: flackem $';
+$VERSION='$Revision$ $Date$ $Author$';
 #
 #--- RC defines
 $OK=0;
