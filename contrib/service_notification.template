@@ -1,0 +1,63 @@
+#!/bin/sh
+#
+# Notification for Nagios check_multi plugin
+#
+# (c) 2007, Matthias Flacke
+#
+#--- var
+NAGIOS_URL="http://localhost/nagios"
+#
+#--- output
+cat <<EOF1
+
+Nagios service notification
+$NAGIOS_NOTIFICATIONTYPE $NAGIOS_SERVICEDESC $NAGIOS_SERVICESTATE
+$NAGIOS_LONGDATETIME
+
+--- Host information ---
+Name                   $NAGIOS_HOSTNAME
+IP address             $NAGIOS_HOSTADDRESS
+
+--- Service information ---
+Name                   $NAGIOS_SERVICEDESC
+State                  $NAGIOS_SERVICESTATE
+State type             $NAGIOS_SERVICESTATETYPE
+Output                 $NAGIOS_SERVICEOUTPUT
+EOF1
+#
+#--- print sorted list of output
+for i in CRITICAL WARNING UNKNOWN OK; do 
+echo $NAGIOS_LONGSERVICEOUTPUT | sed 's/\\n/\
+/g' | grep $i > /dev/null && {
+echo
+echo "$i service output"
+echo $NAGIOS_LONGSERVICEOUTPUT | sed 's/\\n/\
+/g' | grep $i
+}
+done
+#
+#--- continue
+cat <<EOF2
+
+Plugin                 $NAGIOS_SERVICECHECKCOMMAND
+Execution time(s)      $NAGIOS_SERVICEEXECUTIONTIME
+
+--- Contact information ---
+Name                   $NAGIOS_CONTACTNAME
+Alias                  $NAGIOS_CONTACTALIAS
+Mail address           $NAGIOS_CONTACTEMAIL
+Notification type      $NAGIOS_NOTIFICATIONTYPE
+
+--- Service URLs ---
+Service details        $NAGIOS_URL/cgi-bin/extinfo.cgi?type=2&host=$NAGIOS_HOSTNAME&service=$NAGIOS_SERVICEDESC
+Service alert history  $NAGIOS_URL/cgi-bin/history.cgi?host=$NAGIOS_HOSTNAME&service=$NAGIOS_SERVICEDESC
+Service availability   $NAGIOS_URL/cgi-bin/avail.cgi?host=$NAGIOS_HOSTNAME&&service=$NAGIOS_SERVICEDESC&show_log_entries
+Service comments       $NAGIOS_URL$NAGIOS_SERVICENOTESURL
+
+--- Host URLs ---
+Host details           $NAGIOS_URL/cgi-bin/extinfo.cgi?type=1&host=$NAGIOS_HOSTNAME
+Host services          $NAGIOS_URL/cgi-bin/status.cgi?host=dada
+Host alert history     $NAGIOS_URL/cgi-bin/history.cgi?host=$NAGIOS_HOSTNAME
+Host availability      $NAGIOS_URL/cgi-bin/avail.cgi?host=$NAGIOS_HOSTNAME&show_log_entries
+Host comments          $NAGIOS_URL$NAGIOS_HOSTNOTESURL
+EOF2
