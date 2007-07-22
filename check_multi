@@ -1,0 +1,501 @@
+#!/usr/bin/perl -w
+#
+# check_multi - nagios plugin
+#
+# Copyright (c) 2007 Matthias Flacke (matthias.flacke at stiegemeyer.de)
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+#
+#
+# $Id: check_multi 18 2007-07-22 06:16:49Z flackem $
+#
+#nagios: -epn
+#
+# done:
+# - Performance output: done (still todo: warn Joerg before ;-)
+#
+# TODO:
+# - embedding of runtime errors in output
+# - handling of undefined RC
+# - customizeable return code handling
+# - libexec: configure script
+# - verbose output
+#
+use strict;
+use Getopt::Long qw(:config no_ignore_case bundling);
+use lib "/usr/local/nagios/libexec";
+use vars qw($MYSELF %cmds $returncode %rc $no $VERSION 
+ $OK $WARNING $CRITICAL $UNKNOWN $DETAIL_LIST $DETAIL_RC $DETAIL_STDERR);
+
+#-------------------------------------------------------------------------------
+#--- vars ----------------------------------------------------------------------
+#-------------------------------------------------------------------------------
+
+$MYSELF="check_multi";
+$VERSION='$Revision: 18 $ $Date: 2007-07-22 08:16:49 +0200 (Sun, 22 Jul 2007) $ $Author: flackem $';
+#
+#--- RC defines
+$OK=0;
+$WARNING=1;
+$CRITICAL=2;
+$UNKNOWN=3;
+#
+#--- report defines
+$DETAIL_LIST=1;
+$DETAIL_RC=2;
+$DETAIL_STDERR=4;
+#
+#--- vars
+$no=0;
+%cmds=();
+$returncode=0;
+%rc=(
+	label	=> { $OK => "OK", $WARNING => "WARNING", $CRITICAL => "CRITICAL", $UNKNOWN => "UNKNOWN", },
+	s2r	=> { 0 => $OK, 2 => $WARNING, 3 => $CRITICAL, 1 => $UNKNOWN, },
+	r2s	=> { $OK => 0, $WARNING => 2, $CRITICAL => 3, $UNKNOWN => 1, },
+	count	=> { $OK => 0, $WARNING => 0, $CRITICAL => 0, $UNKNOWN => 0, },
+	minimum => { $OK => 0, $WARNING => 1, $CRITICAL => 1, $UNKNOWN => 1, },
+	maximum => { $OK => 0, $WARNING => 1, $CRITICAL => 1, $UNKNOWN => 1, },
+	list	=> { $OK => [],$WARNING => [],$CRITICAL => [],$UNKNOWN => [], },
+	top	=> $OK,
+	error	=> [ ],
+	starttime => 0,
+	endtime => 0,
+);
+
+my %opt=(
+	"configfile"	=> "",
+	"libexec"	=> "/usr/local/nagios/libexec",
+	"name"		=> "MULTI",
+	"performance"	=> 0,
+	"report"	=> 7,
+	"state"		=> -1,
+	"timeout"	=> 10,
+	"TIMEOUT"	=> 60,
+	"ok"		=> "0:0",
+	"warning"	=> "1:1",
+	"critical"	=> "1:1",
+	"unknown"	=> "1:1",
+);
+
+#-------------------------------------------------------------------------------
+#--- subs ----------------------------------------------------------------------
+#-------------------------------------------------------------------------------
+
+sub process_parameters {
+
+	if (! GetOptions(
+		"f|filename=s"	=> \$opt{filename},
+		"h|help"	=> \$opt{help},
+		"l|libexec=s"	=> \$opt{libexec},
+		"n|name=s"	=> \$opt{name},
+		"p|performance"	=> \$opt{performance},
+		"r|report:i"	=> \$opt{report},
+		"t|timeout=i"	=> \$opt{timeout},
+		"T|TIMEOUT=i"	=> \$opt{TIMEOUT},
+		"V|version"	=> \$opt{version},
+
+		"s|state=i"	=> \$opt{state},
+		"o|ok=s"	=> \$opt{ok},
+		"w|warning=s"	=> \$opt{warning},
+		"c|critical=s"	=> \$opt{critical},
+		"u|unknown=s"	=> \$opt{unknown},)
+	) {
+		short_usage();
+        	return $UNKNOWN;
+	}
+
+	if ($opt{version}) {
+		print "$MYSELF: v$VERSION\n";
+        	return $UNKNOWN;
+	}
+
+	if ($opt{help}) {
+		short_usage();
+        	long_usage();
+        	return $UNKNOWN;
+	}
+
+	if (! $opt{filename}) {
+        	print "$MYSELF error: no config file specified\n";
+		short_usage();
+        	return $UNKNOWN;
+	}
+	if ($opt{warning}) {
+		($rc{minimum}{warning},$rc{maximum}{warning})=minmax($opt{warning},0,999);
+	}
+	if ($opt{critical}) {
+		($rc{minimum}{critical},$rc{maximum}{critical})=minmax($opt{critical},0,999);
+	}
+	if ($opt{unknown}) {
+		($rc{minimum}{unknown},$rc{maximum}{unknown})=minmax($opt{unknown},0,999);
+	}
+	if ($opt{ok}) {
+		($rc{minimum}{ok},$rc{maximum}{ok})=minmax($opt{ok},0,999);
+	}
+	return $OK;
+}
+
+sub short_usage {
+print <<SHORTEOF;
+
+$MYSELF -f <config file> [-l libexec_path] [-n name] [-t timeout] [-T TIMEOUT] [-r level]
+$MYSELF [-h | --help]
+$MYSELF [-V | --version]
+SHORTEOF
+#$MYSELF [-s state] [-w N:N] [-c N:N] [-u N:N] [-o N:N]
+}
+
+sub long_usage {
+print <<LONGEOF;
+
+Options:
+-f, --filename
+   config file which contains commands to be executed
+   (file format follows nrpe style: command[tag]=plugin command line)
+-l, --libexec
+   path to plugins, default: $opt{libexec}
+-n, --name
+   multi plugin name (shown in output), default: $opt{name}
+-t, --timeout
+   timeout for one command, default: $opt{timeout}
+-T, --TIMEOUT
+   TIMEOUT for all commands, default: $opt{TIMEOUT}
+-r, --report <level>
+   specify level of details in output (level is binary coded, just add all options)
+   default: $opt{report}
+      1: mention service names in plugin_output, e.g.
+         "24 plugins checked, 1 critical (http), 0 warning, 0 unknown, 23 ok"
+      2: show STATE in front of each line of plugin output, e.g.
+         "[16] OK system_ssh - SSH OK - OpenSSH_4.4 (protocol 1.99)"
+      4: show STDERR (if any) in each line of plugin output
+-h, --help
+   print detailed help screen
+-V, --version
+   print version information
+LONGEOF
+
+#-p, --performance
+#   gather performance data, default: $opt{performance}
+#Extended mode - specify extra settings for threshold interpretation:
+#-s, --state    <wanted overall state> (default: -1 for RC with highest severity)
+#-w, --warning  <minimum:maximum>
+#-c, --critical <minimum:maximum>
+#-u, --unknown  <minimum:maximum>
+#-o, --ok       <minimum:maximum>
+}
+
+#---
+#--- numerical sort
+#---
+sub numerically { $a <=> $b }
+
+#---
+#--- trim input string if found any chars from trim string
+#---
+sub mytrim {
+	my ($src, $trim)=@_;
+	return ($src=~/[$trim]*(.*)[$trim]*/) ? $1 : $src;
+}
+
+#---
+#--- add error(s) to global error list
+#---
+sub add_error {
+	push @{$rc{error}}, @_;
+}
+
+#---
+#--- minmax parses threshold string of format 'min:max'
+#--- also allowed: 'min:' ':max' 'max'
+#--- input values: thresholdstring, absolute minimum, absolute maximum
+#--- return values: ($min,$max)
+#---
+sub minmax {
+	my ($input,$absmin,$absmax)=@_;
+	my $stripped;
+	my $min;
+	my $max;
+
+	# in any case: strip white chars
+	($stripped=$input)=~s/\s+//;
+
+	#print "DEBUG minmax input:>$input< stripped:>$stripped< absmin:$absmin absmax:$absmax\n";
+
+	# bare number without ':'
+	if ($stripped=~/^(\d+)$/) {
+		$min=$absmin;
+		$max=$1;
+	# number:
+	} elsif ($stripped=~/^(\d+):$/) {
+		$min=$1;
+		$max=$absmax;
+	# :number
+	} elsif ($stripped=~/^:(\d+)$/) {
+		$min=$absmin;
+		$max=$1;
+	# number:number
+	} elsif ($stripped=~/^(\d+):(\d+)$/) {
+		$min=$1;
+		$max=$2;
+	# format error
+	} else {
+		add_error("minmax: format ERROR in input string '$input'");
+	}
+	
+	if ($min > $max) {
+		add_error("minmax: ERROR min $min > max $max");
+	}
+	
+	return ($min,$max);
+}
+
+#---
+#--- create unique tmpfile and try to create it
+#---
+sub get_tmpfile {
+	my ($path,$prefix)=@_;
+	my $attempt=0;
+	my $tmpfile="";
+	#--- check existance of path and create it if necessary
+	if (! -d $path && ! mkdir($path,0700)) {
+		add_error("get_tmpfile: error creating tmp_path $path:$!");
+		return "";
+	}
+	#--- do 5 attempts to create tmpfile
+	while ($attempt++ < 5) {
+		my $suffix=int(rand(89999))+10000;
+		$tmpfile="$path/$prefix.$suffix";
+		next if (-f $tmpfile);
+		if (open(TMP,">$tmpfile")) {
+			close TMP;
+			return $tmpfile;
+		}
+	}
+	add_error("get_tmpfile: giving up opening $tmpfile after $attempt attempts:$!");
+	return "";
+}
+
+#---
+#--- read file and return its contents
+#---
+sub readfile {
+	my ($filename)=@_;
+	open(FILE,$filename) || add_error("readfile: error opening $filename:$!") && return "";
+	my @lines=<FILE>;
+	close(FILE);
+	return join("", @lines);
+}
+
+#---
+#--- parse command file and fill %cmds structure
+#---
+sub parse_commands {
+	my ($filename)=@_;
+	my $lineno=0;		# count sourcefile lines
+	my $cmd_count=0;	# count stored commands
+	my ($cmd,$name,$plugin);
+
+	if (!open(FILE, $filename)) {
+		add_error("parse_command: cannot open config file $filename:$!");
+		$rc{top}=$UNKNOWN;
+		return $cmd_count;
+	}
+
+	while (<FILE>) {
+		$lineno++;		
+		next if (/^\s*$/);	# skip empty lines
+		next if (/^\s*#/);	# skip comments
+	
+		chop($cmd=$_);
+
+		#--- format: 'command[ tag ] = plugin command line'
+		if ($cmd=~/\s*command\s*\[\s*(\S+)\s*\]\s*=\s*(.*)\s*/i) {
+			$name=$1;
+			$cmd=$2;
+			$plugin=(split(/\s+/,"$cmd"))[0];
+		} else {
+			add_error("parse_command: invalid format in line $lineno: $cmd");
+			next;
+		}
+
+		#--- store vars into cmds structure
+		$cmds{++$cmd_count}{command}=$cmd;
+		$cmds{$cmd_count}{plugin}=$plugin;
+		$cmds{$cmd_count}{name}=$name;
+	}
+	close FILE;
+	return $cmd_count;
+}
+
+#---
+#--- execute command number $no from %cmds
+#---
+sub exec_command {
+	my ($no)=@_;
+	my $tmp_stdout="";
+	my $tmp_stderr="";
+
+	#--- execute command with alarm timer to catch timeouts
+	$SIG{'ALRM'} = sub { die "timeout" };
+	eval {
+		alarm($opt{timeout});
+
+		#--- prepare tmpfiles for stdout and stderr
+		$tmp_stdout=&get_tmpfile("/tmp", "${MYSELF}_stdout_$$");
+		$tmp_stderr=&get_tmpfile("/tmp", "${MYSELF}_stderr_$$");
+
+		#--- execute command and store stdout/stderr/return code
+		`$opt{libexec}/$cmds{$no}{command} 1>$tmp_stdout 2>$tmp_stderr`;
+		$cmds{$no}{rc}=$? >> 8;
+
+		#--- store stdout/stderr and cleanup tmpfiles
+		$cmds{$no}{output}=readfile($tmp_stdout);
+		$cmds{$no}{stderr}=readfile($tmp_stderr);
+		unlink $tmp_stdout, $tmp_stderr;
+
+		#--- unknown return code? change it explicitly to UNKNOWN
+		if (! $cmds{$no}{rc} > $UNKNOWN) {
+			$cmds{$no}{stderr}.=" RC was $cmds{$no}{rc}!";
+			$cmds{$no}{rc}=$UNKNOWN;
+		}
+		
+		#--- remove white chars from output
+		$cmds{$no}{output}=mytrim($cmds{$no}{output},"\\n\\s");
+
+		#--- split performance data from standard output
+		if ($cmds{$no}{output}=~/\|/) {
+			($cmds{$no}{output},$cmds{$no}{performance})=split(/\|/,$cmds{$no}{output});
+			$cmds{$no}{performance}=mytrim($cmds{$no}{performance},"\\s");
+		}
+
+		alarm(0);
+	};
+	
+	#--- any oddities during command execution?
+	if ($@) {
+		#--- timeout encountered: store status
+		if ($@ =~ /timeout/) {
+			$cmds{$no}{output}="UNKNOWN - $cmds{$no}{plugin} cancelled after timeout ($opt{timeout}s)";
+			$cmds{$no}{rc}=$UNKNOWN;
+		#--- catchall for unknown errors
+		} else {
+			alarm(0);
+       			die "$MYSELF: unexpected exception encountered:$!";
+		}
+		unlink $tmp_stdout, $tmp_stderr;
+	}
+	return $cmds{$no}{rc};
+}
+
+#---
+#--- report results stored in %cmds
+#---
+sub do_report {
+
+	#--- do some statistics
+	foreach $no (sort numerically keys %cmds) {
+
+		$rc{count}{$cmds{$no}{rc}}++;	# count return codes
+		push @{$rc{list}{$cmds{$no}{rc}}},$cmds{$no}{name}; # add plugin to list
+		#print STDERR "DEBUG: rc:$cmds{$no}{rc} ok:$rc{count}{$OK} unknown:$rc{count}{$UNKNOWN} warning:$rc{count}{$WARNING} critical:$rc{count}{$CRITICAL}\n";
+
+		#--- determine return code with highest severity
+		#print STDERR "DEBUG: r2s-rc:$rc{r2s}{$cmds{$no}{rc}} top:$rc{r2s}{$rc{top}} rc:$cmds{$no}{rc}\n";
+		$rc{top}=$cmds{$no}{rc} if ($rc{r2s}{$cmds{$no}{rc}} > $rc{r2s}{$rc{top}});
+	}
+
+	#--- print header line (1): name, state, number of plugins
+	print "$opt{name} $rc{label}{$rc{top}} - " . keys(%cmds) . " plugins checked, ";
+
+	#--- print header line (2): summary for particular states 
+	if ($opt{report} & $DETAIL_LIST) {
+		print	"$rc{count}{$CRITICAL} critical (" . join(',',@{$rc{list}{$CRITICAL}}) . "), " .
+			"$rc{count}{$WARNING} warning (" . join(',',@{$rc{list}{$WARNING}}) . "), " .
+			"$rc{count}{$UNKNOWN} unknown (" . join(',',@{$rc{list}{$UNKNOWN}}) . "), " .
+			"$rc{count}{$OK} ok";
+	} else {
+		print	"$rc{count}{$CRITICAL} critical, " .
+			"$rc{count}{$WARNING} warning, " .
+			"$rc{count}{$UNKNOWN} unknown, " .
+			"$rc{count}{$OK} ok";
+	}
+
+	#--- print general errors if any occured
+	print " [" . join(",",@{$rc{error}}) . "]" if (defined($rc{error}[0]));
+	
+	#--- report performance data?
+	if ($opt{performance}) {
+		print "\|$opt{name}:$MYSELF:plugins=" . int(keys(%cmds)) . ",time=" . int(time - $rc{starttime});
+	}
+
+	#--- loop over commands: report particular results for long plugin output
+	foreach $no (sort numerically keys %cmds) {
+
+		printf "\n[%2.d] %s%s - %s%s",
+			$no,
+			($opt{report} & $DETAIL_RC) ? substr($rc{label}{$cmds{$no}{rc}},0,10) . ' ' : "",
+			$cmds{$no}{name},
+			$cmds{$no}{output},
+			(defined($cmds{$no}{stderr}) && $cmds{$no}{stderr} ne "" && $opt{report} & $DETAIL_STDERR) ?
+			 " [ STDERR: " . $cmds{$no}{stderr} . ']' : "";
+	}
+
+	#--- report performance data?
+	if ($opt{performance}) {
+		print "\|"; # start performance part
+		#--- one line per command, format: tag=output
+		foreach $no (sort numerically keys %cmds) {
+			print "$cmds{$no}{name}:$cmds{$no}{plugin}:$cmds{$no}{performance}\n" if (defined($cmds{$no}{performance}));
+		}
+	}
+	print "\n";
+}
+
+#-------------------------------------------------------------------------------
+#--- main ----------------------------------------------------------------------
+#-------------------------------------------------------------------------------
+
+#--- parse command line options
+exit $UNKNOWN if (&process_parameters != $OK);
+
+#--- parse command file (nrpe format)
+exit $UNKNOWN if (&parse_commands($opt{filename}) == 0);
+
+#--- initialize timer for overall timeout
+$rc{starttime}=time;
+$rc{endtime}=$rc{starttime} + $opt{TIMEOUT};
+
+#--- loop over commands in order of config file
+foreach $no (sort numerically keys %cmds) {
+	
+	#--- if total timeout is going to be exceeded, cancel next commands
+	if (time + $opt{timeout} > $rc{endtime}) {
+		$cmds{$no}{output}="UNKNOWN - execution cancelled after global timeout ($opt{TIMEOUT}s)";
+		$cmds{$no}{rc}=$UNKNOWN;
+		$rc{count}{$UNKNOWN}++;
+		$rc{list}{$UNKNOWN}.="$cmds{$no}{name},";
+		next;
+	}
+		
+	#--- execute command
+	&exec_command($no);
+}
+
+#--- report results
+&do_report;
+
+#--- return rc with highest severity
+exit $rc{top};
