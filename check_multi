@@ -210,7 +210,7 @@ sub mytrim {
 #---
 sub substitute_macros {
         my ($input)=@_;
-        while ((my $var)=($input=~/\$([^\$]+)\$/)) {
+        while ((my $var)=($input=~/\$([A-Z0-9^\$]+)\$/)) {
                 $input=~s/\$$var\$/$ENV{"NAGIOS_$var"}/g;
         }
         return $input;
