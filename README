@@ -130,12 +130,13 @@ Options:
 -r, --report <level>
    specify level of details in output (level is binary coded, just add 
    all options)
-   default: 7
+   default: 15
       1: mention service names in plugin_output, e.g.
          "24 plugins checked, 1 critical (http), 0 warning, 0 unknown, 23 ok"
       2: show STATE in front of each line of plugin output, e.g.
          "[16] OK system_ssh - SSH OK - OpenSSH_4.4 (protocol 1.99)"
       4: show STDERR (if any) in each line of plugin output
+      8: show performance data
 
     This option provides a means to influence some details of output.
 
