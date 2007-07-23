@@ -206,6 +206,17 @@ sub mytrim {
 }
 
 #---
+#--- substitute macros a la $HOSTNAME$ from environment
+#---
+sub substitute_macros {
+        my ($input)=@_;
+        while ((my $var)=($input=~/\$([^\$]+)\$/)) {
+                $input=~s/\$$var\$/$ENV{"NAGIOS_$var"}/g;
+        }
+        return $input;
+}
+
+#---
 #--- add error(s) to global error list
 #---
 sub add_error {
@@ -315,6 +326,7 @@ sub parse_commands {
 		next if (/^\s*#/);	# skip comments
 	
 		chop($cmd=$_);
+		$cmd=substitute_macros($cmd);
 
 		#--- format: 'command[ tag ] = plugin command line'
 		if ($cmd=~/\s*command\s*\[\s*(\S+)\s*\]\s*=\s*(.*)\s*/i) {
