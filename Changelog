@@ -1,0 +1,12 @@
+
+check_multi changelog
+---------------------
+
+0.11	22.07.2007
+	- first version in SVN
+
+0.12
+	- performance switch replaced by report flag
+	- output of performance data is now default
+	- substitute macros a la $HOSTNAME$
+	- Time::Hires integrated
