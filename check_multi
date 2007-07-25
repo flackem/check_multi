@@ -31,15 +31,15 @@
 #
 use strict;
 use Getopt::Long qw(:config no_ignore_case bundling);
+BEGIN { eval("use Time::HiRes qw(time)") }
 use lib "/usr/local/nagios/libexec";
-use vars qw($MYSELF %cmds $returncode %rc $no $VERSION 
+use vars qw($MYSELF %cmds $returncode %rc $no $VERSION
  $OK $WARNING $CRITICAL $UNKNOWN $DETAIL_LIST $DETAIL_RC $DETAIL_STDERR
  $DETAIL_PERFORMANCE);
 
 #-------------------------------------------------------------------------------
 #--- vars ----------------------------------------------------------------------
 #-------------------------------------------------------------------------------
-
 $MYSELF="check_multi";
 $VERSION='$Revision$ $Date$ $Author$';
 #
@@ -69,8 +69,8 @@ $returncode=0;
 	list	=> { $OK => [],$WARNING => [],$CRITICAL => [],$UNKNOWN => [], },
 	top	=> $OK,
 	error	=> [ ],
-	starttime => 0,
-	endtime => 0,
+	starttime => 0.0,
+	endtime => 0.0,
 );
 
 my %opt=(
@@ -86,7 +86,7 @@ my %opt=(
 	"critical"	=> "1:1",
 	"unknown"	=> "1:1",
 );
-
+	
 #-------------------------------------------------------------------------------
 #--- subs ----------------------------------------------------------------------
 #-------------------------------------------------------------------------------
@@ -458,7 +458,7 @@ sub do_report {
 
 	#--- report performance data?
 	if ($opt{report} & $DETAIL_PERFORMANCE) {
-		print "\|$opt{name}:$MYSELF:plugins=" . int(keys(%cmds)) . ",time=" . int(time - $rc{starttime}) . " \n";
+		printf "\|$opt{name}:$MYSELF:plugins=%d time=%.2f \n", scalar(keys(%cmds)), time - $rc{starttime};
 		#--- one line per command, format: tag=output
 		foreach $no (sort numerically keys %cmds) {
 			print "$cmds{$no}{name}:$cmds{$no}{plugin}:$cmds{$no}{performance} \n" if (defined($cmds{$no}{performance}));
