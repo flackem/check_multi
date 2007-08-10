@@ -429,9 +429,9 @@ sub do_report {
 
 	#--- print header line (2): summary for particular states 
 	if ($opt{report} & $DETAIL_LIST) {
-		print	"$rc{count}{$CRITICAL} critical (" . join(',',@{$rc{list}{$CRITICAL}}) . "), " .
-			"$rc{count}{$WARNING} warning (" . join(',',@{$rc{list}{$WARNING}}) . "), " .
-			"$rc{count}{$UNKNOWN} unknown (" . join(',',@{$rc{list}{$UNKNOWN}}) . "), " .
+		print	"$rc{count}{$CRITICAL} critical" . ((@{$rc{list}{$CRITICAL}}) ? " (" . join(',',@{$rc{list}{$CRITICAL}}) . ')' : "") . ", " .
+			"$rc{count}{$WARNING} warning"   . ((@{$rc{list}{$WARNING}})  ? " (" . join(',',@{$rc{list}{$WARNING}})  . ')' : "") . ", " .
+			"$rc{count}{$UNKNOWN} unknown"   . ((@{$rc{list}{$UNKNOWN}})  ? " (" . join(',',@{$rc{list}{$UNKNOWN}})  . ')' : "") . ", " .
 			"$rc{count}{$OK} ok";
 	} else {
 		print	"$rc{count}{$CRITICAL} critical, " .
