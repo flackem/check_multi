@@ -2,11 +2,14 @@
 check_multi changelog
 ---------------------
 
-0.11	22.07.2007
-	- first version in SVN
+0.13
+	- suppress empty check lists '()' in output
 
-0.12
+0.12	25.07.2007
 	- performance switch replaced by report flag
 	- output of performance data is now default
 	- substitute macros a la $HOSTNAME$
 	- Time::Hires integrated
+
+0.11	22.07.2007
+	- first version in SVN
