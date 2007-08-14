@@ -33,10 +33,11 @@ use strict;
 use Getopt::Long qw(:config no_ignore_case bundling);
 BEGIN { eval("use Time::HiRes qw(time)") }
 use lib "/usr/local/nagios/libexec";
-use vars qw($MYSELF %cmds $returncode %rc $no $VERSION
- $OK $WARNING $CRITICAL $UNKNOWN $DETAIL_LIST $DETAIL_RC $DETAIL_STDERR
- $DETAIL_PERFORMANCE);
-
+use vars qw(
+$MYSELF %cmds $returncode %rc $no $VERSION
+$OK $WARNING $CRITICAL $UNKNOWN 
+$DETAIL_LIST $DETAIL_LIST_FULL $DETAIL_RC $DETAIL_STDERR $DETAIL_PERFORMANCE
+);
 #-------------------------------------------------------------------------------
 #--- vars ----------------------------------------------------------------------
 #-------------------------------------------------------------------------------
@@ -54,6 +55,7 @@ $DETAIL_LIST=1;
 $DETAIL_RC=2;
 $DETAIL_STDERR=4;
 $DETAIL_PERFORMANCE=8;
+$DETAIL_LIST_FULL=16;
 #
 #--- vars
 $no=0;
@@ -428,11 +430,18 @@ sub do_report {
 	print "$opt{name} $rc{label}{$rc{top}} - " . keys(%cmds) . " plugins checked, ";
 
 	#--- print header line (2): summary for particular states 
-	if ($opt{report} & $DETAIL_LIST) {
+	if ($opt{report} & $DETAIL_LIST_FULL) {
 		print	"$rc{count}{$CRITICAL} critical" . ((@{$rc{list}{$CRITICAL}}) ? " (" . join(',',@{$rc{list}{$CRITICAL}}) . ')' : "") . ", " .
 			"$rc{count}{$WARNING} warning"   . ((@{$rc{list}{$WARNING}})  ? " (" . join(',',@{$rc{list}{$WARNING}})  . ')' : "") . ", " .
 			"$rc{count}{$UNKNOWN} unknown"   . ((@{$rc{list}{$UNKNOWN}})  ? " (" . join(',',@{$rc{list}{$UNKNOWN}})  . ')' : "") . ", " .
 			"$rc{count}{$OK} ok";
+	} elsif ($opt{report} & $DETAIL_LIST) {
+		my @r=();
+		push @r, "$rc{count}{$CRITICAL} critical (" . join(',',@{$rc{list}{$CRITICAL}}) . ")" if (@{$rc{list}{$CRITICAL}});
+		push @r, "$rc{count}{$WARNING} warning ("   . join(',',@{$rc{list}{$WARNING}})  . ")" if (@{$rc{list}{$WARNING}});
+		push @r, "$rc{count}{$UNKNOWN} unknown ("   . join(',',@{$rc{list}{$UNKNOWN}})  . ")" if (@{$rc{list}{$UNKNOWN}});
+		push @r, "$rc{count}{$OK} ok" if (@{$rc{list}{$OK}});
+		print join(", ", @r);
 	} else {
 		print	"$rc{count}{$CRITICAL} critical, " .
 			"$rc{count}{$WARNING} warning, " .
