@@ -1,6 +1,10 @@
 
 ===== Changelog =====
 
+  * 0.13	16.08.2007
+	- bugfix for handling of extended return code
+	- stderr output now trimmed
+	- bugfix for non existing environment vars
 	- suppress empty check lists '()' in output
 	- cleaned up 0 results in summary
 
