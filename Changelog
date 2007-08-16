@@ -1,18 +1,18 @@
 
 ===== Changelog =====
 
-  * 0.13	16.08.2007
-	- bugfix for handling of extended return code
-	- stderr output now trimmed
-	- bugfix for non existing environment vars
-	- suppress empty check lists '()' in output
-	- cleaned up 0 results in summary
+  *0.13*	16.08.2007
+	* bugfix for handling of extended return code
+	* stderr output now trimmed
+	* bugfix for non existing environment vars
+	* suppress empty check lists '()' in output
+	* cleaned up 0 results in summary
 
-  * 0.12	25.07.2007
-	- performance switch replaced by report flag
-	- output of performance data is now default
-	- substitute macros a la $HOSTNAME$
-	- Time::Hires integrated
+  *0.12*	25.07.2007
+	* performance switch replaced by report flag
+	* output of performance data is now default
+	* substitute macros a la $HOSTNAME$
+	* Time::Hires integrated
 
-  * 0.11	22.07.2007
-	- first version in SVN
+  *0.11*	22.07.2007
+	* first version in SVN
