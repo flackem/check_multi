@@ -1,5 +1,5 @@
 
-check_multi README
+check_multi README (see also http://my-plugin.de/check_multi)
 ------------------
 Nagios 3.x plugin
 
@@ -56,8 +56,8 @@ But there are are also some disadvantages:
 
 Download
 --------
-SVN repository at http://svn.process-zero.de/repos/check_multi:
-$svn co http://svn.process-zero.de/repos/check_multi/tags/current
+SVN repository at http://svn.my-plugin.de/repos/check_multi:
+$svn co http://svn.my-plugin.de/repos/check_multi/tags/current
 
 
 Installation
@@ -215,7 +215,7 @@ define command {
 Feedback and help
 -----------------
 Questions and comments are always welcome at 
-(matthias.flacke_at_gmx.de)
+(Matthias.Flacke-at-gmx.de)
 
 
 Last modified

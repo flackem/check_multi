@@ -213,6 +213,7 @@ sub mytrim {
 sub substitute_macros {
         my ($input)=@_;
         while ((my $var)=($input=~/\$([A-Z0-9^\$]+)\$/)) {
+		last if (!defined($ENV{"NAGIOS_$var"}));
                 $input=~s/\$$var\$/$ENV{"NAGIOS_$var"}/g;
         }
         return $input;
@@ -376,13 +377,14 @@ sub exec_command {
 		unlink $tmp_stdout, $tmp_stderr;
 
 		#--- unknown return code? change it explicitly to UNKNOWN
-		if (! $cmds{$no}{rc} > $UNKNOWN) {
+		if (! defined($rc{r2s}{$cmds{$no}{rc}})) {
 			$cmds{$no}{stderr}.=" RC was $cmds{$no}{rc}!";
 			$cmds{$no}{rc}=$UNKNOWN;
 		}
 		
 		#--- remove white chars from output
 		$cmds{$no}{output}=mytrim($cmds{$no}{output},"\\n\\s");
+		$cmds{$no}{stderr}=mytrim($cmds{$no}{stderr},"\\n\\s");
 
 		#--- split performance data from standard output
 		if ($cmds{$no}{output}=~/\|/) {
