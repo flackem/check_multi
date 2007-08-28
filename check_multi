@@ -346,6 +346,7 @@ sub parse_commands {
 		}
 
 		#--- store vars into cmds structure
+		$cmd="$opt{libexec}/$cmd" if ($plugin!~/\//);
 		$cmds{++$cmd_count}{command}=$cmd;
 		$cmds{$cmd_count}{plugin}=$plugin;
 		$cmds{$cmd_count}{name}=$name;
@@ -372,7 +373,7 @@ sub exec_command {
 		$tmp_stderr=&get_tmpfile("/tmp", "${MYSELF}_stderr_$$");
 
 		#--- execute command and store stdout/stderr/return code
-		`$opt{libexec}/$cmds{$no}{command} 1>$tmp_stdout 2>$tmp_stderr`;
+		`$cmds{$no}{command} 1>$tmp_stdout 2>$tmp_stderr`;
 		$cmds{$no}{rc}=$? >> 8;
 
 		#--- store stdout/stderr and cleanup tmpfiles
