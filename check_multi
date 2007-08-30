@@ -37,7 +37,7 @@ use vars qw(
 $MYSELF %cmds $returncode %rc $no $VERSION
 $OK $WARNING $CRITICAL $UNKNOWN
 $DETAIL_LIST $DETAIL_LIST_FULL $DETAIL_RC $DETAIL_STDERR $DETAIL_PERFORMANCE
-$DETAIL_PERFORMANCE_CLASSIC
+$DETAIL_PERFORMANCE_CLASSIC $DETAIL_COMMAND_LIST
 );
 #-------------------------------------------------------------------------------
 #--- vars ----------------------------------------------------------------------
@@ -58,6 +58,7 @@ $DETAIL_STDERR=4;
 $DETAIL_PERFORMANCE=8;
 $DETAIL_LIST_FULL=16;
 $DETAIL_PERFORMANCE_CLASSIC=32;
+$DETAIL_COMMAND_LIST=32;
 #
 #--- vars
 $no=0;
@@ -184,6 +185,7 @@ Options:
       8: show performance data (with check_multi_style)
       16: show full list of states, normally '0 warning' is omitted
       32: show old type of performance data (without check_multi style)
+      64: show list of commands in output
 -h, --help
    print detailed help screen
 -V, --version
@@ -472,12 +474,20 @@ sub do_report {
 			 " [ STDERR: " . $cmds{$no}{stderr} . ']' : "";
 	}
 
+	#--- print list of commands
+	if ($opt{report} & $DETAIL_COMMAND_LIST) {
+		print "\nCommands executed:";
+		foreach $no (sort numerically keys %cmds) {
+			printf "\n[%2.d] %s", $no, $cmds{$no}{command};
+		}
+	}
+
 	#--- report performance data?
 	if ($opt{report} & $DETAIL_PERFORMANCE) {
-		printf "\|$opt{name}:$MYSELF:plugins=%d time=%.2f \n", scalar(keys(%cmds)), time - $rc{starttime};
+		printf "\|$opt{name}::${MYSELF}::plugins=%d time=%.2f \n", scalar(keys(%cmds)), time - $rc{starttime};
 		#--- one line per command, format: tag=output
 		foreach $no (sort numerically keys %cmds) {
-			print "$cmds{$no}{name}:$cmds{$no}{plugin}:$cmds{$no}{performance} \n" if (defined($cmds{$no}{performance}));
+			print "$cmds{$no}{name}::$cmds{$no}{plugin}::$cmds{$no}{performance} \n" if (defined($cmds{$no}{performance}));
 		}
 	} elsif ($opt{report} & $DETAIL_PERFORMANCE_CLASSIC) {
 		printf "\|";
