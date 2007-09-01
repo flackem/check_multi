@@ -1,7 +1,8 @@
 
 ===== Changelog =====
 
-        * if plugin specified with full path, do not use libexec path
+	* added blanks to result lists to provide wrapping in HTML output
+   * if plugin specified with full path, do not use libexec path
 
   *0.13*	16.08.2007
 	* bugfix for handling of extended return code
