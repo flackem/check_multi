@@ -440,15 +440,15 @@ sub do_report {
 
 	#--- print header line (2): summary for particular states 
 	if ($opt{report} & $DETAIL_LIST_FULL) {
-		print	"$rc{count}{$CRITICAL} critical" . ((@{$rc{list}{$CRITICAL}}) ? " (" . join(',',@{$rc{list}{$CRITICAL}}) . ')' : "") . ", " .
-			"$rc{count}{$WARNING} warning"   . ((@{$rc{list}{$WARNING}})  ? " (" . join(',',@{$rc{list}{$WARNING}})  . ')' : "") . ", " .
-			"$rc{count}{$UNKNOWN} unknown"   . ((@{$rc{list}{$UNKNOWN}})  ? " (" . join(',',@{$rc{list}{$UNKNOWN}})  . ')' : "") . ", " .
+		print	"$rc{count}{$CRITICAL} critical" . ((@{$rc{list}{$CRITICAL}}) ? " (" . join(', ',@{$rc{list}{$CRITICAL}}) . ')' : "") . ", " .
+			"$rc{count}{$WARNING} warning"   . ((@{$rc{list}{$WARNING}})  ? " (" . join(', ',@{$rc{list}{$WARNING}})  . ')' : "") . ", " .
+			"$rc{count}{$UNKNOWN} unknown"   . ((@{$rc{list}{$UNKNOWN}})  ? " (" . join(', ',@{$rc{list}{$UNKNOWN}})  . ')' : "") . ", " .
 			"$rc{count}{$OK} ok";
 	} elsif ($opt{report} & $DETAIL_LIST) {
 		my @r=();
-		push @r, "$rc{count}{$CRITICAL} critical (" . join(',',@{$rc{list}{$CRITICAL}}) . ")" if (@{$rc{list}{$CRITICAL}});
-		push @r, "$rc{count}{$WARNING} warning ("   . join(',',@{$rc{list}{$WARNING}})  . ")" if (@{$rc{list}{$WARNING}});
-		push @r, "$rc{count}{$UNKNOWN} unknown ("   . join(',',@{$rc{list}{$UNKNOWN}})  . ")" if (@{$rc{list}{$UNKNOWN}});
+		push @r, "$rc{count}{$CRITICAL} critical (" . join(', ',@{$rc{list}{$CRITICAL}}) . ")" if (@{$rc{list}{$CRITICAL}});
+		push @r, "$rc{count}{$WARNING} warning ("   . join(', ',@{$rc{list}{$WARNING}})  . ")" if (@{$rc{list}{$WARNING}});
+		push @r, "$rc{count}{$UNKNOWN} unknown ("   . join(', ',@{$rc{list}{$UNKNOWN}})  . ")" if (@{$rc{list}{$UNKNOWN}});
 		push @r, "$rc{count}{$OK} ok" if (@{$rc{list}{$OK}});
 		print join(", ", @r);
 	} else {
@@ -459,7 +459,7 @@ sub do_report {
 	}
 
 	#--- print general errors if any occured
-	print " [" . join(",",@{$rc{error}}) . "]" if (defined($rc{error}[0]));
+	print " [" . join(", ",@{$rc{error}}) . "]" if (defined($rc{error}[0]));
 	
 
 	#--- loop over commands: report particular results for long plugin output
