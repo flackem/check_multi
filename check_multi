@@ -36,7 +36,7 @@ use lib "/usr/local/nagios/libexec";
 use vars qw(
 $MYSELF %cmds $returncode %rc $no $VERSION
 $OK $WARNING $CRITICAL $UNKNOWN
-$DETAIL_LIST $DETAIL_LIST_FULL $DETAIL_RC $DETAIL_STDERR $DETAIL_PERFORMANCE
+$DETAIL_LIST $DETAIL_LIST_FULL $DETAIL_HTML $DETAIL_STDERR $DETAIL_PERFORMANCE
 $DETAIL_PERFORMANCE_CLASSIC $DETAIL_COMMAND_LIST
 );
 #-------------------------------------------------------------------------------
@@ -53,7 +53,7 @@ $UNKNOWN=3;
 #
 #--- report defines
 $DETAIL_LIST=1;
-$DETAIL_RC=2;
+$DETAIL_HTML=2;
 $DETAIL_STDERR=4;
 $DETAIL_PERFORMANCE=8;
 $DETAIL_LIST_FULL=16;
@@ -179,8 +179,7 @@ Options:
    default: $opt{report}
       1: mention service names in plugin_output, e.g.
          "24 plugins checked, 1 critical (http), 0 warning, 0 unknown, 23 ok"
-      2: show STATE in front of each line of plugin output, e.g.
-         "[16] OK system_ssh - SSH OK - OpenSSH_4.4 (protocol 1.99)"
+      2: add HTML coloring of output for extinfo
       4: show STDERR (if any) in each line of plugin output
       8: show performance data (with check_multi_style)
       16: show full list of states, normally '0 warning' is omitted
@@ -461,13 +460,13 @@ sub do_report {
 	#--- print general errors if any occured
 	print " [" . join(", ",@{$rc{error}}) . "]" if (defined($rc{error}[0]));
 	
-
 	#--- loop over commands: report particular results for long plugin output
 	foreach $no (sort numerically keys %cmds) {
 
-		printf "\n[%2.d] %s%s - %s%s",
+		printf "\n%s[%2.d]%s %s %s%s",
+			($opt{report} & $DETAIL_HTML) ? "<DIV CLASS=\'service$rc{label}{$cmds{$no}{rc}}\'>" : "",
 			$no,
-			($opt{report} & $DETAIL_RC) ? substr($rc{label}{$cmds{$no}{rc}},0,10) . ' ' : "",
+			($opt{report} & $DETAIL_HTML) ? "</DIV>&nbsp " : "",
 			$cmds{$no}{name},
 			$cmds{$no}{output},
 			(defined($cmds{$no}{stderr}) && $cmds{$no}{stderr} ne "" && $opt{report} & $DETAIL_STDERR) ?
