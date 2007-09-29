@@ -37,7 +37,7 @@ use vars qw(
 $MYSELF %cmds $returncode %rc $no $VERSION
 $OK $WARNING $CRITICAL $UNKNOWN
 $DETAIL_LIST $DETAIL_LIST_FULL $DETAIL_HTML $DETAIL_STDERR $DETAIL_PERFORMANCE
-$DETAIL_PERFORMANCE_CLASSIC $DETAIL_COMMAND_LIST
+$DETAIL_PERFORMANCE_CLASSIC $DETAIL_COMMAND_LIST $DETAIL_PNP_LINK
 );
 #-------------------------------------------------------------------------------
 #--- vars ----------------------------------------------------------------------
@@ -59,6 +59,7 @@ $DETAIL_PERFORMANCE=8;
 $DETAIL_LIST_FULL=16;
 $DETAIL_PERFORMANCE_CLASSIC=32;
 $DETAIL_COMMAND_LIST=64;
+$DETAIL_PNP_LINK=128;
 #
 #--- vars
 $no=0;
@@ -463,12 +464,14 @@ sub do_report {
 	#--- loop over commands: report particular results for long plugin output
 	foreach $no (sort numerically keys %cmds) {
 
-		printf "\n%s[%2.d]%s %s %s%s",
+		printf "\n%s[%2.d]%s %s %s%s%s",
 			($opt{report} & $DETAIL_HTML) ? "<DIV CLASS=\'service$rc{label}{$cmds{$no}{rc}}\'>" : "",
 			$no,
 			($opt{report} & $DETAIL_HTML) ? "</DIV>&nbsp " : "",
 			$cmds{$no}{name},
 			$cmds{$no}{output},
+			($opt{report} & $DETAIL_PERFORMANCE && $opt{report} & $DETAIL_PNP_LINK && defined($cmds{$no}{performance})) ?
+				"<A HREF='/nagios/pnp/index.php?host=$ENV{NAGIOS_HOSTNAME}&srv=$cmds{$no}{plugin}' TARGET='_self'><img src='/nagios/images/action.gif' width=20 height=20 border=0 align=top alt='Show PNP chart for $ENV{NAGIOS_HOSTNAME} / $cmds{$no}{plugin}'></A>" : "",
 			(defined($cmds{$no}{stderr}) && $cmds{$no}{stderr} ne "" && $opt{report} & $DETAIL_STDERR) ?
 			 " [ STDERR: " . $cmds{$no}{stderr} . ']' : "";
 	}
