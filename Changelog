@@ -1,6 +1,7 @@
 
 ===== Changelog =====
 
+	* added PNP link option for extended info
 	* added HTML coloring for extended info
         * performance data label separator is now '::' to avoid mismatches
         * added DISPLAY_COMMAND_LIST to show full list of commands in extended_output
