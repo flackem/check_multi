@@ -186,6 +186,7 @@ Options:
       16: show full list of states, normally '0 warning' is omitted
       32: show old type of performance data (without check_multi style)
       64: show list of commands in output
+      128: add PNP action link if performance data available
 -h, --help
    print detailed help screen
 -V, --version
