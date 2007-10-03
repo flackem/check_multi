@@ -37,7 +37,7 @@ use vars qw(
 $MYSELF %cmds $returncode %rc $no $VERSION
 $OK $WARNING $CRITICAL $UNKNOWN
 $DETAIL_LIST $DETAIL_LIST_FULL $DETAIL_HTML $DETAIL_STDERR $DETAIL_PERFORMANCE
-$DETAIL_PERFORMANCE_CLASSIC $DETAIL_COMMAND_LIST $DETAIL_PNP_LINK
+$DETAIL_PERFORMANCE_CLASSIC $DETAIL_COMMAND_LIST $DETAIL_PNP_LINK $DETAIL_XML
 );
 #-------------------------------------------------------------------------------
 #--- vars ----------------------------------------------------------------------
@@ -60,6 +60,7 @@ $DETAIL_LIST_FULL=16;
 $DETAIL_PERFORMANCE_CLASSIC=32;
 $DETAIL_COMMAND_LIST=64;
 $DETAIL_PNP_LINK=128;
+$DETAIL_XML=256;
 #
 #--- vars
 $no=0;
@@ -436,6 +437,11 @@ sub do_report {
 		$rc{top}=$cmds{$no}{rc} if ($rc{r2s}{$cmds{$no}{rc}} > $rc{r2s}{$rc{top}});
 	}
 
+	if ($opt{report} & $DETAIL_HTML) {
+		&do_report_html;
+		return;
+	}
+
 	#--- print header line (1): name, state, number of plugins
 	print "$opt{name} $rc{label}{$rc{top}} - " . keys(%cmds) . " plugins checked, ";
 
@@ -465,12 +471,8 @@ sub do_report {
 	#--- loop over commands: report particular results for long plugin output
 	foreach $no (sort numerically keys %cmds) {
 
-		printf "\n%s[%2.d]%s%s %s %s%s",
-			($opt{report} & $DETAIL_HTML) ? "<DIV CLASS=\'service$rc{label}{$cmds{$no}{rc}}\'>" : "",
+		printf "\n[%2.d] %s %s%s",
 			$no,
-			($opt{report} & $DETAIL_HTML) ? "</DIV>&nbsp " : "",
-			($opt{report} & $DETAIL_PERFORMANCE && $opt{report} & $DETAIL_PNP_LINK && defined($cmds{$no}{performance})) ?
-				"<A HREF='/nagios/pnp/index.php?host=$ENV{NAGIOS_HOSTNAME}&srv=$cmds{$no}{plugin}' TARGET='_self'><img src='/nagios/images/action.gif' width=20 height=20 border=0 align=top alt='Show PNP chart for $ENV{NAGIOS_HOSTNAME} / $cmds{$no}{plugin}'></A>" : "",
 			$cmds{$no}{name},
 			$cmds{$no}{output},
 			(defined($cmds{$no}{stderr}) && $cmds{$no}{stderr} ne "" && $opt{report} & $DETAIL_STDERR) ?
@@ -483,6 +485,27 @@ sub do_report {
 		foreach $no (sort numerically keys %cmds) {
 			printf "\n[%2.d] %s", $no, $cmds{$no}{command};
 		}
+	}
+
+	#--- print xml
+	if ($opt{report} & $DETAIL_XML) {
+		print "<xml>";
+		print "<meta http-equiv=\"Content-Style-Type\" content=\"application/xml\">";
+		print "\n<?xml version=\"1.0\"?>";
+		print "\n<?xml-stylesheet type='text/xsl' href='http://localhost/nagios/extinfo.xsl'?>";
+		print "\n<PARENT name=\"$opt{name}\">";
+		foreach $no (sort numerically keys %cmds) {
+			printf "\n\t<CHILD name=\"$cmds{$no}{name}\">";
+			printf "\n\t\t<no>$no</no>";
+			printf "\n\t\t<output>$cmds{$no}{output}</output>";
+			printf "\n\t\t<stderr>$cmds{$no}{stderr}</stderr>";
+			printf "\n\t\t<rc>$cmds{$no}{rc}</rc>";
+			printf "\n\t\t<plugin>$cmds{$no}{plugin}</plugin>";
+			printf "\n\t\t<command>$cmds{$no}{command}</command>";
+			printf "\n\t</CHILD>";
+		}
+		print "\n</PARENT>";
+		print "</xml>";
 	}
 
 	#--- report performance data?
@@ -501,6 +524,74 @@ sub do_report {
 		print "\n";
 	} else {
 		print "\n";
+	}
+}
+
+sub do_report_html {
+	#--- print header line (1): name, state, number of plugins
+	print "$opt{name} $rc{label}{$rc{top}} - " . keys(%cmds) . " plugins checked, ";
+
+	#--- print header line (2): summary for particular states 
+	if ($opt{report} & $DETAIL_LIST_FULL) {
+		print	"$rc{count}{$CRITICAL} critical" . ((@{$rc{list}{$CRITICAL}}) ? " (" . join(', ',@{$rc{list}{$CRITICAL}}) . ')' : "") . ", " .
+			"$rc{count}{$WARNING} warning"   . ((@{$rc{list}{$WARNING}})  ? " (" . join(', ',@{$rc{list}{$WARNING}})  . ')' : "") . ", " .
+			"$rc{count}{$UNKNOWN} unknown"   . ((@{$rc{list}{$UNKNOWN}})  ? " (" . join(', ',@{$rc{list}{$UNKNOWN}})  . ')' : "") . ", " .
+			"$rc{count}{$OK} ok";
+	} elsif ($opt{report} & $DETAIL_LIST) {
+		my @r=();
+		push @r, "$rc{count}{$CRITICAL} critical (" . join(', ',@{$rc{list}{$CRITICAL}}) . ")" if (@{$rc{list}{$CRITICAL}});
+		push @r, "$rc{count}{$WARNING} warning ("   . join(', ',@{$rc{list}{$WARNING}})  . ")" if (@{$rc{list}{$WARNING}});
+		push @r, "$rc{count}{$UNKNOWN} unknown ("   . join(', ',@{$rc{list}{$UNKNOWN}})  . ")" if (@{$rc{list}{$UNKNOWN}});
+		push @r, "$rc{count}{$OK} ok" if (@{$rc{list}{$OK}});
+		print join(", ", @r);
+	} else {
+		print	"$rc{count}{$CRITICAL} critical, " .
+			"$rc{count}{$WARNING} warning, " .
+			"$rc{count}{$UNKNOWN} unknown, " .
+			"$rc{count}{$OK} ok";
+	}
+	print "\n";
+
+	#--- print general errors if any occured
+	print " [" . join(", ",@{$rc{error}}) . "]" if (defined($rc{error}[0]));
+	
+	#--- loop over commands: report particular results for long plugin output
+	print "<table>";
+	foreach $no (sort numerically keys %cmds) {
+		
+
+		printf "<tr><td>%s[%2.d]%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td>%s</tr>",
+			($opt{report} & $DETAIL_HTML) ? "<DIV CLASS=\'service$rc{label}{$cmds{$no}{rc}}\'>" : "",
+			$no,
+			($opt{report} & $DETAIL_HTML) ? "</DIV>&nbsp " : "",
+			($opt{report} & $DETAIL_PERFORMANCE && $opt{report} & $DETAIL_PNP_LINK && defined($cmds{$no}{performance})) ?
+				"<A HREF='/nagios/pnp/index.php?host=$ENV{NAGIOS_HOSTNAME}&srv=$cmds{$no}{plugin}' TARGET='_self'><img src='/nagios/images/action.gif' width=20 height=20 border=0 align=top alt='Show PNP chart for $ENV{NAGIOS_HOSTNAME} / $cmds{$no}{plugin}'></A>" : "",
+			$cmds{$no}{name},
+			$cmds{$no}{output},
+			(defined($cmds{$no}{stderr}) && $cmds{$no}{stderr} ne "" && $opt{report} & $DETAIL_STDERR) ?
+			 " [ STDERR: " . $cmds{$no}{stderr} . ']' : "",
+			($opt{report} & $DETAIL_COMMAND_LIST) ? "<td>$cmds{$no}{command}</td>" : "";
+			
+	}
+	print "</table>";
+
+
+	#--- report performance data?
+	if ($opt{report} & $DETAIL_PERFORMANCE) {
+		printf "\|$opt{name}::${MYSELF}::plugins=%d time=%.2f ", scalar(keys(%cmds)), time - $rc{starttime};
+		#--- one line per command, format: tag=output
+		foreach $no (sort numerically keys %cmds) {
+			print "$cmds{$no}{name}::$cmds{$no}{plugin}::$cmds{$no}{performance} " if (defined($cmds{$no}{performance}));
+		}
+	} elsif ($opt{report} & $DETAIL_PERFORMANCE_CLASSIC) {
+		printf "\|";
+		#--- one line per command, format: tag=output
+		foreach $no (sort numerically keys %cmds) {
+			print "$cmds{$no}{performance} " if (defined($cmds{$no}{performance}));
+		}
+		print "";
+	} else {
+		print "";
 	}
 }
 
