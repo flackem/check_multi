@@ -560,12 +560,12 @@ sub do_report_html {
 	foreach $no (sort numerically keys %cmds) {
 		
 
-		printf "<tr><td>%s[%2.d]%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td>%s</tr>",
+		printf "<tr><td>%s[%2.d]%s</td> <td>%s</td> <td>%s</td> <td>%s</td> <td>%s</td> %s</tr>",
 			($opt{report} & $DETAIL_HTML) ? "<DIV CLASS=\'service$rc{label}{$cmds{$no}{rc}}\'>" : "",
 			$no,
-			($opt{report} & $DETAIL_HTML) ? "</DIV>&nbsp " : "",
+			($opt{report} & $DETAIL_HTML) ? "</DIV>" : "",
 			($opt{report} & $DETAIL_PERFORMANCE && $opt{report} & $DETAIL_PNP_LINK && defined($cmds{$no}{performance})) ?
-				"<A HREF='/nagios/pnp/index.php?host=$ENV{NAGIOS_HOSTNAME}&srv=$cmds{$no}{plugin}' TARGET='_self'><img src='/nagios/images/action.gif' width=20 height=20 border=0 align=top alt='Show PNP chart for $ENV{NAGIOS_HOSTNAME} / $cmds{$no}{plugin}'></A>" : "",
+				"<A HREF='/nagios/pnp/index.php?host=$ENV{NAGIOS_HOSTNAME}&srv=$cmds{$no}{name}' TARGET='_self'><img src='/nagios/images/action.gif' width=20 height=20 border=0 align=top alt='Show PNP chart for $ENV{NAGIOS_HOSTNAME} / $cmds{$no}{plugin}'></A>" : "",
 			$cmds{$no}{name},
 			$cmds{$no}{output},
 			(defined($cmds{$no}{stderr}) && $cmds{$no}{stderr} ne "" && $opt{report} & $DETAIL_STDERR) ?
