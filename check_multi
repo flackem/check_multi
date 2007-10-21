@@ -526,7 +526,7 @@ sub do_report {
 		foreach $no (sort numerically keys %cmds) {
 			print "$cmds{$no}{performance} " if (defined($cmds{$no}{performance}));
 		}
-		print "\n";
+		print "\n" if (! $opt{report} & $DETAIL_NAGIOS2);
 	} else {
 		print "\n";
 	}
