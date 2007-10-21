@@ -8,10 +8,10 @@
 #--- some local checks on the nagios system
 #
 #--- network
-command[ network_ping ]		= check_ping -H $HOSTNAME$ -w 500,5% -c 1000,10%
-command[ network_interfaces ]	= check_ifstatus -H $HOSTNAME$
-command[ network_if_eth1 ]	= check_ifoperstatus -k 4 -H $HOSTNAME$
-command[ network_rsync ]	= check_tcp -H $HOSTNAME$ -p 873 -e RSYNCD
+command[ network_ping ]		= check_ping -H localhost -w 500,5% -c 1000,10%
+command[ network_interfaces ]	= check_ifstatus -H localhost
+command[ network_if_eth1 ]	= check_ifoperstatus -k 0 -H localhost
+command[ network_rsync ]	= check_tcp -H localhost -p 873 -e RSYNCD
 
 #--- processes
 command[ procs_total ]		= check_procs
@@ -28,20 +28,20 @@ command[ proc_xinetd ]		= check_procs -c 1: -C xinetd
 
 #--- system parameters
 command[ system_load ]		= check_load -w 5,4,3 -c 10,8,6
-command[ system_mail ]		= check_tcp -H $HOSTNAME$ -p 25
+command[ system_mail ]		= check_tcp -H localhost -p 25
 command[ system_mailqueue ]	= check_mailq -w 2 -c 4
 command[ system_mysql ]		= check_mysql -u admin
 command[ system_ntp ]		= check_ntp -H ntp1.fau.de
-command[ system_portmapper ]	= check_rpc -H $HOSTNAME$ -C portmapper
+command[ system_portmapper ]	= check_rpc -H localhost -C portmapper
 command[ system_rootdisk ]	= check_disk -w 5% -c 2% -p /
-command[ system_ssh ]		= check_ssh $HOSTNAME$
+command[ system_ssh ]		= check_ssh localhost
 command[ system_swap ]		= check_swap -w 90 -c 80
 command[ system_syslog ]	= check_file_age -f /var/log/messages -c 86400 -C 0
 command[ system_users ]		= check_users -w 5 -c 10
 
 #--- nagios check for your local nagios system
 command[ nagios_system ]	= check_nagios -F /usr/local/nagios/var/nagios.log -e 5 -C nagios
-command[ nagios_tac ]		= check_http -H $HOSTNAME$ -u "http://$HOSTNAME$/nagios/cgi-bin/tac.cgi" -a guest:guest
+command[ nagios_tac ]		= check_http -H localhost -u "http://localhost/nagios/cgi-bin/tac.cgi" -a guest:guest
 
 #--- some external checks (need internet connection)
 command[ nagios_ping ]		= check_ping -H www.nagios.org -w 500,5% -c 1000,10%

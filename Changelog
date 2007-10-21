@@ -1,6 +1,13 @@
 
 ===== Changelog =====
 
+  *0.14*	21.10.2007
+	* added NAGIOS2 report mode with most important info in one line
+	* extra http report function
+	* setting report standard to 13 (verbose header line, stderr and perfdata)
+	* in order to get proper output on command line
+	* extended html report mode to full table
+	* performance star to the front (thx Joerg)
 	* added PNP link option for extended info
 	* added HTML coloring for extended info
         * performance data label separator is now '::' to avoid mismatches
