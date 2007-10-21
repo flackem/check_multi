@@ -38,6 +38,7 @@ $MYSELF %cmds $returncode %rc $no $VERSION
 $OK $WARNING $CRITICAL $UNKNOWN
 $DETAIL_LIST $DETAIL_LIST_FULL $DETAIL_HTML $DETAIL_STDERR $DETAIL_PERFORMANCE
 $DETAIL_PERFORMANCE_CLASSIC $DETAIL_COMMAND_LIST $DETAIL_PNP_LINK $DETAIL_XML
+$DETAIL_NAGIOS2
 );
 #-------------------------------------------------------------------------------
 #--- vars ----------------------------------------------------------------------
@@ -61,6 +62,7 @@ $DETAIL_PERFORMANCE_CLASSIC=32;
 $DETAIL_COMMAND_LIST=64;
 $DETAIL_PNP_LINK=128;
 $DETAIL_XML=256;
+$DETAIL_NAGIOS2=512;
 #
 #--- vars
 $no=0;
@@ -78,6 +80,8 @@ $returncode=0;
 	error	=> [ ],
 	starttime => 0.0,
 	endtime => 0.0,
+	runtime => 0.0,
+	nchecks => 0,
 );
 
 my %opt=(
@@ -436,33 +440,39 @@ sub do_report {
 		#print STDERR "DEBUG: r2s-rc:$rc{r2s}{$cmds{$no}{rc}} top:$rc{r2s}{$rc{top}} rc:$cmds{$no}{rc}\n";
 		$rc{top}=$cmds{$no}{rc} if ($rc{r2s}{$cmds{$no}{rc}} > $rc{r2s}{$rc{top}});
 	}
+	$rc{runtime}=time - $rc{starttime};
+	$rc{nchecks}=scalar(keys(%cmds));
 
 	if ($opt{report} & $DETAIL_HTML) {
 		&do_report_html;
 		return;
 	}
 
-	#--- print header line (1): name, state, number of plugins
-	print "$opt{name} $rc{label}{$rc{top}} - " . keys(%cmds) . " plugins checked, ";
-
-	#--- print header line (2): summary for particular states 
-	if ($opt{report} & $DETAIL_LIST_FULL) {
-		print	"$rc{count}{$CRITICAL} critical" . ((@{$rc{list}{$CRITICAL}}) ? " (" . join(', ',@{$rc{list}{$CRITICAL}}) . ')' : "") . ", " .
-			"$rc{count}{$WARNING} warning"   . ((@{$rc{list}{$WARNING}})  ? " (" . join(', ',@{$rc{list}{$WARNING}})  . ')' : "") . ", " .
-			"$rc{count}{$UNKNOWN} unknown"   . ((@{$rc{list}{$UNKNOWN}})  ? " (" . join(', ',@{$rc{list}{$UNKNOWN}})  . ')' : "") . ", " .
-			"$rc{count}{$OK} ok";
-	} elsif ($opt{report} & $DETAIL_LIST) {
-		my @r=();
-		push @r, "$rc{count}{$CRITICAL} critical (" . join(', ',@{$rc{list}{$CRITICAL}}) . ")" if (@{$rc{list}{$CRITICAL}});
-		push @r, "$rc{count}{$WARNING} warning ("   . join(', ',@{$rc{list}{$WARNING}})  . ")" if (@{$rc{list}{$WARNING}});
-		push @r, "$rc{count}{$UNKNOWN} unknown ("   . join(', ',@{$rc{list}{$UNKNOWN}})  . ")" if (@{$rc{list}{$UNKNOWN}});
-		push @r, "$rc{count}{$OK} ok" if (@{$rc{list}{$OK}});
-		print join(", ", @r);
+	if (!$opt{report} & $DETAIL_NAGIOS2) {
+		#--- print header line (1): name, state, number of plugins
+		print "$opt{name} $rc{label}{$rc{top}} - " . keys(%cmds) . " plugins checked, ";
+	
+		#--- print header line (2): summary for particular states 
+		if ($opt{report} & $DETAIL_LIST_FULL) {
+			print	"$rc{count}{$CRITICAL} critical" . ((@{$rc{list}{$CRITICAL}}) ? " (" . join(', ',@{$rc{list}{$CRITICAL}}) . ')' : "") . ", " .
+				"$rc{count}{$WARNING} warning"   . ((@{$rc{list}{$WARNING}})  ? " (" . join(', ',@{$rc{list}{$WARNING}})  . ')' : "") . ", " .
+				"$rc{count}{$UNKNOWN} unknown"   . ((@{$rc{list}{$UNKNOWN}})  ? " (" . join(', ',@{$rc{list}{$UNKNOWN}})  . ')' : "") . ", " .
+				"$rc{count}{$OK} ok";
+		} elsif ($opt{report} & $DETAIL_LIST) {
+			my @r=();
+			push @r, "$rc{count}{$CRITICAL} critical (" . join(', ',@{$rc{list}{$CRITICAL}}) . ")" if (@{$rc{list}{$CRITICAL}});
+			push @r, "$rc{count}{$WARNING} warning ("   . join(', ',@{$rc{list}{$WARNING}})  . ")" if (@{$rc{list}{$WARNING}});
+			push @r, "$rc{count}{$UNKNOWN} unknown ("   . join(', ',@{$rc{list}{$UNKNOWN}})  . ")" if (@{$rc{list}{$UNKNOWN}});
+			push @r, "$rc{count}{$OK} ok" if (@{$rc{list}{$OK}});
+			print join(", ", @r);
+		} else {
+			print	"$rc{count}{$CRITICAL} critical, " .
+				"$rc{count}{$WARNING} warning, " .
+				"$rc{count}{$UNKNOWN} unknown, " .
+				"$rc{count}{$OK} ok";
+		}
 	} else {
-		print	"$rc{count}{$CRITICAL} critical, " .
-			"$rc{count}{$WARNING} warning, " .
-			"$rc{count}{$UNKNOWN} unknown, " .
-			"$rc{count}{$OK} ok";
+		print "$opt{name} $rc{label}{$rc{top}}";
 	}
 
 	#--- print general errors if any occured
@@ -471,12 +481,23 @@ sub do_report {
 	#--- loop over commands: report particular results for long plugin output
 	foreach $no (sort numerically keys %cmds) {
 
-		printf "\n[%2.d] %s %s%s",
-			$no,
-			$cmds{$no}{name},
-			$cmds{$no}{output},
-			(defined($cmds{$no}{stderr}) && $cmds{$no}{stderr} ne "" && $opt{report} & $DETAIL_STDERR) ?
-			 " [ STDERR: " . $cmds{$no}{stderr} . ']' : "";
+		#--- if NAGIOS2 output: skip $OK results
+		if ($opt{report} & $DETAIL_NAGIOS2) {
+			next if ($cmds{$no}{rc} == $OK);
+			printf ", %s %s%s",
+				$cmds{$no}{name},
+				$cmds{$no}{output},
+				(defined($cmds{$no}{stderr}) && $cmds{$no}{stderr} ne "" && $opt{report} & $DETAIL_STDERR) ?
+			 	" [ STDERR: " . $cmds{$no}{stderr} . ']' : "";
+		} else {
+			printf "%s[%2.d] %s %s%s",
+				($opt{report} & $DETAIL_NAGIOS2) ? ", " : "\n",
+				$no,
+				$cmds{$no}{name},
+				$cmds{$no}{output},
+				(defined($cmds{$no}{stderr}) && $cmds{$no}{stderr} ne "" && $opt{report} & $DETAIL_STDERR) ?
+			 	" [ STDERR: " . $cmds{$no}{stderr} . ']' : "";
+		}
 	}
 
 	#--- print list of commands
@@ -487,35 +508,19 @@ sub do_report {
 		}
 	}
 
-	#--- print xml
+	#--- need XML data?
 	if ($opt{report} & $DETAIL_XML) {
-		print "<xml>";
-		print "<meta http-equiv=\"Content-Style-Type\" content=\"application/xml\">";
-		print "\n<?xml version=\"1.0\"?>";
-		print "\n<?xml-stylesheet type='text/xsl' href='http://localhost/nagios/extinfo.xsl'?>";
-		print "\n<PARENT name=\"$opt{name}\">";
-		foreach $no (sort numerically keys %cmds) {
-			printf "\n\t<CHILD name=\"$cmds{$no}{name}\">";
-			printf "\n\t\t<no>$no</no>";
-			printf "\n\t\t<output>$cmds{$no}{output}</output>";
-			printf "\n\t\t<stderr>$cmds{$no}{stderr}</stderr>";
-			printf "\n\t\t<rc>$cmds{$no}{rc}</rc>";
-			printf "\n\t\t<plugin>$cmds{$no}{plugin}</plugin>";
-			printf "\n\t\t<command>$cmds{$no}{command}</command>";
-			printf "\n\t</CHILD>";
-		}
-		print "\n</PARENT>";
-		print "</xml>";
+		&do_report_xml;
 	}
 
 	#--- report performance data?
 	if ($opt{report} & $DETAIL_PERFORMANCE) {
-		printf "\|$opt{name}::${MYSELF}::plugins=%d time=%.2f \n", scalar(keys(%cmds)), time - $rc{starttime};
+		printf "\|$opt{name}::${MYSELF}::plugins=%d time=%.2f \n",$rc{nchecks},$rc{runtime};
 		#--- one line per command, format: tag=output
 		foreach $no (sort numerically keys %cmds) {
 			print "$cmds{$no}{name}::$cmds{$no}{plugin}::$cmds{$no}{performance} \n" if (defined($cmds{$no}{performance}));
 		}
-	} elsif ($opt{report} & $DETAIL_PERFORMANCE_CLASSIC) {
+	} elsif ($opt{report} & $DETAIL_PERFORMANCE_CLASSIC || $opt{report} & $DETAIL_NAGIOS2) {
 		printf "\|";
 		#--- one line per command, format: tag=output
 		foreach $no (sort numerically keys %cmds) {
@@ -593,6 +598,23 @@ sub do_report_html {
 	} else {
 		print "";
 	}
+}
+
+sub do_report_xml {
+	print "\n<xml>";
+	print "\n<meta http-equiv=\"Content-Style-Type\" content=\"application/xml\">";
+	print "\n<?xml version=\"1.0\"?>";
+	print "\n<?xml-stylesheet type='text/xsl' href='http://localhost/nagios/extinfo.xsl'?>";
+	print "\n<PARENT name=\"$opt{name}\" plugins=\"$rc{nchecks}\" time=\"$rc{runtime}\">";
+	foreach $no (sort numerically keys %cmds) {
+		printf "\n\t<CHILD no=\"$no\">";
+		foreach my $token ("name","rc","output","stderr","plugin","command","performance") {
+			printf "\n\t\t<%s>%s</%s>",$token,$cmds{$no}{$token},$token if defined($cmds{$no}{$token});
+		}
+		printf "\n\t</CHILD>";
+	}
+	print "\n</PARENT>";
+	print "\n</xml>";
 }
 
 #-------------------------------------------------------------------------------
