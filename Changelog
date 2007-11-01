@@ -1,7 +1,9 @@
 
 ===== Changelog =====
 
-  *0.14*	21.10.2007
+	* reordered report functions 
+
+**0.14**	21.10.2007
 	* added NAGIOS2 report mode with most important info in one line
 	* extra http report function
 	* setting report standard to 13 (verbose header line, stderr and perfdata)
@@ -10,23 +12,23 @@
 	* performance star to the front (thx Joerg)
 	* added PNP link option for extended info
 	* added HTML coloring for extended info
-        * performance data label separator is now '::' to avoid mismatches
-        * added DISPLAY_COMMAND_LIST to show full list of commands in extended_output
-        * if plugin specified with full path, do not use libexec path
+	* performance data label separator is now '::' to avoid mismatches
+	* added DISPLAY_COMMAND_LIST to show full list of commands in extended_output
+	* if plugin specified with full path, do not use libexec path
 	* added blanks to result lists to provide wrapping in HTML output
 
-  *0.13*	16.08.2007
+**0.13**	16.08.2007
 	* bugfix for handling of extended return code
 	* stderr output now trimmed
 	* bugfix for non existing environment vars
 	* suppress empty check lists '()' in output
 	* cleaned up 0 results in summary
 
-  *0.12*	25.07.2007
+**0.12**	25.07.2007
 	* performance switch replaced by report flag
 	* output of performance data is now default
 	* substitute macros a la $HOSTNAME$
 	* Time::Hires integrated
 
-  *0.11*	22.07.2007
+**0.11**	22.07.2007
 	* first version in SVN
