@@ -192,6 +192,8 @@ Options:
       32: show old type of performance data (without check_multi style)
       64: show list of commands in output
       128: add PNP action link if performance data available
+      256: XML: print structured XML output
+      512: Nagios 2: one line output
 -h, --help
    print detailed help screen
 -V, --version
@@ -425,11 +427,9 @@ sub exec_command {
 }
 
 #---
-#--- report results stored in %cmds
+#--- calculate sums from %cmds and %rc
 #---
-sub do_report {
-
-	#--- do some statistics
+sub do_statistics {
 	foreach $no (sort numerically keys %cmds) {
 
 		$rc{count}{$cmds{$no}{rc}}++;	# count return codes
@@ -442,13 +442,16 @@ sub do_report {
 	}
 	$rc{runtime}=time - $rc{starttime};
 	$rc{nchecks}=scalar(keys(%cmds));
+}
 
-	if ($opt{report} & $DETAIL_HTML) {
-		&do_report_html;
-		return;
-	}
+#---
+#--- report results stored in %cmds
+#---
+sub do_report {
 
-	if (!$opt{report} & $DETAIL_NAGIOS2) {
+	if ($opt{report} & $DETAIL_NAGIOS2) {
+		print "$opt{name} $rc{label}{$rc{top}}";
+	} else {
 		#--- print header line (1): name, state, number of plugins
 		print "$opt{name} $rc{label}{$rc{top}} - " . keys(%cmds) . " plugins checked, ";
 	
@@ -471,8 +474,6 @@ sub do_report {
 				"$rc{count}{$UNKNOWN} unknown, " .
 				"$rc{count}{$OK} ok";
 		}
-	} else {
-		print "$opt{name} $rc{label}{$rc{top}}";
 	}
 
 	#--- print general errors if any occured
@@ -506,29 +507,6 @@ sub do_report {
 		foreach $no (sort numerically keys %cmds) {
 			printf "\n[%2.d] %s", $no, $cmds{$no}{command};
 		}
-	}
-
-	#--- need XML data?
-	if ($opt{report} & $DETAIL_XML) {
-		&do_report_xml;
-	}
-
-	#--- report performance data?
-	if ($opt{report} & $DETAIL_PERFORMANCE) {
-		printf "\|$opt{name}::${MYSELF}::plugins=%d time=%.2f \n",$rc{nchecks},$rc{runtime};
-		#--- one line per command, format: tag=output
-		foreach $no (sort numerically keys %cmds) {
-			print "$cmds{$no}{name}::$cmds{$no}{plugin}::$cmds{$no}{performance} \n" if (defined($cmds{$no}{performance}));
-		}
-	} elsif ($opt{report} & $DETAIL_PERFORMANCE_CLASSIC || $opt{report} & $DETAIL_NAGIOS2) {
-		printf "\|";
-		#--- one line per command, format: tag=output
-		foreach $no (sort numerically keys %cmds) {
-			print "$cmds{$no}{performance} " if (defined($cmds{$no}{performance}));
-		}
-		print "\n" if (! $opt{report} & $DETAIL_NAGIOS2);
-	} else {
-		print "\n";
 	}
 }
 
@@ -564,7 +542,6 @@ sub do_report_html {
 	print "<table>";
 	foreach $no (sort numerically keys %cmds) {
 		
-
 		printf "<tr><td>%s[%2.d]%s</td> <td>%s</td> <td>%s</td> <td>%s</td> <td>%s</td> %s</tr>",
 			($opt{report} & $DETAIL_HTML) ? "<DIV CLASS=\'service$rc{label}{$cmds{$no}{rc}}\'>" : "",
 			$no,
@@ -580,7 +557,49 @@ sub do_report_html {
 	}
 	print "</table>";
 
+}
 
+sub do_report_xml {
+	print "<xml>\n";
+	print "<meta http-equiv=\"Content-Style-Type\" content=\"application/xml\">\n";
+	print "<?xml version=\"1.0\"?>\n";
+	print "<?xml-stylesheet type=\"text/xsl\" href=\"http://localhost/nagios/extinfo.xsl\"?>\n";
+	print "<PARENT name=\"$opt{name}\" plugins=\"$rc{nchecks}\" time=\"$rc{runtime}\">\n";
+	print "\t<output>";
+	#--- print header line (2): summary for particular states 
+        if ($opt{report} & $DETAIL_LIST_FULL) {
+                print   "$rc{count}{$CRITICAL} critical" . ((@{$rc{list}{$CRITICAL}}) ? " (" . join(', ',@{$rc{list}{$CRITICAL}}) . ')' : "") . ", " .
+                        "$rc{count}{$WARNING} warning"   . ((@{$rc{list}{$WARNING}})  ? " (" . join(', ',@{$rc{list}{$WARNING}})  . ')' : "") . ", " .
+                        "$rc{count}{$UNKNOWN} unknown"   . ((@{$rc{list}{$UNKNOWN}})  ? " (" . join(', ',@{$rc{list}{$UNKNOWN}})  . ')' : "") . ", " .
+                        "$rc{count}{$OK} ok";
+        } elsif ($opt{report} & $DETAIL_LIST) {
+                my @r=();
+                push @r, "$rc{count}{$CRITICAL} critical (" . join(', ',@{$rc{list}{$CRITICAL}}) . ")" if (@{$rc{list}{$CRITICAL}});
+                push @r, "$rc{count}{$WARNING} warning ("   . join(', ',@{$rc{list}{$WARNING}})  . ")" if (@{$rc{list}{$WARNING}});
+                push @r, "$rc{count}{$UNKNOWN} unknown ("   . join(', ',@{$rc{list}{$UNKNOWN}})  . ")" if (@{$rc{list}{$UNKNOWN}});
+                push @r, "$rc{count}{$OK} ok" if (@{$rc{list}{$OK}});
+                print join(", ", @r);
+        } else {
+                print   "$rc{count}{$CRITICAL} critical, " .
+                        "$rc{count}{$WARNING} warning, " .
+                        "$rc{count}{$UNKNOWN} unknown, " .
+                        "$rc{count}{$OK} ok";
+        }
+	print "</output>\n";
+	print "<error>" . join(", ",@{$rc{error}}) . "</error>\n" if (defined($rc{error}[0]));
+
+	foreach $no (sort numerically keys %cmds) {
+		printf "\t<CHILD no=\"$no\">\n";
+		foreach my $token ("name","rc","output","stderr","plugin","command","performance") {
+			printf "\t\t<%s>%s</%s>\n",$token,$cmds{$no}{$token},$token if defined($cmds{$no}{$token});
+		}
+		printf "\t</CHILD>\n";
+	}
+	print "</PARENT>\n";
+	print "</xml>\n";
+}
+
+sub do_report_perfdata {
 	#--- report performance data?
 	if ($opt{report} & $DETAIL_PERFORMANCE) {
 		printf "\|$opt{name}::${MYSELF}::plugins=%d time=%.2f ", scalar(keys(%cmds)), time - $rc{starttime};
@@ -594,27 +613,7 @@ sub do_report_html {
 		foreach $no (sort numerically keys %cmds) {
 			print "$cmds{$no}{performance} " if (defined($cmds{$no}{performance}));
 		}
-		print "";
-	} else {
-		print "";
 	}
-}
-
-sub do_report_xml {
-	print "\n<xml>";
-	print "\n<meta http-equiv=\"Content-Style-Type\" content=\"application/xml\">";
-	print "\n<?xml version=\"1.0\"?>";
-	print "\n<?xml-stylesheet type='text/xsl' href='http://localhost/nagios/extinfo.xsl'?>";
-	print "\n<PARENT name=\"$opt{name}\" plugins=\"$rc{nchecks}\" time=\"$rc{runtime}\">";
-	foreach $no (sort numerically keys %cmds) {
-		printf "\n\t<CHILD no=\"$no\">";
-		foreach my $token ("name","rc","output","stderr","plugin","command","performance") {
-			printf "\n\t\t<%s>%s</%s>",$token,$cmds{$no}{$token},$token if defined($cmds{$no}{$token});
-		}
-		printf "\n\t</CHILD>";
-	}
-	print "\n</PARENT>";
-	print "\n</xml>";
 }
 
 #-------------------------------------------------------------------------------
@@ -647,8 +646,21 @@ foreach $no (sort numerically keys %cmds) {
 	&exec_command($no);
 }
 
-#--- report results
-&do_report;
+#--- prepare output
+&do_statistics;
+
+#--- report HTML output
+if ($opt{report} & $DETAIL_HTML) {
+	&do_report_html;
+#--- need XML data
+} elsif ($opt{report} & $DETAIL_XML) {
+	&do_report_xml;
+#--- classical report
+} else {
+	&do_report;
+}
+#--- at last: perfdata
+&do_report_perfdata;
 
 #--- return rc with highest severity
 exit $rc{top};
