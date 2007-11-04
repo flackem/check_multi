@@ -152,22 +152,25 @@ sub process_parameters {
 	if ($opt{ok}) {
 		($rc{minimum}{ok},$rc{maximum}{ok})=minmax($opt{ok},0,999);
 	}
+	if ($opt{timeout} && $opt{TIMEOUT} && $opt{timeout} >= $opt{TIMEOUT}) {
+		print "$MYSELF: error - child timeout $opt{timeout}s >= parent timeout $opt{TIMEOUT}s\n";
+		return $UNKNOWN;
+	}
 	return $OK;
 }
 
 sub short_usage {
 print <<SHORTEOF;
-
 $MYSELF -f <config file> [-l libexec_path] [-n name] [-t timeout] [-T TIMEOUT] [-r level]
 $MYSELF [-h | --help]
 $MYSELF [-V | --version]
+
 SHORTEOF
 #$MYSELF [-s state] [-w N:N] [-c N:N] [-u N:N] [-o N:N]
 }
 
 sub long_usage {
 print <<LONGEOF;
-
 Options:
 -f, --filename
    config file which contains commands to be executed
@@ -332,7 +335,7 @@ sub parse_commands {
 	my ($cmd,$name,$plugin);
 
 	if (!open(FILE, $filename)) {
-		add_error("parse_command: cannot open config file $filename:$!");
+		add_error("parse_command: cannot open config file $filename: $!");
 		$rc{top}=$UNKNOWN;
 		return $cmd_count;
 	}
@@ -360,6 +363,7 @@ sub parse_commands {
 		$cmds{++$cmd_count}{command}=$cmd;
 		$cmds{$cmd_count}{plugin}=$plugin;
 		$cmds{$cmd_count}{name}=$name;
+		$cmds{$cmd_count}{rc}=$UNKNOWN;
 	}
 	close FILE;
 	return $cmd_count;
@@ -398,7 +402,7 @@ sub exec_command {
 		}
 		
 		#--- remove white chars from output
-		$cmds{$no}{output}=mytrim($cmds{$no}{output},"\\n\\s");
+		#$cmds{$no}{output}=mytrim($cmds{$no}{output},"\\n\\s");
 		$cmds{$no}{stderr}=mytrim($cmds{$no}{stderr},"\\n\\s");
 
 		#--- split performance data from standard output
@@ -416,6 +420,8 @@ sub exec_command {
 		if ($@ =~ /timeout/) {
 			$cmds{$no}{output}="UNKNOWN - $cmds{$no}{plugin} cancelled after timeout ($opt{timeout}s)";
 			$cmds{$no}{rc}=$UNKNOWN;
+			$cmds{$no}{output}.=readfile($tmp_stdout);
+			$cmds{$no}{stderr}.=readfile($tmp_stderr);
 		#--- catchall for unknown errors
 		} else {
 			alarm(0);
@@ -539,10 +545,10 @@ sub do_report_html {
 	print " [" . join(", ",@{$rc{error}}) . "]" if (defined($rc{error}[0]));
 	
 	#--- loop over commands: report particular results for long plugin output
-	print "<table>";
+	#print "<table style='border-left:1px; border-style:dotted border-right-style:none border-top-style:none border-bottom-style:none'>";
+	print "<table style='border-left-width:1px; border-left-style:dotted' border-rigth-width:0px; >";
 	foreach $no (sort numerically keys %cmds) {
-		
-		printf "<tr><td>%s[%2.d]%s</td> <td>%s</td> <td>%s</td> <td>%s</td> <td>%s</td> %s</tr>",
+		printf "<tr valign='top'><td nowrap>%s[%2.d]%s</td><td nowrap>%s</td><td>%s</td><td>%s</td><td>%s</td>%s</tr>",
 			($opt{report} & $DETAIL_HTML) ? "<DIV CLASS=\'service$rc{label}{$cmds{$no}{rc}}\'>" : "",
 			$no,
 			($opt{report} & $DETAIL_HTML) ? "</DIV>" : "",
@@ -560,6 +566,7 @@ sub do_report_html {
 }
 
 sub do_report_xml {
+	print "<!--\n" if ($opt{report} & $DETAIL_HTML);
 	print "<xml>\n";
 	print "<meta http-equiv=\"Content-Style-Type\" content=\"application/xml\">\n";
 	print "<?xml version=\"1.0\"?>\n";
@@ -597,6 +604,7 @@ sub do_report_xml {
 	}
 	print "</PARENT>\n";
 	print "</xml>\n";
+	print "\n--> " if ($opt{report} & $DETAIL_HTML);
 }
 
 sub do_report_perfdata {
@@ -624,7 +632,7 @@ sub do_report_perfdata {
 exit $UNKNOWN if (&process_parameters != $OK);
 
 #--- parse command file (nrpe format)
-exit $UNKNOWN if (&parse_commands($opt{filename}) == 0);
+&parse_commands($opt{filename});
 
 #--- initialize timer for overall timeout
 $rc{starttime}=time;
@@ -652,13 +660,16 @@ foreach $no (sort numerically keys %cmds) {
 #--- report HTML output
 if ($opt{report} & $DETAIL_HTML) {
 	&do_report_html;
+}
 #--- need XML data
-} elsif ($opt{report} & $DETAIL_XML) {
+if ($opt{report} & $DETAIL_XML) {
 	&do_report_xml;
+}
 #--- classical report
-} else {
+if (! ($opt{report} & $DETAIL_HTML)) {
 	&do_report;
 }
+
 #--- at last: perfdata
 &do_report_perfdata;
 
