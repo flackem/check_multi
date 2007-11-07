@@ -31,7 +31,6 @@
 #
 use strict;
 use Getopt::Long qw(:config no_ignore_case bundling);
-use Data::Dumper;
 BEGIN { eval("use Time::HiRes qw(time)") }
 use lib "/usr/local/nagios/libexec";
 use vars qw(
@@ -169,7 +168,6 @@ sub process_parameters {
 		print "$MYSELF: error - child timeout $opt{timeout}s >= parent timeout $opt{TIMEOUT}s\n";
 		return $UNKNOWN;
 	}
-	print Dumper(\%rc);
 	return $OK;
 }
 
