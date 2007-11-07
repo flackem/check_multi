@@ -31,6 +31,7 @@
 #
 use strict;
 use Getopt::Long qw(:config no_ignore_case bundling);
+use Data::Dumper;
 BEGIN { eval("use Time::HiRes qw(time)") }
 use lib "/usr/local/nagios/libexec";
 use vars qw(
@@ -70,12 +71,12 @@ $no=0;
 $returncode=0;
 %rc=(
 	label	=> { $OK => "OK", $WARNING => "WARNING", $CRITICAL => "CRITICAL", $UNKNOWN => "UNKNOWN", },
+	charind => "owcu",
 	s2r	=> { 0 => $OK, 2 => $WARNING, 3 => $CRITICAL, 1 => $UNKNOWN, },
 	r2s	=> { $OK => 0, $WARNING => 2, $CRITICAL => 3, $UNKNOWN => 1, },
 	count	=> { $OK => 0, $WARNING => 0, $CRITICAL => 0, $UNKNOWN => 0, },
-	minimum => { $OK => 0, $WARNING => 1, $CRITICAL => 1, $UNKNOWN => 1, },
-	maximum => { $OK => 0, $WARNING => 1, $CRITICAL => 1, $UNKNOWN => 1, },
 	list	=> { $OK => [],$WARNING => [],$CRITICAL => [],$UNKNOWN => [], },
+	range	=> { $OK => {},$WARNING => {},$CRITICAL => {},$UNKNOWN => {}, },
 	top	=> $OK,
 	error	=> [ ],
 	starttime => 0.0,
@@ -89,13 +90,13 @@ my %opt=(
 	"libexec"	=> "/usr/local/nagios/libexec",
 	"name"		=> "MULTI",
 	"report"	=> 13,
-	"state"		=> -1,
+	"state"		=> undef,
 	"timeout"	=> 10,
 	"TIMEOUT"	=> 60,
-	"ok"		=> "0:0",
-	"warning"	=> "1:1",
-	"critical"	=> "1:1",
-	"unknown"	=> "1:1",
+	"ok"		=> undef,
+	"warning"	=> undef,
+	"critical"	=> undef,
+	"unknown"	=> undef,
 );
 	
 #-------------------------------------------------------------------------------
@@ -114,7 +115,7 @@ sub process_parameters {
 		"T|TIMEOUT=i"	=> \$opt{TIMEOUT},
 		"V|version"	=> \$opt{version},
 
-		"s|state=i"	=> \$opt{state},
+		"s|state=s"	=> \$opt{state},
 		"o|ok=s"	=> \$opt{ok},
 		"w|warning=s"	=> \$opt{warning},
 		"c|critical=s"	=> \$opt{critical},
@@ -141,32 +142,45 @@ sub process_parameters {
         	return $UNKNOWN;
 	}
 	if ($opt{warning}) {
-		($rc{minimum}{warning},$rc{maximum}{warning})=minmax($opt{warning},0,999);
+		parse_range_string(\%{$rc{range}{$WARNING}},$opt{warning});
 	}
 	if ($opt{critical}) {
-		($rc{minimum}{critical},$rc{maximum}{critical})=minmax($opt{critical},0,999);
+		parse_range_string(\%{$rc{range}{$CRITICAL}},$opt{critical});
 	}
 	if ($opt{unknown}) {
-		($rc{minimum}{unknown},$rc{maximum}{unknown})=minmax($opt{unknown},0,999);
+		parse_range_string(\%{$rc{range}{$UNKNOWN}},$opt{unknown});
 	}
 	if ($opt{ok}) {
-		($rc{minimum}{ok},$rc{maximum}{ok})=minmax($opt{ok},0,999);
+		parse_range_string(\%{$rc{range}{$OK}},$opt{ok});
+	}
+	if ($opt{state}) {
+		if (defined($rc{label}{$opt{state}})) {
+			# already numerical: ok
+		} elsif ($opt{state}=~/[owcu]?/i) {
+			$opt{state}=lc($opt{state});
+			$opt{state}=index("owcu",$opt{state});
+		} else {
+			print "$MYSELF error: invalid state defined\n";
+			short_usage();
+			return $UNKNOWN;
+		}
 	}
 	if ($opt{timeout} && $opt{TIMEOUT} && $opt{timeout} >= $opt{TIMEOUT}) {
 		print "$MYSELF: error - child timeout $opt{timeout}s >= parent timeout $opt{TIMEOUT}s\n";
 		return $UNKNOWN;
 	}
+	print Dumper(\%rc);
 	return $OK;
 }
 
 sub short_usage {
 print <<SHORTEOF;
 $MYSELF -f <config file> [-l libexec_path] [-n name] [-t timeout] [-T TIMEOUT] [-r level]
+        [-s state] [-w N:N] [-c N:N] [-u N:N] [-o N:N]
 $MYSELF [-h | --help]
 $MYSELF [-V | --version]
 
 SHORTEOF
-#$MYSELF [-s state] [-w N:N] [-c N:N] [-u N:N] [-o N:N]
 }
 
 sub long_usage {
@@ -201,14 +215,17 @@ Options:
    print detailed help screen
 -V, --version
    print version information
+
+Extended mode - specify extra settings for threshold interpretation:
+-w, --warning  <minimum:maximum>
+-c, --critical <minimum:maximum>
+-u, --unknown  <minimum:maximum>
+-o, --ok       <minimum:maximum>
+-s, --state    
+   wanted overall state, allowed is: 'o','w','c','u', 0-3
+  default: highest severity
 LONGEOF
 
-#Extended mode - specify extra settings for threshold interpretation:
-#-s, --state    <wanted overall state> (default: -1 for RC with highest severity)
-#-w, --warning  <minimum:maximum>
-#-c, --critical <minimum:maximum>
-#-u, --unknown  <minimum:maximum>
-#-o, --ok       <minimum:maximum>
 }
 
 #---
@@ -243,51 +260,85 @@ sub add_error {
 	push @{$rc{error}}, @_;
 }
 
-#---
-#--- minmax parses threshold string of format 'min:max'
-#--- also allowed: 'min:' ':max' 'max'
-#--- input values: thresholdstring, absolute minimum, absolute maximum
-#--- return values: ($min,$max)
-#---
-sub minmax {
-	my ($input,$absmin,$absmax)=@_;
-	my $stripped;
-	my $min;
-	my $max;
+# The next two routines have been taken and adopted from Nagios::Plugin.
+# Thanks to Gavin Carr and Ton Voon! 
+# Some day I'll find time to migrate the whole stuff to Nagios::Plugin ;-)
+sub parse_range_string {
+        my ($range, $string) = @_;
+        my $valid = 0;
 
-	# in any case: strip white chars
-	($stripped=$input)=~s/\s+//;
+        $range->{start}=0;
+	$range->{start_infinity}=0;
+	$range->{end}=0;
+	$range->{end_infinity}=1;
+	$range->{inside}=0;
 
-	#print "DEBUG minmax input:>$input< stripped:>$stripped< absmin:$absmin absmax:$absmax\n";
+        $string =~ s/\s//g;  # strip out any whitespace
+        # check for valid range definition
+        unless ( $string =~ /[\d~]/ && $string =~ m/^\@?(-?[\d.]+|~)?(:(-?[\d.]+)?)?$/ ) {
+		print "Invalid range definition '$string'\n";
+		return undef;
+        }
 
-	# bare number without ':'
-	if ($stripped=~/^(\d+)$/) {
-		$min=$absmin;
-		$max=$1;
-	# number:
-	} elsif ($stripped=~/^(\d+):$/) {
-		$min=$1;
-		$max=$absmax;
-	# :number
-	} elsif ($stripped=~/^:(\d+)$/) {
-		$min=$absmin;
-		$max=$1;
-	# number:number
-	} elsif ($stripped=~/^(\d+):(\d+)$/) {
-		$min=$1;
-		$max=$2;
-	# format error
-	} else {
-		add_error("minmax: format ERROR in input string '$input'");
-	}
-	
-	if ($min > $max) {
-		add_error("minmax: ERROR min $min > max $max");
-	}
-	
-	return ($min,$max);
+        if ($string =~ s/^\@//) {
+		$range->{inside}=1;
+        }
+
+        if ($string =~ s/^~//) {  # '~:x'
+		$range->{start_infinity}=1;
+        }
+        if ( $string =~ m/^([\d\.-]+)?:/ ) {     # '10:'
+		my $start = $1;
+		if (defined($start)) {
+			$range->{start}=$start;
+			$range->{start_infinity}=0;
+		}
+            	$range->{end_infinity}=1;  # overridden below if there's an end specified
+            	$string =~ s/^([-\d\.]+)?://;
+            	$valid++;
+        }
+        if ($string =~ /^([-\d\.]+)$/) {   # 'x:10' or '10'
+		$range->{end}=$string;
+		$range->{end_infinity}=0;
+		$valid++;
+        }
+
+        if ($valid && ($range->{start_infinity} == 1 || $range->{end_infinity} == 1 || $range->{start} <= $range->{end})) {
+                return $range;
+        }
+        return undef;
 }
-
+# Returns 1 if an alert should be raised, otherwise 0
+sub check_range {
+        my ($range, $value) = @_;
+        my $false = 0;
+        my $true = 1;
+        if ($range->{inside}) {
+                $false = 1;
+                $true = 0;
+        }
+        if ($range->{end_infinity} == 0 && $range->{start_infinity} == 0) {
+                if ($range->{start} <= $value && $value <= $range->{end}) {
+                        return $false;
+                } else {
+                        return $true;
+                }
+        } elsif ($range->{start_infinity} == 0 && $range->{end_infinity} == 1) {
+                if ( $value >= $range->{start} ) {
+                        return $false;
+                } else {
+                        return $true;
+                }
+        } elsif ($range->{start_infinity} == 1 && $range->{end_infinity} == 0) {
+                if ($value <= $range->{end}) {
+                        return $false;
+                } else {
+                        return $true;
+                }
+        } else {
+                return $false;
+        }
+}
 #---
 #--- create unique tmpfile and try to create it
 #---
@@ -435,7 +486,13 @@ sub exec_command {
 #---
 #--- calculate sums from %cmds and %rc
 #---
-sub do_statistics {
+sub do_result_rating {
+
+	#--- measure runtime without reporting ;-)
+	$rc{runtime}=time - $rc{starttime};
+	$rc{nchecks}=scalar(keys(%cmds));
+
+	#--- count return codes
 	foreach $no (sort numerically keys %cmds) {
 
 		$rc{count}{$cmds{$no}{rc}}++;	# count return codes
@@ -446,8 +503,20 @@ sub do_statistics {
 		#print STDERR "DEBUG: r2s-rc:$rc{r2s}{$cmds{$no}{rc}} top:$rc{r2s}{$rc{top}} rc:$cmds{$no}{rc}\n";
 		$rc{top}=$cmds{$no}{rc} if ($rc{r2s}{$cmds{$no}{rc}} > $rc{r2s}{$rc{top}});
 	}
-	$rc{runtime}=time - $rc{starttime};
-	$rc{nchecks}=scalar(keys(%cmds));
+	
+	my $match=0;
+	foreach my $state (sort keys %{$rc{s2r}}) {
+		#print "Performing $rc{label}{$state}\n";
+		next if not defined($rc{range}{$state}{start});
+		if (check_range(\%{$rc{range}{$state}},$rc{count}{$state})) {
+			#print "$rc{label}{$state} matches\n";
+			if (defined($opt{state})) {
+				$rc{top}=$opt{state};
+			} else {
+				$rc{top}=$state;
+			}
+		}
+	}
 }
 
 #---
@@ -655,7 +724,7 @@ foreach $no (sort numerically keys %cmds) {
 }
 
 #--- prepare output
-&do_statistics;
+&do_result_rating;
 
 #--- report HTML output
 if ($opt{report} & $DETAIL_HTML) {
