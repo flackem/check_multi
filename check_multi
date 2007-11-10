@@ -443,6 +443,8 @@ sub exec_command {
 		$cmds{$no}{output}=readfile($tmp_stdout);
 		$cmds{$no}{stderr}=readfile($tmp_stderr);
 		unlink $tmp_stdout, $tmp_stderr;
+		chomp $cmds{$no}{output};	
+		chomp $cmds{$no}{stderr};
 
 		#--- unknown return code? change it explicitly to UNKNOWN
 		if (! defined($rc{r2s}{$cmds{$no}{rc}})) {
@@ -495,7 +497,6 @@ sub do_result_rating {
 
 		$rc{count}{$cmds{$no}{rc}}++;	# count return codes
 		push @{$rc{list}{$cmds{$no}{rc}}},$cmds{$no}{name}; # add plugin to list
-		#print STDERR "DEBUG: rc:$cmds{$no}{rc} ok:$rc{count}{$OK} unknown:$rc{count}{$UNKNOWN} warning:$rc{count}{$WARNING} critical:$rc{count}{$CRITICAL}\n";
 
 		#--- determine return code with highest severity
 		#print STDERR "DEBUG: r2s-rc:$rc{r2s}{$cmds{$no}{rc}} top:$rc{r2s}{$rc{top}} rc:$cmds{$no}{rc}\n";
@@ -718,7 +719,7 @@ foreach $no (sort numerically keys %cmds) {
 		$cmds{$no}{output}="UNKNOWN - execution cancelled after global timeout ($opt{TIMEOUT}s)";
 		$cmds{$no}{rc}=$UNKNOWN;
 		$rc{count}{$UNKNOWN}++;
-		$rc{list}{$UNKNOWN}.="$cmds{$no}{name},";
+		push @{$rc{list}{$UNKNOWN}},$cmds{$no}{name};
 		next;
 	}
 		
