@@ -388,6 +388,8 @@ sub exec_command {
 		$cmds{$no}{output}=readfile($tmp_stdout);
 		$cmds{$no}{stderr}=readfile($tmp_stderr);
 		unlink $tmp_stdout, $tmp_stderr;
+		chomp $cmds{$no}{output};
+		chomp $cmds{$no}{stderr};
 
 		#--- unknown return code? change it explicitly to UNKNOWN
 		if (! defined($rc{r2s}{$cmds{$no}{rc}})) {
@@ -448,7 +450,7 @@ sub do_report {
 		return;
 	}
 
-	if (!$opt{report} & $DETAIL_NAGIOS2) {
+	if (!($opt{report} & $DETAIL_NAGIOS2)) {
 		#--- print header line (1): name, state, number of plugins
 		print "$opt{name} $rc{label}{$rc{top}} - " . keys(%cmds) . " plugins checked, ";
 	
@@ -639,7 +641,7 @@ foreach $no (sort numerically keys %cmds) {
 		$cmds{$no}{output}="UNKNOWN - execution cancelled after global timeout ($opt{TIMEOUT}s)";
 		$cmds{$no}{rc}=$UNKNOWN;
 		$rc{count}{$UNKNOWN}++;
-		$rc{list}{$UNKNOWN}.="$cmds{$no}{name},";
+		push @{$rc{list}{$UNKNOWN}},$cmds{$no}{name};
 		next;
 	}
 		
