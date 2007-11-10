@@ -1,5 +1,6 @@
 
 ===== Changelog =====
+	* added range support (check_multi now can replace check_cluster!)
 	* prepared recursive calls, added dotted line to HTML view
 	* fixed bug with parent timeout smaller than child timeout
 	* fixed error reporting for missing config file

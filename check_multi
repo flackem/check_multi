@@ -92,10 +92,10 @@ my %opt=(
 	"state"		=> undef,
 	"timeout"	=> 10,
 	"TIMEOUT"	=> 60,
-	"ok"		=> undef,
-	"warning"	=> undef,
-	"critical"	=> undef,
-	"unknown"	=> undef,
+	"ok"		=> "\@1:",
+	"warning"	=> "\@1:",
+	"critical"	=> "\@1:",
+	"unknown"	=> "\@1:",
 );
 	
 #-------------------------------------------------------------------------------
@@ -499,19 +499,18 @@ sub do_result_rating {
 
 		#--- determine return code with highest severity
 		#print STDERR "DEBUG: r2s-rc:$rc{r2s}{$cmds{$no}{rc}} top:$rc{r2s}{$rc{top}} rc:$cmds{$no}{rc}\n";
-		$rc{top}=$cmds{$no}{rc} if ($rc{r2s}{$cmds{$no}{rc}} > $rc{r2s}{$rc{top}});
+		#$rc{top}=$cmds{$no}{rc} if ($rc{r2s}{$cmds{$no}{rc}} > $rc{r2s}{$rc{top}});
 	}
 	
-	my $match=0;
-	foreach my $state (sort keys %{$rc{s2r}}) {
+	foreach my $s (sort numerically keys %{$rc{s2r}}) {
 		#print "Performing $rc{label}{$state}\n";
-		next if not defined($rc{range}{$state}{start});
-		if (check_range(\%{$rc{range}{$state}},$rc{count}{$state})) {
+		#next if not defined($rc{range}{$state}{start});
+		if (check_range(\%{$rc{range}{ $rc{s2r}{$s}  }},$rc{count}{ $rc{s2r}{$s}    })) {
 			#print "$rc{label}{$state} matches\n";
 			if (defined($opt{state})) {
 				$rc{top}=$opt{state};
 			} else {
-				$rc{top}=$state;
+				$rc{top}=$rc{s2r}{$s};
 			}
 		}
 	}
@@ -548,10 +547,16 @@ sub do_report {
 				"$rc{count}{$OK} ok";
 		}
 	}
-
 	#--- print general errors if any occured
 	print " [" . join(", ",@{$rc{error}}) . "]" if (defined($rc{error}[0]));
 	
+	#--- print custom range settings if necessary
+	foreach my $s (sort numerically keys %{$rc{s2r}}) {
+		if ($rc{range}{ $rc{s2r}{$s} } !~ /\@1:/) {
+			# !!!TODO!!!
+		}
+	}
+
 	#--- loop over commands: report particular results for long plugin output
 	foreach $no (sort numerically keys %cmds) {
 
@@ -724,6 +729,10 @@ foreach $no (sort numerically keys %cmds) {
 #--- prepare output
 &do_result_rating;
 
+#--- classical report
+if (! ($opt{report} & $DETAIL_HTML)) {
+	&do_report;
+}
 #--- report HTML output
 if ($opt{report} & $DETAIL_HTML) {
 	&do_report_html;
@@ -731,10 +740,6 @@ if ($opt{report} & $DETAIL_HTML) {
 #--- need XML data
 if ($opt{report} & $DETAIL_XML) {
 	&do_report_xml;
-}
-#--- classical report
-if (! ($opt{report} & $DETAIL_HTML)) {
-	&do_report;
 }
 
 #--- at last: perfdata
