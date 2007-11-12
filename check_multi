@@ -38,7 +38,7 @@ $MYSELF %cmds $returncode %rc $no $VERSION
 $OK $WARNING $CRITICAL $UNKNOWN
 $DETAIL_LIST $DETAIL_LIST_FULL $DETAIL_HTML $DETAIL_STDERR $DETAIL_PERFORMANCE
 $DETAIL_PERFORMANCE_CLASSIC $DETAIL_COMMAND_LIST $DETAIL_PNP_LINK $DETAIL_XML
-$DETAIL_NAGIOS2
+$DETAIL_NAGIOS2 $DETAIL_STATE_EVAL
 );
 #-------------------------------------------------------------------------------
 #--- vars ----------------------------------------------------------------------
@@ -63,6 +63,7 @@ $DETAIL_COMMAND_LIST=64;
 $DETAIL_PNP_LINK=128;
 $DETAIL_XML=256;
 $DETAIL_NAGIOS2=512;
+$DETAIL_STATE_EVAL=1024;
 #
 #--- vars
 $no=0;
@@ -70,12 +71,14 @@ $no=0;
 $returncode=0;
 %rc=(
 	label	=> { $OK => "OK", $WARNING => "WARNING", $CRITICAL => "CRITICAL", $UNKNOWN => "UNKNOWN", },
-	charind => "owcu",
+	code	=> { "OK" => $OK, "WARNING" => $WARNING, "CRITICAL" => $CRITICAL, "UNKNOWN" => $UNKNOWN, },
 	s2r	=> { 0 => $OK, 2 => $WARNING, 3 => $CRITICAL, 1 => $UNKNOWN, },
 	r2s	=> { $OK => 0, $WARNING => 2, $CRITICAL => 3, $UNKNOWN => 1, },
 	count	=> { $OK => 0, $WARNING => 0, $CRITICAL => 0, $UNKNOWN => 0, },
 	list	=> { $OK => [],$WARNING => [],$CRITICAL => [],$UNKNOWN => [], },
 	range	=> { $OK => {},$WARNING => {},$CRITICAL => {},$UNKNOWN => {}, },
+	expr	=> { $OK => "1", $WARNING => "COUNT(WARNING)>0", $CRITICAL => "COUNT(CRITICAL)>0", $UNKNOWN => "COUNT(UNKNOWN)>0" },
+	match	=> { $OK => 0, $WARNING => 0, $CRITICAL => 0, $UNKNOWN => 0, },
 	top	=> $OK,
 	error	=> [ ],
 	starttime => 0.0,
@@ -92,10 +95,10 @@ my %opt=(
 	"state"		=> undef,
 	"timeout"	=> 10,
 	"TIMEOUT"	=> 60,
-	"ok"		=> "\@1:",
-	"warning"	=> "\@1:",
-	"critical"	=> "\@1:",
-	"unknown"	=> "\@1:",
+	"ok"		=> undef,
+	"warning"	=> undef,
+	"critical"	=> undef,
+	"unknown"	=> undef,
 );
 	
 #-------------------------------------------------------------------------------
@@ -113,7 +116,6 @@ sub process_parameters {
 		"t|timeout=i"	=> \$opt{timeout},
 		"T|TIMEOUT=i"	=> \$opt{TIMEOUT},
 		"V|version"	=> \$opt{version},
-
 		"s|state=s"	=> \$opt{state},
 		"o|ok=s"	=> \$opt{ok},
 		"w|warning=s"	=> \$opt{warning},
@@ -140,17 +142,17 @@ sub process_parameters {
 		short_usage();
         	return $UNKNOWN;
 	}
+	if ($opt{ok}) {
+		$rc{expr}{$OK}=$opt{ok};
+	}
 	if ($opt{warning}) {
-		parse_range_string(\%{$rc{range}{$WARNING}},$opt{warning});
+		$rc{expr}{$WARNING}=$opt{warning};
 	}
 	if ($opt{critical}) {
-		parse_range_string(\%{$rc{range}{$CRITICAL}},$opt{critical});
+		$rc{expr}{$CRITICAL}=$opt{critical};
 	}
 	if ($opt{unknown}) {
-		parse_range_string(\%{$rc{range}{$UNKNOWN}},$opt{unknown});
-	}
-	if ($opt{ok}) {
-		parse_range_string(\%{$rc{range}{$OK}},$opt{ok});
+		$rc{expr}{$UNKNOWN}=$opt{unknown};
 	}
 	if ($opt{state}) {
 		if (defined($rc{label}{$opt{state}})) {
@@ -174,7 +176,7 @@ sub process_parameters {
 sub short_usage {
 print <<SHORTEOF;
 $MYSELF -f <config file> [-l libexec_path] [-n name] [-t timeout] [-T TIMEOUT] [-r level]
-        [-s state] [-w N:N] [-c N:N] [-u N:N] [-o N:N]
+        [-s state] [-w <expr>] [-c <expr>] [-u <expr>] [-o <expr>]
 $MYSELF [-h | --help]
 $MYSELF [-V | --version]
 
@@ -196,30 +198,31 @@ Options:
 -T, --TIMEOUT
    TIMEOUT for all commands, default: $opt{TIMEOUT}
 -r, --report <level>
-   specify level of details in output (level is binary coded, just add all options)
+   specify level of details in output (level is binary coded, just sum all options)
    default: $opt{report}
-      1: mention service names in plugin_output, e.g.
-         "24 plugins checked, 1 critical (http), 0 warning, 0 unknown, 23 ok"
-      2: add HTML coloring of output for extinfo
-      4: show STDERR (if any) in each line of plugin output
-      8: show performance data (with check_multi_style)
-      16: show full list of states, normally '0 warning' is omitted
-      32: show old type of performance data (without check_multi style)
-      64: show list of commands in output
+        1: mention service names in plugin_output, e.g.
+           "24 plugins checked, 1 critical (http), 0 warning, 0 unknown, 23 ok"
+        2: add HTML coloring of output for extinfo
+        4: show STDERR (if any) in each line of plugin output
+        8: show performance data (with check_multi_style)
+       16: show full list of states, normally '0 warning' is omitted
+       32: show old type of performance data (without check_multi style)
+       64: show list of commands in output
       128: add PNP action link if performance data available
       256: XML: print structured XML output
-      512: Nagios 2: one line output
+      512: Nagios 2: one line of output only
+     1024: State evaluation chart
 -h, --help
    print detailed help screen
 -V, --version
    print version information
 
 Extended mode - specify extra settings for threshold interpretation:
--w, --warning  <minimum:maximum>
--c, --critical <minimum:maximum>
--u, --unknown  <minimum:maximum>
--o, --ok       <minimum:maximum>
--s, --state    
+-w, --warning  <expression>
+-c, --critical <expression>
+-u, --unknown  <expression>
+-o, --ok       <expression>
+-s, --state    <state>
    wanted overall state, allowed is: 'o','w','c','u', 0-3
   default: highest severity
 LONGEOF
@@ -258,85 +261,6 @@ sub add_error {
 	push @{$rc{error}}, @_;
 }
 
-# The next two routines have been taken and adopted from Nagios::Plugin.
-# Thanks to Gavin Carr and Ton Voon! 
-# Some day I'll find time to migrate the whole stuff to Nagios::Plugin ;-)
-sub parse_range_string {
-        my ($range, $string) = @_;
-        my $valid = 0;
-
-        $range->{start}=0;
-	$range->{start_infinity}=0;
-	$range->{end}=0;
-	$range->{end_infinity}=1;
-	$range->{inside}=0;
-
-        $string =~ s/\s//g;  # strip out any whitespace
-        # check for valid range definition
-        unless ( $string =~ /[\d~]/ && $string =~ m/^\@?(-?[\d.]+|~)?(:(-?[\d.]+)?)?$/ ) {
-		print "Invalid range definition '$string'\n";
-		return undef;
-        }
-
-        if ($string =~ s/^\@//) {
-		$range->{inside}=1;
-        }
-
-        if ($string =~ s/^~//) {  # '~:x'
-		$range->{start_infinity}=1;
-        }
-        if ( $string =~ m/^([\d\.-]+)?:/ ) {     # '10:'
-		my $start = $1;
-		if (defined($start)) {
-			$range->{start}=$start;
-			$range->{start_infinity}=0;
-		}
-            	$range->{end_infinity}=1;  # overridden below if there's an end specified
-            	$string =~ s/^([-\d\.]+)?://;
-            	$valid++;
-        }
-        if ($string =~ /^([-\d\.]+)$/) {   # 'x:10' or '10'
-		$range->{end}=$string;
-		$range->{end_infinity}=0;
-		$valid++;
-        }
-
-        if ($valid && ($range->{start_infinity} == 1 || $range->{end_infinity} == 1 || $range->{start} <= $range->{end})) {
-                return $range;
-        }
-        return undef;
-}
-# Returns 1 if an alert should be raised, otherwise 0
-sub check_range {
-        my ($range, $value) = @_;
-        my $false = 0;
-        my $true = 1;
-        if ($range->{inside}) {
-                $false = 1;
-                $true = 0;
-        }
-        if ($range->{end_infinity} == 0 && $range->{start_infinity} == 0) {
-                if ($range->{start} <= $value && $value <= $range->{end}) {
-                        return $false;
-                } else {
-                        return $true;
-                }
-        } elsif ($range->{start_infinity} == 0 && $range->{end_infinity} == 1) {
-                if ( $value >= $range->{start} ) {
-                        return $false;
-                } else {
-                        return $true;
-                }
-        } elsif ($range->{start_infinity} == 1 && $range->{end_infinity} == 0) {
-                if ($value <= $range->{end}) {
-                        return $false;
-                } else {
-                        return $true;
-                }
-        } else {
-                return $false;
-        }
-}
 #---
 #--- create unique tmpfile and try to create it
 #---
@@ -381,7 +305,7 @@ sub parse_commands {
 	my ($filename)=@_;
 	my $lineno=0;		# count sourcefile lines
 	my $cmd_count=0;	# count stored commands
-	my ($cmd,$name,$plugin);
+	my ($cmd,$name,$plugin,$expr);
 
 	if (!open(FILE, $filename)) {
 		add_error("parse_command: cannot open config file $filename: $!");
@@ -402,17 +326,26 @@ sub parse_commands {
 			$name=$1;
 			$cmd=$2;
 			$plugin=(split(/\s+/,"$cmd"))[0];
+			#--- store vars into cmds structure
+			$cmd="$opt{libexec}/$cmd" if ($plugin!~/\//);
+			$cmds{++$cmd_count}{command}=$cmd;
+			$cmds{$cmd_count}{plugin}=$plugin;
+			$cmds{$cmd_count}{name}=$name;
+			$cmds{$cmd_count}{rc}=$UNKNOWN;
+		#--- format: 'state [ tag ] = (EXPR)
+		} elsif ($cmd=~/\s*state\s*\[\s*(\S+)\s*\]\s*=\s*(.*)\s*/i) {
+			$name=uc($1);
+			$expr=$2;
+			if (!defined($rc{code}{$name})) {
+				add_error("parse_command: invalid state code specified in line $lineno: $name");
+				next;
+			}
+			# store state expression only if NOT set via commandline
+			$rc{expr}{$rc{code}{$name}}=$expr if (!defined($opt{lc($name)}));
 		} else {
 			add_error("parse_command: invalid format in line $lineno: $cmd");
 			next;
 		}
-
-		#--- store vars into cmds structure
-		$cmd="$opt{libexec}/$cmd" if ($plugin!~/\//);
-		$cmds{++$cmd_count}{command}=$cmd;
-		$cmds{$cmd_count}{plugin}=$plugin;
-		$cmds{$cmd_count}{name}=$name;
-		$cmds{$cmd_count}{rc}=$UNKNOWN;
 	}
 	close FILE;
 	return $cmd_count;
@@ -483,6 +416,46 @@ sub exec_command {
 	return $cmds{$no}{rc};
 }
 
+sub eval_result {
+        my ($input)=@_;
+
+        my $input_org=$input;
+        my $message="";
+
+        # 1. replace COUNT(WARNING)
+        $input=~s/\bCOUNT\s*\(\s*(OK)\s*\)/$rc{count}{$OK}/ig;
+        $input=~s/\bCOUNT\s*\(\s*(WARNING)\s*\)/$rc{count}{$WARNING}/ig;
+        $input=~s/\bCOUNT\s*\(\s*(CRITICAL)\s*\)/$rc{count}{$CRITICAL}/ig;
+        $input=~s/\bCOUNT\s*\(\s*(UNKNOWN)\s*\)/$rc{count}{$UNKNOWN}/ig;
+        #$input=~s/\bCOUNT\s*\(\s*(\S+)\s*\)/$rc{count}{${uc($1)}}/ig;
+
+        # 2. replace all STATES (OK)
+        $input=~s/\b(OK)\b/$OK/ig;
+        $input=~s/\b(WARNING)\b/$WARNING/ig;
+        $input=~s/\b(CRITICAL)\b/$CRITICAL/ig;
+        $input=~s/\b(UNKNOWN)\b/$UNKNOWN/ig;
+
+        # 3. replace all vars with RC
+        foreach my $no (sort keys(%cmds)) { 
+                $input=~s/\b($cmds{$no}{name})\b/$cmds{$no}{rc}/ig;
+        }
+
+        #--- evaluate expression
+        my $result=eval "($input)";
+
+        #--- catch error
+        if ($@) {
+                $message="Evaluation error in \'$input_org\': $@\n";
+                $message=~s/\n/ /g;
+                return (-1,$message);
+        #--- return result
+        } else {
+                $message="input:\'$input_org\' parsed:\'$input\' result:\'$result\'\n";
+                $message=~s/\n/ /g;
+                return ($result,$message);
+        }
+}
+
 #---
 #--- calculate sums from %cmds and %rc
 #---
@@ -494,25 +467,29 @@ sub do_result_rating {
 
 	#--- count return codes
 	foreach $no (sort numerically keys %cmds) {
-
 		$rc{count}{$cmds{$no}{rc}}++;	# count return codes
 		push @{$rc{list}{$cmds{$no}{rc}}},$cmds{$no}{name}; # add plugin to list
-
-		#--- determine return code with highest severity
-		#print STDERR "DEBUG: r2s-rc:$rc{r2s}{$cmds{$no}{rc}} top:$rc{r2s}{$rc{top}} rc:$cmds{$no}{rc}\n";
-		#$rc{top}=$cmds{$no}{rc} if ($rc{r2s}{$cmds{$no}{rc}} > $rc{r2s}{$rc{top}});
 	}
 	
 	foreach my $s (sort numerically keys %{$rc{s2r}}) {
-		#print "Performing $rc{label}{$state}\n";
-		#next if not defined($rc{range}{$state}{start});
-		if (check_range(\%{$rc{range}{ $rc{s2r}{$s}  }},$rc{count}{ $rc{s2r}{$s}    })) {
-			#print "$rc{label}{$state} matches\n";
+		#print "Performing $rc{label}{$s}\n";
+		
+		my $state=$rc{s2r}{$s};
+		
+        	my ($result,$message)=eval_result($rc{expr}{$state});
+		#print "result:$result ref(result):".ref($result)." message:$message\n";
+        	if (! defined($result) || $result eq "") {
+                	#print "NO: $message\n";
+        	} elsif ($result < 0) {
+                	add_error("do_result_rating: parsing error ($message)");
+        	} else {
+			$rc{match}{$state}=1;
 			if (defined($opt{state})) {
 				$rc{top}=$opt{state};
 			} else {
-				$rc{top}=$rc{s2r}{$s};
+				$rc{top}=$state;
 			}
+			#print "YES: $rc{label}{$state} matches, $message TOP:$rc{top}\n";
 		}
 	}
 }
@@ -587,6 +564,20 @@ sub do_report {
 			printf "\n[%2.d] %s", $no, $cmds{$no}{command};
 		}
 	}
+
+	#--- print state settings and RC evaluation result
+	if ($opt{report} & $DETAIL_STATE_EVAL) {
+		print "\n", "-" x 80;
+		printf "\n%-8s %-40s %s", "State","Expression","Evaluates to";
+		print "\n", "-" x 80;
+		foreach my $state (sort keys(%{$rc{expr}})) {
+			printf "\n%-8s %-40s %d", $rc{label}{$state}, $rc{expr}{$state}, $rc{match}{$state};
+		}
+		printf "\n%8s %40s %s", "", "Overall state =>", $rc{label}{$rc{top}};
+	}
+
+	#--- final '\n' - dedicated for Wolfgang Barth ;-)
+	print "\n";
 }
 
 sub do_report_html {
@@ -618,7 +609,6 @@ sub do_report_html {
 	print " [" . join(", ",@{$rc{error}}) . "]" if (defined($rc{error}[0]));
 	
 	#--- loop over commands: report particular results for long plugin output
-	#print "<table style='border-left:1px; border-style:dotted border-right-style:none border-top-style:none border-bottom-style:none'>";
 	print "<table style='border-left-width:1px; border-left-style:dotted' border-rigth-width:0px; >";
 	foreach $no (sort numerically keys %cmds) {
 		printf "<tr valign='top'><td nowrap>%s[%2.d]%s</td><td nowrap>%s</td><td>%s</td><td>%s</td><td>%s</td>%s</tr>",
@@ -686,7 +676,14 @@ sub do_report_perfdata {
 		printf "\|$opt{name}::${MYSELF}::plugins=%d time=%.2f ", scalar(keys(%cmds)), time - $rc{starttime};
 		#--- one line per command, format: tag=output
 		foreach $no (sort numerically keys %cmds) {
-			print "$cmds{$no}{name}::$cmds{$no}{plugin}::$cmds{$no}{performance} " if (defined($cmds{$no}{performance}));
+			if (defined($cmds{$no}{performance})) {
+				#--- prevent concatenation of multi-labels if called recursively
+				if ($cmds{$no}{performance}=~/::.*::/) {
+					print "$cmds{$no}{name}$cmds{$no}{performance} ";
+				} else {
+					print "$cmds{$no}{name}::$cmds{$no}{plugin}::$cmds{$no}{performance} ";
+				}
+			}
 		}
 	} elsif ($opt{report} & $DETAIL_PERFORMANCE_CLASSIC) {
 		printf "\|";
