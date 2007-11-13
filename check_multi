@@ -1,4 +1,5 @@
 #!/usr/bin/perl -w
+#nagios: -epn
 #
 # check_multi - nagios plugin
 #
@@ -20,14 +21,6 @@
 #
 #
 # $Id$
-#
-#nagios: -epn
-#
-# TODO:
-# - handling of undefined RC
-# - customizeable return code handling
-# - libexec: configure script
-# - verbose output
 #
 use strict;
 use Getopt::Long qw(:config no_ignore_case bundling);
@@ -570,8 +563,8 @@ sub do_report {
 		print "\n", "-" x 80;
 		printf "\n%-8s %-40s %s", "State","Expression","Evaluates to";
 		print "\n", "-" x 80;
-		foreach my $state (sort keys(%{$rc{expr}})) {
-			printf "\n%-8s %-40s %d", $rc{label}{$state}, $rc{expr}{$state}, $rc{match}{$state};
+		foreach my $s (sort numerically keys %{$rc{s2r}}) {
+			printf "\n%-8s %-40s %d", $rc{label}{$rc{s2r}{$s}}, $rc{expr}{$rc{s2r}{$s}}, $rc{match}{$rc{s2r}{$s}};
 		}
 		printf "\n%8s %40s %s", "", "Overall state =>", $rc{label}{$rc{top}};
 	}
