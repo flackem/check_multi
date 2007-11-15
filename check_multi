@@ -571,7 +571,7 @@ sub report {
 	}
 
 	#--- final '\n' - dedicated to Wolfgang Barth ;-)
-	print "\n" if (!$DETAIL_NAGIOS2);
+	print "\n" if (!($opt{report} & $DETAIL_NAGIOS2));
 }
 
 sub report_html {
