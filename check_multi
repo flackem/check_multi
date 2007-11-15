@@ -82,7 +82,7 @@ $returncode=0;
 my %opt=(
 	"filename"	=> [ ],
 	"libexec"	=> "/usr/local/nagios/libexec",
-	"name"		=> "MULTI",
+	"name"		=> "",
 	"report"	=> 13,
 	"state"		=> undef,
 	"timeout"	=> 10,
@@ -499,10 +499,12 @@ sub result_rating {
 sub report {
 
 	if ($opt{report} & $DETAIL_NAGIOS2) {
-		print "$opt{name} $rc{label}{$rc{top}}";
+		print "$opt{name} " if ($opt{name} ne "");
+		print "$rc{label}{$rc{top}}";
 	} else {
 		#--- print header line (1): name, state, number of plugins
-		print "$opt{name} $rc{label}{$rc{top}} - " . keys(%cmds) . " plugins checked, ";
+		print "$opt{name} " if ($opt{name} ne "");
+		print "$rc{label}{$rc{top}} - " . keys(%cmds) . " plugins checked, ";
 	
 		#--- print header line (2): summary for particular states 
 		if ($opt{report} & $DETAIL_LIST_FULL) {
@@ -605,15 +607,15 @@ sub report_html {
 	#--- loop over commands: report particular results for long plugin output
 	print "<table style='border-left-width:1px; border-left-style:dotted' border-rigth-width:0px; >";
 	foreach $no (sort numerically keys %cmds) {
-		printf "<tr valign='top'><td nowrap>%s[%2.d]%s</td>%s<td>%s</td><td>%s%s</td><td>%s</td>%s</tr>",
+		printf "<tr valign='top'><td nowrap>%s&nbsp%2.d&nbsp;%s</td>%s<td>%s</td><td>%s</td><td>%s</td>%s</tr>",
 			($opt{report} & $DETAIL_HTML) ? "<DIV CLASS=\'service$rc{label}{$cmds{$no}{rc}}\'>" : "",
 			$no,
 			($opt{report} & $DETAIL_HTML) ? "</DIV>" : "",
 			($opt{report} & $DETAIL_PERFORMANCE && $opt{report} & $DETAIL_PNP_LINK) ?  (defined($cmds{$no}{performance}) ?
 				"<td nowrap><A HREF='/nagios/pnp/index.php?host=$ENV{NAGIOS_HOSTNAME}&srv=$cmds{$no}{name}' TARGET='_self'><img src='/nagios/images/action.gif' width=20 height=20 border=0 align=top alt='Show PNP chart for $ENV{NAGIOS_HOSTNAME} / $cmds{$no}{plugin}'></A></td>" : "<td></td>") : "",
-			$cmds{$no}{name},
-			($cmds{$no}{output}=~/\n/i) ? "</tr><tr><td></td><td colspan='10'>" : "",
-			 $cmds{$no}{output},
+			($cmds{$no}{name} ne "") ? $cmds{$no}{name} : "",
+			($cmds{$no}{output}=~/([^\n]*)\n(.*)/i) ? "$1</tr><tr><td></td><td colspan='10'>$2" : $cmds{$no}{output},
+			 #$cmds{$no}{output},
 			(defined($cmds{$no}{stderr}) && $cmds{$no}{stderr} ne "" && $opt{report} & $DETAIL_STDERR) ?
 			 " [ STDERR: " . $cmds{$no}{stderr} . ']' : "",
 			($opt{report} & $DETAIL_COMMAND_LIST) ? "<td>$cmds{$no}{command}</td>" : "";
