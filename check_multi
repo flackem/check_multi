@@ -533,6 +533,8 @@ sub report {
 		#--- if NAGIOS2 output: skip $OK results
 		if ($opt{report} & $DETAIL_NAGIOS2) {
 			next if ($cmds{$no}{rc} == $OK);
+			$cmds{$no}{output}=~s/\n//g;
+			$cmds{$no}{stderr}=~s/\n//g;
 			printf ", %s %s%s",
 				$cmds{$no}{name},
 				$cmds{$no}{output},
@@ -569,7 +571,7 @@ sub report {
 	}
 
 	#--- final '\n' - dedicated to Wolfgang Barth ;-)
-	print "\n";
+	print "\n" if (!$DETAIL_NAGIOS2);
 }
 
 sub report_html {
