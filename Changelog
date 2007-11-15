@@ -1,6 +1,8 @@
 
 ===== Changelog =====
 
+	* multiple config files supported: -f <file> -f <file>...
+	* corrected line (<l10) of ePN optout statement
 	* added state evaluation reporting
 	* replaced ranges with state evaluation
 	* fixed bug with recursive concatenated performance labels
