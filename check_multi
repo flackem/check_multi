@@ -616,8 +616,8 @@ sub do_report_html {
 			($opt{report} & $DETAIL_HTML) ? "<DIV CLASS=\'service$rc{label}{$cmds{$no}{rc}}\'>" : "",
 			$no,
 			($opt{report} & $DETAIL_HTML) ? "</DIV>" : "",
-			($opt{report} & $DETAIL_PERFORMANCE && $opt{report} & $DETAIL_PNP_LINK && defined($cmds{$no}{performance})) ?
-				"<td nowrap><A HREF='/nagios/pnp/index.php?host=$ENV{NAGIOS_HOSTNAME}&srv=$cmds{$no}{name}' TARGET='_self'><img src='/nagios/images/action.gif' width=20 height=20 border=0 align=top alt='Show PNP chart for $ENV{NAGIOS_HOSTNAME} / $cmds{$no}{plugin}'></A></td>" : "",
+			($opt{report} & $DETAIL_PERFORMANCE && $opt{report} & $DETAIL_PNP_LINK) ?  (defined($cmds{$no}{performance}) ?
+				"<td nowrap><A HREF='/nagios/pnp/index.php?host=$ENV{NAGIOS_HOSTNAME}&srv=$cmds{$no}{name}' TARGET='_self'><img src='/nagios/images/action.gif' width=20 height=20 border=0 align=top alt='Show PNP chart for $ENV{NAGIOS_HOSTNAME} / $cmds{$no}{plugin}'></A></td>" : "<td></td>") : "",
 			$cmds{$no}{name},
 			($cmds{$no}{output}=~/\n/i) ? "</tr><tr><td></td><td colspan='10'>" : "",
 			 $cmds{$no}{output},
