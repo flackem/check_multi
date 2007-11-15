@@ -69,7 +69,6 @@ $returncode=0;
 	r2s	=> { $OK => 0, $WARNING => 2, $CRITICAL => 3, $UNKNOWN => 1, },
 	count	=> { $OK => 0, $WARNING => 0, $CRITICAL => 0, $UNKNOWN => 0, },
 	list	=> { $OK => [],$WARNING => [],$CRITICAL => [],$UNKNOWN => [], },
-	range	=> { $OK => {},$WARNING => {},$CRITICAL => {},$UNKNOWN => {}, },
 	expr	=> { $OK => "1", $WARNING => "COUNT(WARNING)>0", $CRITICAL => "COUNT(CRITICAL)>0", $UNKNOWN => "COUNT(UNKNOWN)>0" },
 	match	=> { $OK => 0, $WARNING => 0, $CRITICAL => 0, $UNKNOWN => 0, },
 	top	=> $OK,
@@ -159,8 +158,8 @@ sub process_parameters {
 			return $UNKNOWN;
 		}
 	}
-	if ($opt{timeout} && $opt{TIMEOUT} && $opt{timeout} >= $opt{TIMEOUT}) {
-		print "$MYSELF: error - child timeout $opt{timeout}s >= parent timeout $opt{TIMEOUT}s\n";
+	if ($opt{timeout} && $opt{TIMEOUT} && $opt{timeout} > $opt{TIMEOUT}) {
+		print "$MYSELF: error - child timeout $opt{timeout}s must not be greater than parent timeout $opt{TIMEOUT}s\n";
 		return $UNKNOWN;
 	}
 	return $OK;
@@ -428,7 +427,6 @@ sub eval_result {
         $input=~s/\bCOUNT\s*\(\s*(WARNING)\s*\)/$rc{count}{$WARNING}/ig;
         $input=~s/\bCOUNT\s*\(\s*(CRITICAL)\s*\)/$rc{count}{$CRITICAL}/ig;
         $input=~s/\bCOUNT\s*\(\s*(UNKNOWN)\s*\)/$rc{count}{$UNKNOWN}/ig;
-        #$input=~s/\bCOUNT\s*\(\s*(\S+)\s*\)/$rc{count}{${uc($1)}}/ig;
 
         # 2. replace all STATES (OK)
         $input=~s/\b(OK)\b/$OK/ig;
@@ -460,7 +458,7 @@ sub eval_result {
 #---
 #--- calculate sums from %cmds and %rc
 #---
-sub do_result_rating {
+sub result_rating {
 
 	#--- measure runtime without reporting ;-)
 	$rc{runtime}=time - $rc{starttime};
@@ -482,7 +480,7 @@ sub do_result_rating {
         	if (! defined($result) || $result eq "") {
                 	#print "NO: $message\n";
         	} elsif ($result < 0) {
-                	add_error("do_result_rating: parsing error ($message)");
+                	add_error("result_rating: parsing error ($message)");
         	} else {
 			$rc{match}{$state}=1;
 			if (defined($opt{state})) {
@@ -498,7 +496,7 @@ sub do_result_rating {
 #---
 #--- report results stored in %cmds
 #---
-sub do_report {
+sub report {
 
 	if ($opt{report} & $DETAIL_NAGIOS2) {
 		print "$opt{name} $rc{label}{$rc{top}}";
@@ -529,13 +527,6 @@ sub do_report {
 	#--- print general errors if any occured
 	print " [" . join(", ",@{$rc{error}}) . "]" if (defined($rc{error}[0]));
 	
-	#--- print custom range settings if necessary
-	foreach my $s (sort numerically keys %{$rc{s2r}}) {
-		if ($rc{range}{ $rc{s2r}{$s} } !~ /\@1:/) {
-			# !!!TODO!!!
-		}
-	}
-
 	#--- loop over commands: report particular results for long plugin output
 	foreach $no (sort numerically keys %cmds) {
 
@@ -577,11 +568,11 @@ sub do_report {
 		printf "\n%8s %40s %s", "", "Overall state =>", $rc{label}{$rc{top}};
 	}
 
-	#--- final '\n' - dedicated for Wolfgang Barth ;-)
+	#--- final '\n' - dedicated to Wolfgang Barth ;-)
 	print "\n";
 }
 
-sub do_report_html {
+sub report_html {
 	#--- print header line (1): name, state, number of plugins
 	print "$opt{name} $rc{label}{$rc{top}} - " . keys(%cmds) . " plugins checked, ";
 
@@ -630,7 +621,7 @@ sub do_report_html {
 
 }
 
-sub do_report_xml {
+sub report_xml {
 	print "<!--\n" if ($opt{report} & $DETAIL_HTML);
 	print "<xml>\n";
 	print "<meta http-equiv=\"Content-Style-Type\" content=\"application/xml\">\n";
@@ -672,7 +663,7 @@ sub do_report_xml {
 	print "\n--> " if ($opt{report} & $DETAIL_HTML);
 }
 
-sub do_report_perfdata {
+sub report_perfdata {
 	#--- report performance data?
 	if ($opt{report} & $DETAIL_PERFORMANCE) {
 		printf "\|$opt{name}::${MYSELF}::plugins=%d time=%.2f ", scalar(keys(%cmds)), time - $rc{starttime};
@@ -727,23 +718,23 @@ foreach $no (sort numerically keys %cmds) {
 }
 
 #--- prepare output
-&do_result_rating;
+&result_rating;
 
 #--- classical report
 if (! ($opt{report} & $DETAIL_HTML)) {
-	&do_report;
+	&report;
 }
 #--- report HTML output
 if ($opt{report} & $DETAIL_HTML) {
-	&do_report_html;
+	&report_html;
 }
 #--- need XML data
 if ($opt{report} & $DETAIL_XML) {
-	&do_report_xml;
+	&report_xml;
 }
 
 #--- at last: perfdata
-&do_report_perfdata;
+&report_perfdata;
 
 #--- return rc with highest severity
 exit $rc{top};
