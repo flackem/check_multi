@@ -607,7 +607,7 @@ sub report_html {
 	#--- loop over commands: report particular results for long plugin output
 	print "<table style='border-left-width:1px; border-left-style:dotted' border-rigth-width:0px; >";
 	foreach $no (sort numerically keys %cmds) {
-		printf "<tr valign='top'><td nowrap>%s&nbsp%2.d&nbsp;%s</td>%s<td>%s</td><td>%s</td><td>%s</td>%s</tr>",
+		printf "<tr valign='top'><td nowrap>%s&nbsp;%2.d&nbsp;%s</td>%s<td>%s</td><td>%s</td><td>%s</td>%s</tr>",
 			($opt{report} & $DETAIL_HTML) ? "<DIV CLASS=\'service$rc{label}{$cmds{$no}{rc}}\'>" : "",
 			$no,
 			($opt{report} & $DETAIL_HTML) ? "</DIV>" : "",

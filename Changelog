@@ -1,6 +1,8 @@
 
 ===== Changelog =====
 
+	* removed brackets from HTML view
+	* no MULTI label any more, standard is: no label
 	* multiple config files supported: -f <file> -f <file>...
 	* corrected line (<l10) of ePN optout statement
 	* added state evaluation reporting
