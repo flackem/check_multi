@@ -499,11 +499,11 @@ sub result_rating {
 sub report {
 
 	if ($opt{report} & $DETAIL_NAGIOS2) {
-		print "$opt{name} " if ($opt{name} ne "");
+		print "$opt{name} " if defined($opt{name});
 		print "$rc{label}{$rc{top}}";
 	} else {
 		#--- print header line (1): name, state, number of plugins
-		print "$opt{name} " if ($opt{name} ne "");
+		print "$opt{name} " if defined($opt{name});
 		print "$rc{label}{$rc{top}} - " . keys(%cmds) . " plugins checked, ";
 	
 		#--- print header line (2): summary for particular states 
@@ -578,7 +578,8 @@ sub report {
 
 sub report_html {
 	#--- print header line (1): name, state, number of plugins
-	print "$opt{name} $rc{label}{$rc{top}} - " . keys(%cmds) . " plugins checked, ";
+	printf "$opt{name} " if defined($opt{name});
+	print "$rc{label}{$rc{top}} - " . keys(%cmds) . " plugins checked, ";
 
 	#--- print header line (2): summary for particular states 
 	if ($opt{report} & $DETAIL_LIST_FULL) {
@@ -670,7 +671,9 @@ sub report_xml {
 sub report_perfdata {
 	#--- report performance data?
 	if ($opt{report} & $DETAIL_PERFORMANCE) {
-		printf "\|$opt{name}::${MYSELF}::plugins=%d time=%.2f ", scalar(keys(%cmds)), time - $rc{starttime};
+		printf "\|%s::%s::plugins=%d time=%.2f ",
+			(defined($opt{name})) ? $opt{name} : $MYSELF,
+			$MYSELF, scalar(keys(%cmds)), time - $rc{starttime};
 		#--- one line per command, format: tag=output
 		foreach $no (sort numerically keys %cmds) {
 			if (defined($cmds{$no}{performance})) {
