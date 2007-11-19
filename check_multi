@@ -297,7 +297,7 @@ sub readfile {
 sub parse_commands {
 	my ($filenames)=@_;	# allow multiple filenames (array reference)
 	my $cmd_count=0;	# count stored commands
-	my ($cmd,$name,$plugin,$expr,$lineno);
+	my ($cmd,$name,$plugin,$expr,$lineno,$i);
 
 	#--- loop over filenames
 	foreach my $filename (@{$filenames}) {
@@ -324,12 +324,17 @@ sub parse_commands {
 				$name=$1;
 				$cmd=$2;
 				$plugin=(split(/\s+/,"$cmd"))[0];
-				#--- store vars into cmds structure
 				$cmd="$opt{libexec}/$cmd" if ($plugin!~/\//);
-				$cmds{++$cmd_count}{command}=$cmd;
-				$cmds{$cmd_count}{plugin}=$plugin;
-				$cmds{$cmd_count}{name}=$name;
-				$cmds{$cmd_count}{rc}=$UNKNOWN;
+				#--- find plugin with same name
+				for ($i=1; $i<=scalar(keys(%cmds));$i++) {
+					last if ($cmds{$i}{name} eq $name);
+				}
+				#--- store vars into cmds structure
+				$cmds{$i}{command}=$cmd;
+				$cmds{$i}{plugin}=$plugin;
+				$cmds{$i}{name}=$name;
+				$cmds{$i}{rc}=$UNKNOWN;
+				$cmd_count=scalar(keys(%cmds));
 
 			#--- format: 'state [ tag ] = (EXPR)
 			} elsif ($cmd=~/\s*state\s*\[\s*(\S+)\s*\]\s*=\s*(.*)\s*/i) {
