@@ -1,6 +1,7 @@
 
 ===== Changelog =====
 
+	* added command overload mechanism
 	* removed brackets from HTML view
 	* no MULTI label any more, standard is: no label
 	* multiple config files supported: -f <file> -f <file>...
