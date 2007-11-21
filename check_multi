@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-#nagios: -epn
+# nagios: -epn
 #
 # check_multi - nagios plugin
 #
