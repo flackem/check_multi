@@ -135,6 +135,10 @@ sub process_parameters {
         	print "$MYSELF error: no config file(s) specified\n";
 		short_usage();
         	return $UNKNOWN;
+	} else {
+		for (my $i=0;$i<@{$opt{filename}}; $i++) {
+		        splice(@{$opt{filename}},$i,1,glob "$opt{filename}[$i]/*cmd") if (-d $opt{filename}[$i]);
+		}
 	}
 	if ($opt{ok}) {
 		$rc{expr}{$OK}=$opt{ok};
@@ -183,6 +187,7 @@ Options:
 -f, --filename
    config file which contains commands to be executed
    multiple files can be specified serially
+   if filename is a directory, all '.cmd' files will be taken
    (file format follows nrpe style: command[tag]=plugin command line)
 -n, --name
    multi plugin name (shown in output), default: $opt{name}
