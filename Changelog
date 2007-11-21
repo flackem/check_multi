@@ -1,7 +1,9 @@
 
 ===== Changelog =====
 
-	* added command overload mechanism
+	* added 'ignore_missing_cmd_file' option for command overloading
+	* added --set option to add multiple config values
+	* added command overloading mechanism
 	* removed brackets from HTML view
 	* no MULTI label any more, standard is: no label
 	* multiple config files supported: -f <file> -f <file>...
