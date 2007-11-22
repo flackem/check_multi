@@ -108,6 +108,7 @@ sub process_parameters {
 		"r|report:i"	=> \$opt{report},
 		"t|timeout=i"	=> \$opt{timeout},
 		"T|TIMEOUT=i"	=> \$opt{TIMEOUT},
+		"v|verbose:+"	=> \$opt{verbose},
 		"V|version"	=> \$opt{version},
 		"set=s"		=> \%{$opt{set}},
 		"s|state=s"	=> \$opt{state},
@@ -119,6 +120,9 @@ sub process_parameters {
 		short_usage();
         	return $UNKNOWN;
 	}
+	*DEBUG1=($opt{verbose}>=1) ? \&debug_message : sub {};
+	*DEBUG2=($opt{verbose}>=2) ? \&debug_message : sub {};
+	*DEBUG3=($opt{verbose}>=3) ? \&debug_message : sub {};
 
 	if ($opt{version}) {
 		print "$MYSELF: v$VERSION\n";
@@ -136,6 +140,7 @@ sub process_parameters {
 		short_usage();
         	return $UNKNOWN;
 	} else {
+		#--- check if filenames are directories and replace with '*cmd' files
 		for (my $i=0;$i<@{$opt{filename}}; $i++) {
 		        splice(@{$opt{filename}},$i,1,glob "$opt{filename}[$i]/*cmd") if (-d $opt{filename}[$i]);
 		}
@@ -167,6 +172,9 @@ sub process_parameters {
 	if ($opt{timeout} && $opt{TIMEOUT} && $opt{timeout} > $opt{TIMEOUT}) {
 		print "$MYSELF: error - child timeout $opt{timeout}s must not be greater than parent timeout $opt{TIMEOUT}s\n";
 		return $UNKNOWN;
+	}
+	foreach my $option (sort keys(%opt)) {
+		DEBUG3("\$opt{$option}: $opt{$option}") if (defined($opt{$option}));
 	}
 	return $OK;
 }
@@ -249,9 +257,19 @@ sub substitute_macros {
         my ($input)=@_;
         while ((my $var)=($input=~/\$([A-Z0-9^\$]+)\$/)) {
 		last if (!defined($ENV{"NAGIOS_$var"}));
+		DEBUG3("substitute_macros: replacing env var NAGIOS_$var with $ENV{NAGIOS_$var}");
                 $input=~s/\$$var\$/$ENV{"NAGIOS_$var"}/g;
         }
         return $input;
+}
+
+#---
+#--- print debug message (see Macro DEBUG)
+#---
+sub debug_message {
+	foreach (@_) {
+		print "$_\n";
+	}	
 }
 
 #---
@@ -280,6 +298,7 @@ sub get_tmpfile {
 		next if (-f $tmpfile);
 		if (open(TMP,">$tmpfile")) {
 			close TMP;
+			DEBUG3("get_tmpfile: created $tmpfile");
 			return $tmpfile;
 		}
 	}
@@ -315,6 +334,7 @@ sub parse_commands {
 			$rc{top}=$UNKNOWN;
 			next;
 		}
+		DEBUG2("parse_commands: parsing file $filename");
 	
 		$lineno=0;	# count sourcefile lines
 
@@ -337,6 +357,11 @@ sub parse_commands {
 				for ($i=1; $i<=scalar(keys(%cmds));$i++) {
 					last if ($cmds{$i}{name} eq $name);
 				}
+				if ($cmds{$i}{command}) {
+					DEBUG2("parse_commands: overloaded $name with command \'$cmd\'");
+				} else {
+					DEBUG2("parse_commands: added $name with command \'$cmd\'");
+				}
 				#--- store vars into cmds structure
 				$cmds{$i}{command}=$cmd;
 				$cmds{$i}{plugin}=$plugin;
@@ -353,7 +378,12 @@ sub parse_commands {
 					next;
 				}
 				# store state expression only if NOT set via commandline
-				$rc{expr}{$rc{code}{$name}}=$expr if (!defined($opt{lc($name)}));
+				if (!defined($opt{lc($name)})) {
+					DEBUG2("parse_commands: added state{$rc{code}{$name}} expression: $expr");
+					$rc{expr}{$rc{code}{$name}}=$expr; 
+				} else {
+					DEBUG2("parse_commands: cmdline precedence over state expression. Using \$opt{$name}: $opt{$name}");
+				}
 			} else {
 				add_error("parse_command: invalid format in line $lineno: $cmd");
 				next;
@@ -715,6 +745,7 @@ sub report_perfdata {
 exit $UNKNOWN if (&process_parameters != $OK);
 
 #--- don't run this as root ;-)
+DEBUG3("Userid: $>");
 add_error("please don't run plugins as root!") if ($> == 0);
 
 #--- parse command file (nrpe format)

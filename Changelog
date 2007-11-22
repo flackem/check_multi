@@ -1,6 +1,7 @@
 
 ===== Changelog =====
 
+	* added --verbose (level 0-3) option and DEBUG routine
 
 ##0.15**
 	* added 'ignore_missing_cmd_file' option for command overloading
