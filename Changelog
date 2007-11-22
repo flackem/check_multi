@@ -1,6 +1,8 @@
 
 ===== Changelog =====
 
+
+##0.15**
 	* added 'ignore_missing_cmd_file' option for command overloading
 	* added --set option to add multiple config values
 	* added command overloading mechanism

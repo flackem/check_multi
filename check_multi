@@ -714,6 +714,9 @@ sub report_perfdata {
 #--- parse command line options
 exit $UNKNOWN if (&process_parameters != $OK);
 
+#--- don't run this as root ;-)
+add_error("please don't run plugins as root!") if ($> == 0);
+
 #--- parse command file (nrpe format)
 &parse_commands($opt{filename});
 
