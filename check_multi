@@ -30,8 +30,7 @@ use vars qw(
 $MYSELF %cmds $returncode %rc $no $VERSION
 $OK $WARNING $CRITICAL $UNKNOWN
 $DETAIL_LIST $DETAIL_LIST_FULL $DETAIL_HTML $DETAIL_STDERR $DETAIL_PERFORMANCE
-$DETAIL_PERFORMANCE_CLASSIC $DETAIL_COMMAND_LIST $DETAIL_PNP_LINK $DETAIL_XML
-$DETAIL_NAGIOS2 $DETAIL_STATE_EVAL
+$DETAIL_PERFORMANCE_CLASSIC $DETAIL_PNP_LINK $DETAIL_XML $DETAIL_NAGIOS2
 );
 #-------------------------------------------------------------------------------
 #--- vars ----------------------------------------------------------------------
@@ -52,11 +51,9 @@ $DETAIL_STDERR=4;
 $DETAIL_PERFORMANCE=8;
 $DETAIL_LIST_FULL=16;
 $DETAIL_PERFORMANCE_CLASSIC=32;
-$DETAIL_COMMAND_LIST=64;
 $DETAIL_PNP_LINK=128;
 $DETAIL_XML=256;
 $DETAIL_NAGIOS2=512;
-$DETAIL_STATE_EVAL=1024;
 #
 #--- vars
 $no=0;
@@ -89,6 +86,7 @@ my %opt=(
 	"timeout"	=> 10,
 	"TIMEOUT"	=> 60,
 	"ok"		=> undef,
+	"verbose"	=> 0,
 	"warning"	=> undef,
 	"critical"	=> undef,
 	"unknown"	=> undef,
@@ -213,11 +211,9 @@ Options:
         8: show performance data (with check_multi_style)
        16: show full list of states, normally '0 warning' is omitted
        32: show old type of performance data (without check_multi style)
-       64: show list of commands in output
       128: add PNP action link if performance data available
       256: XML: print structured XML output
       512: Nagios 2 compatibility: one summary line of output only
-     1024: State evaluation chart
 -l, --libexec
    path to plugins, default: $opt{libexec}
 -h, --help
@@ -334,7 +330,9 @@ sub parse_commands {
 			$rc{top}=$UNKNOWN;
 			next;
 		}
+		DEBUG2("-" x 80);
 		DEBUG2("parse_commands: parsing file $filename");
+		DEBUG2("-" x 80);
 	
 		$lineno=0;	# count sourcefile lines
 
@@ -404,6 +402,10 @@ sub exec_command {
 
 	#--- execute command with alarm timer to catch timeouts
 	$SIG{'ALRM'} = sub { die "timeout" };
+
+	#--- measure command runtime;
+	my $cmd_start=time;
+
 	eval {
 		alarm($opt{timeout});
 
@@ -440,6 +442,7 @@ sub exec_command {
 
 		alarm(0);
 	};
+	$cmds{$no}{runtime}=time-$cmd_start;
 	
 	#--- any oddities during command execution?
 	if ($@) {
@@ -482,6 +485,7 @@ sub eval_result {
                 $input=~s/\b($cmds{$no}{name})\b/$cmds{$no}{rc}/ig;
         }
 
+
         #--- evaluate expression
         my $result=eval "($input)";
 
@@ -492,8 +496,9 @@ sub eval_result {
                 return (-1,$message);
         #--- return result
         } else {
-                $message="input:\'$input_org\' parsed:\'$input\' result:\'$result\'\n";
+                $message="eval_result: input:\'$input_org\' parsed:\'$input\' result:\'$result\'\n";
                 $message=~s/\n/ /g;
+		DEBUG2($message);
                 return ($result,$message);
         }
 }
@@ -597,23 +602,29 @@ sub report {
 	}
 
 	#--- print list of commands
-	if ($opt{report} & $DETAIL_COMMAND_LIST) {
-		print "\nCommands executed:";
-		foreach $no (sort numerically keys %cmds) {
-			printf "\n[%2.d] %s", $no, $cmds{$no}{command};
-		}
+	DEBUG1("\n","-" x 80);
+	DEBUG1("Commands executed:");
+	DEBUG1("-" x 80);
+	foreach $no (sort numerically keys %cmds) {
+		DEBUG1(sprintf "[%2.d] %s", $no, $cmds{$no}{command});
+	}
+
+	#--- print list of commands
+	DEBUG1("\n","-" x 80);
+	DEBUG1("Command runtime:");
+	DEBUG1("-" x 80);
+	foreach $no (sort numerically keys %cmds) {
+		DEBUG1(sprintf "[%2.d] %-20s %6.4fs", $no, $cmds{$no}{name}, $cmds{$no}{runtime});
 	}
 
 	#--- print state settings and RC evaluation result
-	if ($opt{report} & $DETAIL_STATE_EVAL) {
-		print "\n", "-" x 80;
-		printf "\n%-8s %-40s %s", "State","Expression","Evaluates to";
-		print "\n", "-" x 80;
-		foreach my $s (sort numerically keys %{$rc{s2r}}) {
-			printf "\n%-8s %-40s %d", $rc{label}{$rc{s2r}{$s}}, $rc{expr}{$rc{s2r}{$s}}, $rc{match}{$rc{s2r}{$s}};
-		}
-		printf "\n%8s %40s %s", "", "Overall state =>", $rc{label}{$rc{top}};
+	DEBUG1("\n","-" x 80);
+	DEBUG1(sprintf "%-8s %-40s %s", "State","Expression","Evaluates to");
+	DEBUG1("-" x 80);
+	foreach my $s (sort numerically keys %{$rc{s2r}}) {
+		DEBUG1(sprintf "%-8s %-40s %d", $rc{label}{$rc{s2r}{$s}}, $rc{expr}{$rc{s2r}{$s}}, $rc{match}{$rc{s2r}{$s}});
 	}
+	DEBUG1(sprintf "%8s %40s %s", "", "Overall state =>", $rc{label}{$rc{top}});
 
 	#--- final '\n' - dedicated to Wolfgang Barth ;-)
 	print "\n" if (!($opt{report} & $DETAIL_NAGIOS2));
@@ -661,8 +672,7 @@ sub report_html {
 			($cmds{$no}{output}=~/([^\n]*)\n(.*)/i) ? "$1</tr><tr><td></td><td colspan='10'>$2" : $cmds{$no}{output},
 			 #$cmds{$no}{output},
 			(defined($cmds{$no}{stderr}) && $cmds{$no}{stderr} ne "" && $opt{report} & $DETAIL_STDERR) ?
-			 " [ STDERR: " . $cmds{$no}{stderr} . ']' : "",
-			($opt{report} & $DETAIL_COMMAND_LIST) ? "<td>$cmds{$no}{command}</td>" : "";
+			 " [ STDERR: " . $cmds{$no}{stderr} . ']' : "";
 			
 	}
 	print "</table>";
@@ -735,6 +745,8 @@ sub report_perfdata {
 			print "$cmds{$no}{performance} " if (defined($cmds{$no}{performance}));
 		}
 	}
+	#--- final '\n' - dedicated to Wolfgang Barth ;-)
+	print "\n" if (!($opt{report} & $DETAIL_NAGIOS2));
 }
 
 #-------------------------------------------------------------------------------

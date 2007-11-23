@@ -1,6 +1,7 @@
 
 ===== Changelog =====
 
+	* replaced -r 64 (command list) and -r 1024 (state eval) by verbose option
 	* added --verbose (level 0-3) option and DEBUG routine
 
 ##0.15**

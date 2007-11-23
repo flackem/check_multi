@@ -8,9 +8,8 @@
 #--- some local checks on the nagios system
 #
 #--- network
-command[ network_ping ]		= check_icmp -H localhost -w 500,5% -c 1000,10%
+command[ network_icmp ]		= check_icmp -H localhost -w 500,5% -c 1000,10%
 command[ network_interfaces ]	= check_ifstatus -H localhost
-command[ network_if_eth1 ]	= check_ifoperstatus -k 0 -H localhost
 command[ network_rsync ]	= check_tcp -H localhost -p 873 -e RSYNCD
 
 #--- processes
@@ -44,7 +43,7 @@ command[ nagios_system ]	= check_nagios -F /usr/local/nagios/var/nagios.log -e 5
 command[ nagios_tac ]		= check_http -H localhost -u "http://localhost/nagios/cgi-bin/tac.cgi" -a guest:guest
 
 #--- some external checks (need internet connection)
-command[ nagios_ping ]		= check_icmp -H www.nagios.org -w 500,5% -c 1000,10%
+command[ nagios_icmp ]		= check_icmp -H www.nagios.org -w 500,5% -c 1000,10%
 command[ nagios.org_dns ]	= check_dns -H www.nagios.org
 command[ nagios.org_http ]	= check_http -H www.nagios.org
 
