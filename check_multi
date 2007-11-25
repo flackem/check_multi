@@ -82,7 +82,6 @@ my %opt=(
 	"name"		=> "",
 	"report"	=> 13,
 	"set"		=> {},
-	"state"		=> undef,
 	"timeout"	=> 10,
 	"TIMEOUT"	=> 60,
 	"ok"		=> undef,
@@ -109,7 +108,6 @@ sub process_parameters {
 		"v|verbose:+"	=> \$opt{verbose},
 		"V|version"	=> \$opt{version},
 		"set=s"		=> \%{$opt{set}},
-		"s|state=s"	=> \$opt{state},
 		"o|O|ok=s"	=> \$opt{ok},
 		"w|W|warning=s"	=> \$opt{warning},
 		"c|C|critical=s"=> \$opt{critical},
@@ -143,6 +141,10 @@ sub process_parameters {
 		        splice(@{$opt{filename}},$i,1,glob "$opt{filename}[$i]/*cmd") if (-d $opt{filename}[$i]);
 		}
 	}
+	if ($opt{report} & $DETAIL_PNP_LINK && !$opt{name}) {
+		$opt{name}=$MYSELF;
+		DEBUG1("process_parameters: PNP report option set and no name defined: taking $MYSELF as name");
+	}
 	if ($opt{ok}) {
 		$rc{expr}{$OK}=$opt{ok};
 	}
@@ -154,18 +156,6 @@ sub process_parameters {
 	}
 	if ($opt{unknown}) {
 		$rc{expr}{$UNKNOWN}=$opt{unknown};
-	}
-	if ($opt{state}) {
-		if (defined($rc{label}{$opt{state}})) {
-			# already numerical: ok
-		} elsif ($opt{state}=~/[owcu]?/i) {
-			$opt{state}=lc($opt{state});
-			$opt{state}=index("owcu",$opt{state});
-		} else {
-			print "$MYSELF error: invalid state defined\n";
-			short_usage();
-			return $UNKNOWN;
-		}
 	}
 	if ($opt{timeout} && $opt{TIMEOUT} && $opt{timeout} > $opt{TIMEOUT}) {
 		print "$MYSELF: error - child timeout $opt{timeout}s must not be greater than parent timeout $opt{TIMEOUT}s\n";
@@ -179,9 +169,10 @@ sub process_parameters {
 
 sub short_usage {
 print <<SHORTEOF;
-$MYSELF -f <config file> [-n name] [-t timeout] [-T TIMEOUT] [-r level] [-l libexec_path] 
-        [-s state] [-w <expr>] [-c <expr>] [-u <expr>] [-o <expr>]
+$MYSELF -f <config file> [-n name] [-t timeout] [-T TIMEOUT] [-r level] [-l libexec_path] [-s option=value]
+        [-w <expr>] [-c <expr>] [-u <expr>] [-o <expr>]
 $MYSELF [-h | --help]
+$MYSELF [-v | --verbose]
 $MYSELF [-V | --version]
 
 SHORTEOF
@@ -214,10 +205,14 @@ Options:
       128: add PNP action link if performance data available
       256: XML: print structured XML output
       512: Nagios 2 compatibility: one summary line of output only
+-s, --set <option>=<value>
+   ignore_missing_cmd_file=(0|1) (don't complain if config file missing)	
 -l, --libexec
    path to plugins, default: $opt{libexec}
 -h, --help
    print detailed help screen
+-v, --verbose
+   prints debug output (multiple -v extend debug level) 
 -V, --version
    print version information
 
@@ -226,9 +221,6 @@ Extended mode - specify extra settings for threshold interpretation:
 -c, --critical <expression>
 -u, --unknown  <expression>
 -o, --ok       <expression>
--s, --state    <state>
-   wanted overall state, allowed is: 'o','w','c','u', 0-3
-   default: highest severity
 LONGEOF
 
 }
@@ -531,11 +523,7 @@ sub result_rating {
                 	add_error("result_rating: parsing error ($message)");
         	} else {
 			$rc{match}{$state}=1;
-			if (defined($opt{state})) {
-				$rc{top}=$opt{state};
-			} else {
-				$rc{top}=$state;
-			}
+			$rc{top}=$state;
 			#print "YES: $rc{label}{$state} matches, $message TOP:$rc{top}\n";
 		}
 	}
@@ -662,18 +650,30 @@ sub report_html {
 	#--- loop over commands: report particular results for long plugin output
 	print "<table style='border-left-width:1px; border-left-style:dotted' border-rigth-width:0px; >";
 	foreach $no (sort numerically keys %cmds) {
-		printf "<tr valign='top'><td nowrap>%s&nbsp;%2.d&nbsp;%s</td>%s<td>%s</td><td>%s</td><td>%s</td>%s</tr>",
+		print "<tr valign='top'>";
+		printf "<td nowrap>%s&nbsp;%2.d&nbsp;%s</td>", 
 			($opt{report} & $DETAIL_HTML) ? "<DIV CLASS=\'service$rc{label}{$cmds{$no}{rc}}\'>" : "",
 			$no,
-			($opt{report} & $DETAIL_HTML) ? "</DIV>" : "",
-			($opt{report} & $DETAIL_PERFORMANCE && $opt{report} & $DETAIL_PNP_LINK) ?  (defined($cmds{$no}{performance}) ?
-				"<td nowrap><A HREF='/nagios/pnp/index.php?host=$ENV{NAGIOS_HOSTNAME}&srv=$cmds{$no}{name}' TARGET='_self'><img src='/nagios/images/action.gif' width=20 height=20 border=0 align=top alt='Show PNP chart for $ENV{NAGIOS_HOSTNAME} / $cmds{$no}{plugin}'></A></td>" : "<td></td>") : "",
-			($cmds{$no}{name} ne "") ? $cmds{$no}{name} : "",
-			($cmds{$no}{output}=~/([^\n]*)\n(.*)/i) ? "$1</tr><tr><td></td><td colspan='10'>$2" : $cmds{$no}{output},
-			 #$cmds{$no}{output},
-			(defined($cmds{$no}{stderr}) && $cmds{$no}{stderr} ne "" && $opt{report} & $DETAIL_STDERR) ?
-			 " [ STDERR: " . $cmds{$no}{stderr} . ']' : "";
-			
+			($opt{report} & $DETAIL_HTML) ? "</DIV>" : "";
+		if (	$opt{report} & $DETAIL_PERFORMANCE &&
+			$opt{report} & $DETAIL_PNP_LINK && 
+			defined($cmds{$no}{performance}) ) {
+
+			printf "<td nowrap>%s</td>", 
+				"<A HREF='/nagios/pnp/index.php?host=$ENV{NAGIOS_HOSTNAME}&srv=$cmds{$no}{name}' TARGET='_self'>" . 
+				"<img src='/nagios/images/action.gif' width=20 height=20 border=0 align=top alt='Show PNP chart for $ENV{NAGIOS_HOSTNAME} / $cmds{$no}{plugin}'></A>";
+		} else {
+			printf "<td></td>";
+		}
+		printf "<td>%s</td>", ($cmds{$no}{name}) ? $cmds{$no}{name} : "";
+		printf "<td>%s</td>", ($cmds{$no}{output}=~/([^\n]*)\n(.*)/i) ? "$1</tr><tr><td></td><td colspan='10'>$2" : $cmds{$no}{output};
+		if (	defined($cmds{$no}{stderr}) && 
+			$cmds{$no}{stderr} ne "" && 
+			$opt{report} & $DETAIL_STDERR) {
+
+			print " [ STDERR: " . $cmds{$no}{stderr} . "]";
+		}
+		print "</tr>";
 	}
 	print "</table>";
 
