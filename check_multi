@@ -244,9 +244,10 @@ sub mytrim {
 sub substitute_macros {
         my ($input)=@_;
         while ((my $var)=($input=~/\$([A-Z0-9^\$]+)\$/)) {
-		last if (!defined($ENV{"NAGIOS_$var"}));
-		DEBUG3("substitute_macros: replacing env var NAGIOS_$var with $ENV{NAGIOS_$var}");
-                $input=~s/\$$var\$/$ENV{"NAGIOS_$var"}/g;
+		DEBUG3("substitute_macros: var NAGIOS_${var} not defined") if (!defined($ENV{"NAGIOS_${var}"}));
+		last if (!defined($ENV{"NAGIOS_${var}"}));
+		DEBUG3("substitute_macros: replacing env var NAGIOS_${var} with $ENV{\"NAGIOS_${var}\"}");
+                $input=~s/\$$var\$/$ENV{"NAGIOS_${var}"}/g;
         }
         return $input;
 }
@@ -311,7 +312,7 @@ sub readfile {
 sub parse_commands {
 	my ($filenames)=@_;	# allow multiple filenames (array reference)
 	my $cmd_count=0;	# count stored commands
-	my ($cmd,$name,$plugin,$expr,$lineno,$i);
+	my ($cmd,$type,$name,$plugin,$expr,$lineno,$i);
 
 	#--- loop over filenames
 	foreach my $filename (@{$filenames}) {
@@ -335,25 +336,32 @@ sub parse_commands {
 			next if (/^\s*#/);	# skip comments
 		
 			chop($cmd=$_);
-			$cmd=substitute_macros($cmd);
 	
 			#--- format: 'command[ tag ] = plugin command line'
-			if ($cmd=~/\s*command\s*\[\s*(\S+)\s*\]\s*=\s*(.*)\s*/i) {
-				$name=$1;
-				$cmd=$2;
+			#--- format: 'env[ tag ] = setenv command line'
+			if ($cmd=~/\s*(command|env)\s*\[\s*(\S+)\s*\]\s*=\s*(.*)\s*/i) {
+				$type=lc($1);
+				$name=$2;
+				$cmd=$3;
 				$plugin=(split(/\s+/,"$cmd"))[0];
 				$cmd="$opt{libexec}/$cmd" if ($plugin!~/\//);
 				#--- find plugin with same name
-				for ($i=1; $i<=scalar(keys(%cmds));$i++) {
-					last if ($cmds{$i}{name} eq $name);
-				}
-				if ($cmds{$i}{command}) {
-					DEBUG2("parse_commands: overloaded $name with command \'$cmd\'");
-				} else {
-					DEBUG2("parse_commands: added $name with command \'$cmd\'");
+				if ($type eq "command") {
+					for ($i=1; $i<=scalar(keys(%cmds));$i++) {
+						last if ($cmds{$i}{name} eq $name);
+					}
+					if ($cmds{$i}{command}) {
+						DEBUG2("parse_commands: overloaded $name with command \'$cmd\'");
+					} else {
+						DEBUG2("parse_commands: added $name with command \'$cmd\'");
+					}
+				} elsif ($type eq "env") {
+					$i=scalar(keys(%cmds))+1;
+					$name=uc($name);
 				}
 				#--- store vars into cmds structure
 				$cmds{$i}{command}=$cmd;
+				$cmds{$i}{type}=lc($type);
 				$cmds{$i}{plugin}=$plugin;
 				$cmds{$i}{name}=$name;
 				$cmds{$i}{rc}=$UNKNOWN;
@@ -395,11 +403,15 @@ sub exec_command {
 	#--- execute command with alarm timer to catch timeouts
 	$SIG{'ALRM'} = sub { die "timeout" };
 
+	#--- at runtime: substitute $MACRO$ macros
+	$cmds{$no}{command}=substitute_macros($cmds{$no}{command});
+
 	#--- measure command runtime;
 	my $cmd_start=time;
 
 	eval {
 		alarm($opt{timeout});
+
 
 		#--- prepare tmpfiles for stdout and stderr
 		$tmp_stdout=&get_tmpfile("/tmp", "${MYSELF}_stdout_$$");
@@ -450,6 +462,10 @@ sub exec_command {
        			die "$MYSELF: unexpected exception encountered:$!";
 		}
 		unlink $tmp_stdout, $tmp_stderr;
+	} else {
+		if ($cmds{$no}{type} eq "env") {
+			$ENV{"NAGIOS_".$cmds{$no}{name}}="$cmds{$no}{output}";
+		}
 	}
 	return $cmds{$no}{rc};
 }
@@ -648,11 +664,11 @@ sub report_html {
 	print " [" . join(", ",@{$rc{error}}) . "]" if (defined($rc{error}[0]));
 	
 	#--- loop over commands: report particular results for long plugin output
-	print "<table style='border-left-width:1px; border-left-style:dotted' border-rigth-width:0px; >";
+	print "<table style='border-left-width:1px; border-left-style:dotted' border-right-width:0px; >";
 	foreach $no (sort numerically keys %cmds) {
 		print "<tr valign='top'>";
 		printf "<td nowrap>%s&nbsp;%2.d&nbsp;%s</td>", 
-			($opt{report} & $DETAIL_HTML) ? "<DIV CLASS=\'service$rc{label}{$cmds{$no}{rc}}\'>" : "",
+			($opt{report} & $DETAIL_HTML) ? "<DIV CLASS=\'service$rc{label}{$cmds{$no}{rc}}\' style='font-size:7pt'>" : "",
 			$no,
 			($opt{report} & $DETAIL_HTML) ? "</DIV>" : "";
 		if (	$opt{report} & $DETAIL_PERFORMANCE &&
@@ -665,7 +681,7 @@ sub report_html {
 		} else {
 			printf "<td></td>";
 		}
-		printf "<td>%s</td>", ($cmds{$no}{name}) ? $cmds{$no}{name} : "";
+		printf "<td>&nbsp;&nbsp;%s</td>", ($cmds{$no}{name}) ? $cmds{$no}{name} : "";
 		printf "<td>%s</td>", ($cmds{$no}{output}=~/([^\n]*)\n(.*)/i) ? "$1</tr><tr><td></td><td colspan='10'>$2" : $cmds{$no}{output};
 		if (	defined($cmds{$no}{stderr}) && 
 			$cmds{$no}{stderr} ne "" && 
