@@ -243,7 +243,7 @@ sub mytrim {
 #---
 sub substitute_macros {
         my ($input)=@_;
-        while ((my $var)=($input=~/\$([A-Z0-9^\$]+)\$/)) {
+        while ((my $var)=($input=~/\$([A-Za-z0-9^\$]+)\$/)) {
 		DEBUG3("substitute_macros: var NAGIOS_${var} not defined") if (!defined($ENV{"NAGIOS_${var}"}));
 		last if (!defined($ENV{"NAGIOS_${var}"}));
 		DEBUG3("substitute_macros: replacing env var NAGIOS_${var} with $ENV{\"NAGIOS_${var}\"}");
@@ -338,8 +338,7 @@ sub parse_commands {
 			chop($cmd=$_);
 	
 			#--- format: 'command[ tag ] = plugin command line'
-			#--- format: 'env[ tag ] = setenv command line'
-			if ($cmd=~/\s*(command|env)\s*\[\s*(\S+)\s*\]\s*=\s*(.*)\s*/i) {
+			if ($cmd=~/\s*(command)\s*\[\s*(\S+)\s*\]\s*=\s*(.*)\s*/i) {
 				$type=lc($1);
 				$name=$2;
 				$cmd=$3;
@@ -355,9 +354,6 @@ sub parse_commands {
 					} else {
 						DEBUG2("parse_commands: added $name with command \'$cmd\'");
 					}
-				} elsif ($type eq "env") {
-					$i=scalar(keys(%cmds))+1;
-					$name=uc($name);
 				}
 				#--- store vars into cmds structure
 				$cmds{$i}{command}=$cmd;
@@ -412,7 +408,6 @@ sub exec_command {
 	eval {
 		alarm($opt{timeout});
 
-
 		#--- prepare tmpfiles for stdout and stderr
 		$tmp_stdout=&get_tmpfile("/tmp", "${MYSELF}_stdout_$$");
 		$tmp_stderr=&get_tmpfile("/tmp", "${MYSELF}_stderr_$$");
@@ -463,9 +458,7 @@ sub exec_command {
 		}
 		unlink $tmp_stdout, $tmp_stderr;
 	} else {
-		if ($cmds{$no}{type} eq "env") {
-			$ENV{"NAGIOS_".$cmds{$no}{name}}="$cmds{$no}{output}";
-		}
+		$ENV{"NAGIOS_".$cmds{$no}{name}}="$cmds{$no}{output}";
 	}
 	return $cmds{$no}{rc};
 }
@@ -475,6 +468,10 @@ sub eval_result {
 
         my $input_org=$input;
         my $message="";
+
+	
+ 	#--- at runtime: substitute $MACRO$ macros
+        $input=substitute_macros($input);
 
         # 1. replace COUNT(WARNING)
         $input=~s/\bCOUNT\s*\(\s*(OK)\s*\)/$rc{count}{$OK}/ig;
@@ -492,7 +489,6 @@ sub eval_result {
         foreach my $no (sort keys(%cmds)) { 
                 $input=~s/\b($cmds{$no}{name})\b/$cmds{$no}{rc}/ig;
         }
-
 
         #--- evaluate expression
         my $result=eval "($input)";
