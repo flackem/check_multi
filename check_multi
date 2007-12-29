@@ -661,7 +661,7 @@ sub report_html {
 	print " [" . join(", ",@{$rc{error}}) . "]" if (defined($rc{error}[0]));
 	
 	#--- loop over commands: report particular results for long plugin output
-	print "<table style='border-left-width:1px; border-left-style:dotted' border-right-width:0px; >";
+	print "<table style='border-left-width:1px; border-left-style:dotted; border-right-width:0px;' >";
 	foreach $no (sort numerically keys %cmds) {
 		print "<tr valign='top'>";
 		printf "<td nowrap>%s&nbsp;%2.d&nbsp;%s</td>", 
@@ -679,7 +679,7 @@ sub report_html {
 			printf "<td></td>";
 		}
 		printf "<td>&nbsp;&nbsp;%s</td>", ($cmds{$no}{name}) ? $cmds{$no}{name} : "";
-		printf "<td>%s</td>", ($cmds{$no}{output}=~/([^\n]*)\n(.*)/i) ? "$1</tr><tr><td></td><td colspan='10'>$2" : $cmds{$no}{output};
+		printf "<td>%s</td>", ($cmds{$no}{output}=~/([^\n]*)\n(.*)/i) ? "$1</td></tr><tr><td></td><td colspan='3'>$2" : $cmds{$no}{output};
 		if (	defined($cmds{$no}{stderr}) && 
 			$cmds{$no}{stderr} ne "" && 
 			$opt{report} & $DETAIL_STDERR) {
