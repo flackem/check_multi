@@ -1,5 +1,4 @@
 #!/usr/bin/perl -w
-# nagios: -epn
 #
 # check_multi - nagios plugin
 #
@@ -31,6 +30,7 @@ $MYSELF %cmds $returncode %rc $no $VERSION
 $OK $WARNING $CRITICAL $UNKNOWN
 $DETAIL_LIST $DETAIL_LIST_FULL $DETAIL_HTML $DETAIL_STDERR $DETAIL_PERFORMANCE
 $DETAIL_PERFORMANCE_CLASSIC $DETAIL_PNP_LINK $DETAIL_XML $DETAIL_NAGIOS2
+*DEBUG1 *DEBUG2 *DEBUG3
 );
 #-------------------------------------------------------------------------------
 #--- vars ----------------------------------------------------------------------
@@ -243,7 +243,7 @@ sub mytrim {
 #---
 sub substitute_macros {
         my ($input)=@_;
-        while ((my $var)=($input=~/\$([A-Za-z0-9^\$]+)\$/)) {
+        while ((my $var)=($input=~/\$([A-Za-z0-9_^\$]+)\$/)) {
 		DEBUG3("substitute_macros: var NAGIOS_${var} not defined") if (!defined($ENV{"NAGIOS_${var}"}));
 		last if (!defined($ENV{"NAGIOS_${var}"}));
 		DEBUG3("substitute_macros: replacing env var NAGIOS_${var} with $ENV{\"NAGIOS_${var}\"}");
@@ -459,6 +459,7 @@ sub exec_command {
 		unlink $tmp_stdout, $tmp_stderr;
 	} else {
 		$ENV{"NAGIOS_".$cmds{$no}{name}}="$cmds{$no}{output}";
+		DEBUG2("Setting environment var NAGIOS_$cmds{$no}{name} to $cmds{$no}{output}");
 	}
 	return $cmds{$no}{rc};
 }
@@ -466,12 +467,12 @@ sub exec_command {
 sub eval_result {
         my ($input)=@_;
 
-        my $input_org=$input;
-        my $message="";
-
 	
  	#--- at runtime: substitute $MACRO$ macros
         $input=substitute_macros($input);
+
+        my $input_org=$input;
+        my $message="";
 
         # 1. replace COUNT(WARNING)
         $input=~s/\bCOUNT\s*\(\s*(OK)\s*\)/$rc{count}{$OK}/ig;
