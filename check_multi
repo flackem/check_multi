@@ -25,7 +25,6 @@
 use strict;
 use Getopt::Long qw(:config no_ignore_case bundling);
 BEGIN { eval("use Time::HiRes qw(time)") }
-use HTML::Entities;
 use lib "/usr/local/nagios/libexec";
 use vars qw(
 $MYSELF %cmds $returncode %rc $no $VERSION
@@ -147,6 +146,10 @@ sub process_parameters {
 		$opt{name}=$MYSELF;
 		DEBUG1("process_parameters: PNP report option set and no name defined: taking $MYSELF as name");
 	}
+	if ($opt{report} & $DETAIL_HTML) {
+		use HTML::Entities;
+		DEBUG3("process_parameters: HTML report option set - loading HTML::Entities module");
+	}
 	if ($opt{ok}) {
 		$rc{expr}{$OK}=$opt{ok};
 	}
@@ -164,7 +167,7 @@ sub process_parameters {
 		return $UNKNOWN;
 	}
 	foreach my $option (sort keys(%opt)) {
-		DEBUG3("\$opt{$option}: $opt{$option}") if (defined($opt{$option}));
+		DEBUG3("process_parameters: \$opt{$option}=$opt{$option}") if (defined($opt{$option}));
 	}
 	return $OK;
 }
@@ -321,7 +324,7 @@ sub parse_commands {
 
 		if (!open(FILE, $filename)) {
 			next if ($opt{set}{ignore_missing_cmd_file});
-			add_error("parse_command: cannot open config file $filename: $!");
+			add_error("parse_commands: cannot open config file $filename: $!");
 			$rc{top}=$UNKNOWN;
 			next;
 		}
@@ -353,9 +356,9 @@ sub parse_commands {
 						last if ($cmds{$i}{name} eq $name);
 					}
 					if ($cmds{$i}{command}) {
-						DEBUG2("parse_commands: overloaded $name with command \'$cmd\'");
+						DEBUG2("parse_commands: overloaded $name with $type \'$cmd\'");
 					} else {
-						DEBUG2("parse_commands: added $name with command \'$cmd\'");
+						DEBUG2("parse_commands: added $name with $type \'$cmd\'");
 					}
 				}
 				#--- store vars into cmds structure
@@ -372,7 +375,7 @@ sub parse_commands {
 				$name=uc($1);
 				$expr=$2;
 				if (!defined($rc{code}{$name})) {
-					add_error("parse_command: invalid state code specified in line $lineno: $name");
+					add_error("parse_commands: invalid state code specified in line $lineno: $name");
 					next;
 				}
 				# store state expression only if NOT set via commandline
@@ -383,7 +386,7 @@ sub parse_commands {
 					DEBUG2("parse_commands: cmdline precedence over state expression. Using \$opt{$name}: $opt{$name}");
 				}
 			} else {
-				add_error("parse_command: invalid format in line $lineno: $cmd");
+				add_error("parse_commands: invalid format in line $lineno: $cmd");
 				next;
 			}
 		}
@@ -456,7 +459,8 @@ sub exec_command {
 			$cmds{$no}{rc}=$WARNING;
 		} else {
 			$ENV{"NAGIOS_".$cmds{$no}{name}}="$cmds{$no}{output}";
-			DEBUG2("Setting environment var NAGIOS_$cmds{$no}{name} to $cmds{$no}{output}");
+			$cmds{$no}{rc}=$OK;
+			DEBUG2("exec_command: environment var NAGIOS_$cmds{$no}{name}=$cmds{$no}{output}");
                 }
 		$cmds{$no}{runtime}=time-$cmd_start;
 		return $cmds{$no}{rc};
@@ -479,7 +483,7 @@ sub exec_command {
 		unlink $tmp_stdout, $tmp_stderr;
 	} else {
 		$ENV{"NAGIOS_".$cmds{$no}{name}}="$cmds{$no}{output}";
-		DEBUG2("Setting environment var NAGIOS_$cmds{$no}{name} to $cmds{$no}{output}");
+		DEBUG2("exec_command: environment var NAGIOS_$cmds{$no}{name}=$cmds{$no}{output}");
 	}
 	return $cmds{$no}{rc};
 }
@@ -634,7 +638,7 @@ sub report {
 	DEBUG1("Command results:");
 	DEBUG1("-" x 80);
 	foreach $no (sort numerically keys %cmds) {
-		DEBUG1(sprintf "[%2.d] %s", $no, $cmds{$no}{output});
+		DEBUG1(sprintf "[%2.d] %-20s %s", $no, $cmds{$no}{name}, $cmds{$no}{output});
 	}
 
 	#--- print runtime
@@ -797,7 +801,7 @@ sub report_perfdata {
 exit $UNKNOWN if (&process_parameters != $OK);
 
 #--- don't run this as root ;-)
-DEBUG3("Userid: $>");
+DEBUG3("main: userid=$>");
 add_error("please don't run plugins as root!") if ($> == 0);
 
 #--- parse command file (nrpe format)
