@@ -1,6 +1,8 @@
 
 ===== Changelog =====
 
+	* added eval [ TAG ] = PERLEXPR
+	* ePN support removed again (too many error conditions)
 	* fixed HTML issues (table specific, thx to Wolfgang Barth)
 	* ePN support
 	* removed --state option (replaced by state evaluation)

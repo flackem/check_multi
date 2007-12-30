@@ -1,4 +1,5 @@
 #!/usr/bin/perl -w
+# nagios: -epn
 #
 # check_multi - nagios plugin
 #
@@ -24,6 +25,7 @@
 use strict;
 use Getopt::Long qw(:config no_ignore_case bundling);
 BEGIN { eval("use Time::HiRes qw(time)") }
+use HTML::Entities;
 use lib "/usr/local/nagios/libexec";
 use vars qw(
 $MYSELF %cmds $returncode %rc $no $VERSION
@@ -337,15 +339,16 @@ sub parse_commands {
 		
 			chop($cmd=$_);
 	
-			#--- format: 'command[ tag ] = plugin command line'
-			if ($cmd=~/\s*(command)\s*\[\s*(\S+)\s*\]\s*=\s*(.*)\s*/i) {
+			#--- format: 'command [ tag ] = plugin command line'
+			#--- format: 'eval [ tag ] = expression'
+			if ($cmd=~/\s*(command|eval)\s*\[\s*(\S+)\s*\]\s*=\s*(.*)\s*/i) {
 				$type=lc($1);
 				$name=$2;
 				$cmd=$3;
 				$plugin=(split(/\s+/,"$cmd"))[0];
-				$cmd="$opt{libexec}/$cmd" if ($plugin!~/\//);
+				$cmd="$opt{libexec}/$cmd" if ($plugin!~/\// && $type ne "eval");
 				#--- find plugin with same name
-				if ($type eq "command") {
+				if ($type eq "command" || $type eq "eval") {
 					for ($i=1; $i<=scalar(keys(%cmds));$i++) {
 						last if ($cmds{$i}{name} eq $name);
 					}
@@ -357,11 +360,12 @@ sub parse_commands {
 				}
 				#--- store vars into cmds structure
 				$cmds{$i}{command}=$cmd;
-				$cmds{$i}{type}=lc($type);
+				$cmds{$i}{type}=$type;
 				$cmds{$i}{plugin}=$plugin;
 				$cmds{$i}{name}=$name;
 				$cmds{$i}{rc}=$UNKNOWN;
 				$cmd_count=scalar(keys(%cmds));
+				DEBUG2("parse_commands: parsed $type [ $name ] = $cmd");
 
 			#--- format: 'state [ tag ] = (EXPR)
 			} elsif ($cmd=~/\s*state\s*\[\s*(\S+)\s*\]\s*=\s*(.*)\s*/i) {
@@ -405,42 +409,58 @@ sub exec_command {
 	#--- measure command runtime;
 	my $cmd_start=time;
 
-	eval {
-		alarm($opt{timeout});
+        if ($cmds{$no}{type} eq "command") {
 
-		#--- prepare tmpfiles for stdout and stderr
-		$tmp_stdout=&get_tmpfile("/tmp", "${MYSELF}_stdout_$$");
-		$tmp_stderr=&get_tmpfile("/tmp", "${MYSELF}_stderr_$$");
-
-		#--- execute command and store stdout/stderr/return code
-		`$cmds{$no}{command} 1>$tmp_stdout 2>$tmp_stderr`;
-		$cmds{$no}{rc}=$? >> 8;
-
-		#--- store stdout/stderr and cleanup tmpfiles
-		$cmds{$no}{output}=readfile($tmp_stdout);
-		$cmds{$no}{stderr}=readfile($tmp_stderr);
-		unlink $tmp_stdout, $tmp_stderr;
-		chomp $cmds{$no}{output};	
-		chomp $cmds{$no}{stderr};
-
-		#--- unknown return code? change it explicitly to UNKNOWN
-		if (! defined($rc{r2s}{$cmds{$no}{rc}})) {
-			$cmds{$no}{stderr}.=" RC was $cmds{$no}{rc}!";
-			$cmds{$no}{rc}=$UNKNOWN;
-		}
-		
-		#--- remove white chars from output
-		#$cmds{$no}{output}=mytrim($cmds{$no}{output},"\\n\\s");
-		$cmds{$no}{stderr}=mytrim($cmds{$no}{stderr},"\\n\\s");
-
-		#--- split performance data from standard output
-		if ($cmds{$no}{output}=~/\|/) {
-			($cmds{$no}{output},$cmds{$no}{performance})=split(/\|/,$cmds{$no}{output});
-			$cmds{$no}{performance}=mytrim($cmds{$no}{performance},"\\s");
-		}
-
-		alarm(0);
-	};
+		eval {
+			alarm($opt{timeout});
+	
+			#--- prepare tmpfiles for stdout and stderr
+				$tmp_stdout=&get_tmpfile("/tmp", "${MYSELF}_stdout_$$");
+			$tmp_stderr=&get_tmpfile("/tmp", "${MYSELF}_stderr_$$");
+	
+				#--- execute command and store stdout/stderr/return code
+			`$cmds{$no}{command} 1>$tmp_stdout 2>$tmp_stderr`;
+			$cmds{$no}{rc}=$? >> 8;
+	
+			#--- store stdout/stderr and cleanup tmpfiles
+			$cmds{$no}{output}=readfile($tmp_stdout);
+			$cmds{$no}{stderr}=readfile($tmp_stderr);
+			unlink $tmp_stdout, $tmp_stderr;
+			chomp $cmds{$no}{output};	
+			chomp $cmds{$no}{stderr};
+	
+			#--- unknown return code? change it explicitly to UNKNOWN
+			if (! defined($rc{r2s}{$cmds{$no}{rc}})) {
+				$cmds{$no}{stderr}.=" RC was $cmds{$no}{rc}!";
+				$cmds{$no}{rc}=$UNKNOWN;
+			}
+			
+			#--- remove white chars from output
+			#$cmds{$no}{output}=mytrim($cmds{$no}{output},"\\n\\s");
+			$cmds{$no}{stderr}=mytrim($cmds{$no}{stderr},"\\n\\s");
+			$cmds{$no}{stdout}=encode_entities($cmds{$no}{stdout}) if ($cmds{$no}{stdout});
+			$cmds{$no}{stderr}=encode_entities($cmds{$no}{stderr}) if ($cmds{$no}{stderr});
+	
+			#--- split performance data from standard output
+			if ($cmds{$no}{output}=~/\|/) {
+				($cmds{$no}{output},$cmds{$no}{performance})=split(/\|/,$cmds{$no}{output});
+				$cmds{$no}{performance}=mytrim($cmds{$no}{performance},"\\s");
+			}
+	
+			alarm(0);
+		};
+	} elsif ($cmds{$no}{type} eq "eval") {
+		$cmds{$no}{output}=eval($cmds{$no}{command});
+		if ($@) {
+			$cmds{$no}{output}.="[$@]";
+			$cmds{$no}{rc}=$WARNING;
+		} else {
+			$ENV{"NAGIOS_".$cmds{$no}{name}}="$cmds{$no}{output}";
+			DEBUG2("Setting environment var NAGIOS_$cmds{$no}{name} to $cmds{$no}{output}");
+                }
+		$cmds{$no}{runtime}=time-$cmd_start;
+		return $cmds{$no}{rc};
+	}
 	$cmds{$no}{runtime}=time-$cmd_start;
 	
 	#--- any oddities during command execution?
@@ -467,7 +487,6 @@ sub exec_command {
 sub eval_result {
         my ($input)=@_;
 
-	
  	#--- at runtime: substitute $MACRO$ macros
         $input=substitute_macros($input);
 
@@ -607,12 +626,20 @@ sub report {
 	DEBUG1("Commands executed:");
 	DEBUG1("-" x 80);
 	foreach $no (sort numerically keys %cmds) {
-		DEBUG1(sprintf "[%2.d] %s", $no, $cmds{$no}{command});
+		DEBUG1(sprintf "[%2.d] %-8s %s", $no, $cmds{$no}{type}, $cmds{$no}{command});
 	}
 
-	#--- print list of commands
+	#--- print results
 	DEBUG1("\n","-" x 80);
-	DEBUG1("Command runtime:");
+	DEBUG1("Command results:");
+	DEBUG1("-" x 80);
+	foreach $no (sort numerically keys %cmds) {
+		DEBUG1(sprintf "[%2.d] %s", $no, $cmds{$no}{output});
+	}
+
+	#--- print runtime
+	DEBUG1("\n","-" x 80);
+	DEBUG1("Command runtimes:");
 	DEBUG1("-" x 80);
 	foreach $no (sort numerically keys %cmds) {
 		DEBUG1(sprintf "[%2.d] %-20s %6.4fs", $no, $cmds{$no}{name}, $cmds{$no}{runtime});
