@@ -317,7 +317,7 @@ sub readfile {
 sub parse_commands {
 	my ($filenames)=@_;	# allow multiple filenames (array reference)
 	my $cmd_count=0;	# count stored commands
-	my ($cmd,$type,$name,$plugin,$expr,$lineno,$i);
+	my ($line,$cmd,$type,$name,$plugin,$expr,$lineno,$i);
 
 	#--- loop over filenames
 	foreach my $filename (@{$filenames}) {
@@ -334,17 +334,21 @@ sub parse_commands {
 	
 		$lineno=0;	# count sourcefile lines
 
-		#--- be liberate about tags - if they're duplicate, don't bother: it's up to the user
-		while (<FILE>) {
+		while ($line=<FILE>) {
+			chomp($line);
 			$lineno++;		
-			next if (/^\s*$/);	# skip empty lines
-			next if (/^\s*#/);	# skip comments
+
+			#--- check for continuation line with trailing '\'
+			if ($line =~ s/\\\s*$//) { 
+				$line .= <FILE>;
+				redo unless eof(FILE);
+			}
+			next if ($line=~/^\s*$/);	# skip empty lines
+			next if ($line=~/^\s*#/);	# skip comments
 		
-			chop($cmd=$_);
-	
 			#--- format: 'command [ tag ] = plugin command line'
 			#--- format: 'eval [ tag ] = expression'
-			if ($cmd=~/\s*(command|eval)\s*\[\s*(\S+)\s*\]\s*=\s*(.*)\s*/i) {
+			if ($line=~/\s*(command|eval)\s*\[\s*(\S+)\s*\]\s*=\s*(.*)\s*/i) {
 				$type=lc($1);
 				$name=$2;
 				$cmd=$3;
@@ -371,7 +375,7 @@ sub parse_commands {
 				DEBUG2("parse_commands: parsed $type [ $name ] = $cmd");
 
 			#--- format: 'state [ tag ] = (EXPR)
-			} elsif ($cmd=~/\s*state\s*\[\s*(\S+)\s*\]\s*=\s*(.*)\s*/i) {
+			} elsif ($line=~/\s*state\s*\[\s*(\S+)\s*\]\s*=\s*(.*)\s*/i) {
 				$name=uc($1);
 				$expr=$2;
 				if (!defined($rc{code}{$name})) {
