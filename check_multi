@@ -108,7 +108,7 @@ sub process_parameters {
 		"T|TIMEOUT=i"	=> \$opt{TIMEOUT},
 		"v|verbose:+"	=> \$opt{verbose},
 		"V|version"	=> \$opt{version},
-		"set=s"		=> \%{$opt{set}},
+		"s|set=s"	=> \%{$opt{set}},
 		"o|O|ok=s"	=> \$opt{ok},
 		"w|W|warning=s"	=> \$opt{warning},
 		"c|C|critical=s"=> \$opt{critical},
@@ -165,6 +165,9 @@ sub process_parameters {
 	if ($opt{timeout} && $opt{TIMEOUT} && $opt{timeout} > $opt{TIMEOUT}) {
 		print "$MYSELF: error - child timeout $opt{timeout}s must not be greater than parent timeout $opt{TIMEOUT}s\n";
 		return $UNKNOWN;
+	}
+	foreach my $option (sort keys(%{$opt{set}})) {
+		$ENV{"NAGIOS_".uc($option)}=$opt{set}{$option};
 	}
 	foreach my $option (sort keys(%opt)) {
 		DEBUG3("process_parameters: \$opt{$option}=$opt{$option}") if (defined($opt{$option}));

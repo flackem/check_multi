@@ -1,6 +1,7 @@
 
 ===== Changelog =====
 
+	* added set option: --set ENV_VAR=xyz
 	* added continuation lines capability for config files 
 	* some minor debugging changes
 	* added eval [ TAG ] = PERLEXPR
