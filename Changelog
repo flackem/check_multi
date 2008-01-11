@@ -1,6 +1,7 @@
 
 ===== Changelog =====
 
+	* fixed HTML::entities (thx to Gerhard Lausser)
 	* added set option: --set ENV_VAR=xyz
 	* added continuation lines capability for config files 
 	* some minor debugging changes

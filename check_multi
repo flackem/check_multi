@@ -147,7 +147,7 @@ sub process_parameters {
 		DEBUG1("process_parameters: PNP report option set and no name defined: taking $MYSELF as name");
 	}
 	if ($opt{report} & $DETAIL_HTML) {
-		use HTML::Entities;
+		require HTML::Entities;
 		DEBUG3("process_parameters: HTML report option set - loading HTML::Entities module");
 	}
 	if ($opt{ok}) {
@@ -448,8 +448,8 @@ sub exec_command {
 			#--- remove white chars from output
 			#$cmds{$no}{output}=mytrim($cmds{$no}{output},"\\n\\s");
 			$cmds{$no}{stderr}=mytrim($cmds{$no}{stderr},"\\n\\s");
-			$cmds{$no}{stdout}=encode_entities($cmds{$no}{stdout}) if ($cmds{$no}{stdout});
-			$cmds{$no}{stderr}=encode_entities($cmds{$no}{stderr}) if ($cmds{$no}{stderr});
+			$cmds{$no}{stdout}=encode_entities($cmds{$no}{stdout}) if (($opt{report} & $DETAIL_HTML) && $cmds{$no}{stdout});
+			$cmds{$no}{stderr}=encode_entities($cmds{$no}{stderr}) if (($opt{report} & $DETAIL_HTML) && $cmds{$no}{stderr});
 	
 			#--- split performance data from standard output
 			if ($cmds{$no}{output}=~/\|/) {
