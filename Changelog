@@ -1,6 +1,8 @@
 
 ===== Changelog =====
 
+	* new option -s suppress_perfdata=<tag1>,[<tag2>][,...]
+	* discarding incorrect perfdata (in order to save the other)
 	* fixed HTML::entities (thx to Gerhard Lausser)
 	* added set option: --set ENV_VAR=xyz
 	* added continuation lines capability for config files 
