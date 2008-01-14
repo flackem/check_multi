@@ -1,6 +1,7 @@
 
 ===== Changelog =====
 
+	* fixed ::multi_label:: problems with ::tags
 	* new option -s suppress_perfdata=<tag1>,[<tag2>][,...]
 	* discarding incorrect perfdata (in order to save the other)
 	* fixed HTML::entities (thx to Gerhard Lausser)

@@ -744,9 +744,10 @@ sub report_html {
 			defined($cmds{$no}{performance}) &&
 			$cmds{$no}{process_perfdata}) {
 
+			my $hostname=($ENV{NAGIOS_HOSTNAME}) ? $ENV{NAGIOS_HOSTNAME} : `uname -n`; chomp($hostname);
 			printf "<td nowrap>%s</td>", 
-				"<A HREF='/nagios/pnp/index.php?host=$ENV{NAGIOS_HOSTNAME}&srv=$cmds{$no}{name}' TARGET='_self'>" . 
-				"<img src='/nagios/images/action.gif' width=20 height=20 border=0 align=top alt='Show PNP chart for $ENV{NAGIOS_HOSTNAME} / $cmds{$no}{plugin}'></A>";
+				"<A HREF='/nagios/pnp/index.php?host=${hostname}&srv=$cmds{$no}{name}' TARGET='_self'>" . 
+				"<img src='/nagios/images/action.gif' width=20 height=20 border=0 align=top alt='Show PNP chart for $hostname / $cmds{$no}{plugin}'></A>";
 		} else {
 			printf "<td></td>";
 		}
@@ -812,6 +813,7 @@ sub report_perfdata {
 		printf "\|%s::%s::plugins=%d time=%.2f ",
 			($opt{name}) ? $opt{name} : $MYSELF,
 			$MYSELF, scalar(keys(%cmds)), time - $rc{starttime};
+		DEBUG2("report_perfdata (DETAIL_PERFORMANCE): name=" . ($opt{name}) ? $opt{name} : $MYSELF);
 		#--- one line per command, format: tag=output
 		foreach $no (sort numerically keys %cmds) {
 
@@ -820,8 +822,10 @@ sub report_perfdata {
 
 			if (defined($cmds{$no}{performance})) {
 				#--- prevent concatenation of multi-labels if called recursively
-				if ($cmds{$no}{performance}=~/::.*::/) {
-					print "$cmds{$no}{name}$cmds{$no}{performance} ";
+				if ($cmds{$no}{performance}=~/check_multi::check_multi::(.*)/) {
+					print "$cmds{$no}{name}::check_multi::$1 ";
+				} elsif ($cmds{$no}{performance}=~/::check_multi::/) {
+					print "$cmds{$no}{performance} ";
 				} else {
 					print "$cmds{$no}{name}::$cmds{$no}{plugin}::$cmds{$no}{performance} ";
 				}
