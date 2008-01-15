@@ -457,8 +457,8 @@ sub exec_command {
 			#--- remove white chars from output
 			#$cmds{$no}{output}=mytrim($cmds{$no}{output},"\\n\\s");
 			$cmds{$no}{stderr}=mytrim($cmds{$no}{stderr},"\\n\\s");
-			$cmds{$no}{stdout}=encode_entities($cmds{$no}{stdout}) if (($opt{report} & $DETAIL_HTML) && $cmds{$no}{stdout});
-			$cmds{$no}{stderr}=encode_entities($cmds{$no}{stderr}) if (($opt{report} & $DETAIL_HTML) && $cmds{$no}{stderr});
+			$cmds{$no}{stdout}=HTML::Entities::encode_entities($cmds{$no}{stdout}) if (($opt{report} & $DETAIL_HTML) && $cmds{$no}{stdout});
+			$cmds{$no}{stderr}=HTML::Entities::encode_entities($cmds{$no}{stderr}) if (($opt{report} & $DETAIL_HTML) && $cmds{$no}{stderr});
 	
 			#--- split performance data from standard output
 			if ($cmds{$no}{output}=~/\|/) {
@@ -471,6 +471,22 @@ sub exec_command {
 					if ($errstr) {
 						add_error("Perfdata error in >$cmds{$no}{performance}< beginning at \'$errstr\', perfdata discarded");
 						$cmds{$no}{performance}=undef;
+					} else {
+						#--- preserve '::' as multi delimiter - replace all latter '::' with '_'
+						my @tmpperf=split(/\s+/,$cmds{$no}{performance});
+						$cmds{$no}{performance}="";
+						foreach my $token (@tmpperf) {
+							my @tmparr=split(/::/,$token);
+							DEBUG2("splitting: $token -> $#tmparr");
+							if ($#tmparr > 1) {
+								$cmds{$no}{performance}.=shift(@tmparr)."::".shift(@tmparr)."::";
+								$cmds{$no}{performance}.=join("_",@tmparr);
+							} else {
+								$cmds{$no}{performance}.=$token;
+							}
+							DEBUG2("after splitting: $cmds{$no}{performance}");
+							$cmds{$no}{performance}.=" ";
+						}
 					}
 				}
 			}
@@ -518,12 +534,14 @@ sub exec_command {
 		#--- catchall for unknown errors
 		} else {
 			alarm(0);
-       			die "$MYSELF: unexpected exception encountered:$!";
+       			die "$MYSELF: unexpected exception encountered:$@";
 		}
 		unlink $tmp_stdout, $tmp_stderr;
 	} else {
 		$ENV{"NAGIOS_".$cmds{$no}{name}}="$cmds{$no}{output}";
 		DEBUG2("exec_command: environment var NAGIOS_$cmds{$no}{name}=$cmds{$no}{output}");
+		$ENV{"NAGIOS_STATE_".$cmds{$no}{name}}="$cmds{$no}{rc}";
+		DEBUG2("exec_command: environment var NAGIOS_STATE_$cmds{$no}{name}=$cmds{$no}{rc}");
 	}
 	return $cmds{$no}{rc};
 }
@@ -834,11 +852,12 @@ sub report_perfdata {
 	} elsif ($opt{report} & $DETAIL_PERFORMANCE_CLASSIC) {
 		printf "\|";
 
-		#--- suppress_perfdata set? ignore perfdata
-		next if (! $cmds{$no}{process_perfdata});
-
 		#--- one line per command, format: tag=output
 		foreach $no (sort numerically keys %cmds) {
+
+			#--- suppress_perfdata set? ignore perfdata
+			next if (! $cmds{$no}{process_perfdata});
+
 			if (defined($cmds{$no}{performance})) {
 				my $errstr=error_in_perfdata($cmds{$no}{performance});
 				if ($errstr) {

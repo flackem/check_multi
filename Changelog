@@ -1,6 +1,9 @@
 
 ===== Changelog =====
 
+	* performance labels delimiters '::' -> '_'
+	* minor fixes(eval error output, HTML::Entities use in eval...)
+	* added $STATE_<tag>$ vars
 	* fixed ::multi_label:: problems with ::tags
 	* new option -s suppress_perfdata=<tag1>,[<tag2>][,...]
 	* discarding incorrect perfdata (in order to save the other)
