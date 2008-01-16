@@ -444,7 +444,9 @@ sub exec_command {
 	
 			#--- store stdout/stderr and cleanup tmpfiles
 			$cmds{$no}{output}=readfile($tmp_stdout);
+			DEBUG2("exec_command: raw output >$cmds{$no}{output}<");
 			$cmds{$no}{stderr}=readfile($tmp_stderr);
+			DEBUG2("exec_command: raw stderr >$cmds{$no}{stderr}<");
 			unlink $tmp_stdout, $tmp_stderr;
 			chomp $cmds{$no}{output};	
 			chomp $cmds{$no}{stderr};
@@ -464,14 +466,14 @@ sub exec_command {
 			#--- split performance data from standard output
 			if ($cmds{$no}{output}=~/\|/) {
 				($cmds{$no}{output},$cmds{$no}{performance})=split(/\|/,$cmds{$no}{output});
-				DEBUG2("exec_command performance string: $cmds{$no}{performance}");
+				DEBUG3("exec_command performance string: $cmds{$no}{performance}");
 				$cmds{$no}{performance}=mytrim($cmds{$no}{performance},"\\s");
 
 				#--- check performance data and suppress if found errors
 				if (($opt{report} & $DETAIL_PERFORMANCE) && $cmds{$no}{process_perfdata}) {
 					my $errstr=error_in_perfdata($cmds{$no}{performance});
 					if ($errstr) {
-						add_error("Perfdata: \'$errstr\', perfdata discarded");
+						add_error("perfdata discarded for $errstr");
 						$cmds{$no}{performance}=undef;
 					} else {
 						#--- preserve '::' as multi delimiter - replace all '::' with '_'
@@ -480,7 +482,7 @@ sub exec_command {
         						my $label=$1;
         						my $data=$2;
 							my @tmparr=split(/::/,$label);
-							DEBUG2("exec_command before splitting: $label -> $#tmparr");
+							DEBUG3("exec_command before splitting: $label -> $#tmparr");
 							if ($#tmparr > 1) {
 								$tmpperf.=shift(@tmparr)."::".shift(@tmparr)."::";
 								$tmpperf.=join("_",@tmparr);
@@ -488,7 +490,7 @@ sub exec_command {
 								$tmpperf.=$label;
 							}
 							$tmpperf.="=$data ";
-							DEBUG2("exec_command after splitting: $tmpperf");
+							DEBUG3("exec_command after splitting: $tmpperf");
 						}
 						$cmds{$no}{performance}=$tmpperf;
 					}
@@ -512,10 +514,10 @@ sub exec_command {
 				$cmds{$no}{performance}=mytrim($cmds{$no}{performance},"\\s");
 
 				#--- check performance data and suppress if found errors
-				if ($opt{report} & $DETAIL_PERFORMANCE && $cmds{$no}{process_perfdata}) {
+				if (($opt{report} & $DETAIL_PERFORMANCE) && $cmds{$no}{process_perfdata}) {
 					my $errstr=error_in_perfdata($cmds{$no}{performance});
 					if ($errstr) {
-						add_error("perfdata \'$errstr\', perfdata discarded");
+						add_error("perfdata discarded for $errstr");
 						$cmds{$no}{performance}=undef;
 					}
 				}
@@ -674,7 +676,7 @@ sub report {
 			printf ", %s %s%s",
 				$cmds{$no}{name},
 				$cmds{$no}{output},
-				(defined($cmds{$no}{stderr}) && $cmds{$no}{stderr} ne "" && $opt{report} & $DETAIL_STDERR) ?
+				(defined($cmds{$no}{stderr}) && $cmds{$no}{stderr} ne "" && ($opt{report} & $DETAIL_STDERR)) ?
 			 	" [ STDERR: " . $cmds{$no}{stderr} . ']' : "";
 		} else {
 			printf "%s[%2.d] %s %s%s",
@@ -682,7 +684,7 @@ sub report {
 				$no,
 				$cmds{$no}{name},
 				$cmds{$no}{output},
-				(defined($cmds{$no}{stderr}) && $cmds{$no}{stderr} ne "" && $opt{report} & $DETAIL_STDERR) ?
+				(defined($cmds{$no}{stderr}) && $cmds{$no}{stderr} ne "" && ($opt{report} & $DETAIL_STDERR)) ?
 			 	" [ STDERR: " . $cmds{$no}{stderr} . ']' : "";
 		}
 	}
@@ -761,12 +763,13 @@ sub report_html {
 			($opt{report} & $DETAIL_HTML) ? "<DIV CLASS=\'service$rc{label}{$cmds{$no}{rc}}\' style='font-size:7pt'>" : "",
 			$no,
 			($opt{report} & $DETAIL_HTML) ? "</DIV>" : "";
-		if (	$opt{report} & $DETAIL_PERFORMANCE &&
-			$opt{report} & $DETAIL_PNP_LINK && 
+		if (	($opt{report} & $DETAIL_PERFORMANCE) &&
+			($opt{report} & $DETAIL_PNP_LINK) && 
 			defined($cmds{$no}{performance}) &&
 			$cmds{$no}{process_perfdata}) {
 
 			my $hostname=($ENV{NAGIOS_HOSTNAME}) ? $ENV{NAGIOS_HOSTNAME} : `uname -n`; chomp($hostname);
+			DEBUG2("report_html: hostname is $hostname");
 			printf "<td nowrap>%s</td>", 
 				"<A HREF='/nagios/pnp/index.php?host=${hostname}&srv=$cmds{$no}{name}' TARGET='_self'>" . 
 				"<img src='/nagios/images/action.gif' width=20 height=20 border=0 align=top alt='Show PNP chart for $hostname / $cmds{$no}{plugin}'></A>";
@@ -774,10 +777,11 @@ sub report_html {
 			printf "<td></td>";
 		}
 		printf "<td>&nbsp;&nbsp;%s</td>", ($cmds{$no}{name}) ? $cmds{$no}{name} : "";
-		printf "<td>%s</td>", ($cmds{$no}{output}=~/([^\n]*)\n(.*)/i) ? "$1</td></tr><tr><td></td><td colspan='3'>$2" : $cmds{$no}{output};
+		DEBUG2("report_html output:$cmds{$no}{output}");
+		printf "<td>%s</td>", ($cmds{$no}{output}=~/^([^\n]+)\n(.*)/i) ? "$1</td></tr><tr><td></td><td colspan='3'>$2" : $cmds{$no}{output};
 		if (	defined($cmds{$no}{stderr}) && 
 			$cmds{$no}{stderr} ne "" && 
-			$opt{report} & $DETAIL_STDERR) {
+			($opt{report} & $DETAIL_STDERR)) {
 
 			print " [ STDERR: " . $cmds{$no}{stderr} . "]";
 		}
@@ -843,14 +847,20 @@ sub report_perfdata {
 			next if (! $cmds{$no}{process_perfdata});
 
 			if (defined($cmds{$no}{performance})) {
+				my $perfstr="";
 				#--- prevent concatenation of multi-labels if called recursively
 				if ($cmds{$no}{performance}=~/check_multi::check_multi::(.*)/) {
-					print "$cmds{$no}{name}::check_multi::$1 ";
+					$perfstr="$cmds{$no}{name}::check_multi::$1 ";
 				} elsif ($cmds{$no}{performance}=~/::check_multi::/) {
-					print "$cmds{$no}{performance} ";
+					$perfstr="$cmds{$no}{performance} ";
 				} else {
-					print "$cmds{$no}{name}::$cmds{$no}{plugin}::$cmds{$no}{performance} ";
+					if ($cmds{$no}{performance}=~/^\s*\'([^']*)\'=(\S+)(.*)/) {
+						$perfstr="\'$cmds{$no}{name}::$cmds{$no}{plugin}::$1\'=$2$3 ";
+					} else {
+						$perfstr="$cmds{$no}{name}::$cmds{$no}{plugin}::$cmds{$no}{performance} ";
+					}
 				}
+				print $perfstr;
 			}
 		}
 	} elsif ($opt{report} & $DETAIL_PERFORMANCE_CLASSIC) {
@@ -865,7 +875,7 @@ sub report_perfdata {
 			if (defined($cmds{$no}{performance})) {
 				my $errstr=error_in_perfdata($cmds{$no}{performance});
 				if ($errstr) {
-					add_error("perfdata \'$errstr\', perfdata suppressed");
+					add_error("perfdata discarded for $errstr");
 				} else {
 					print "$cmds{$no}{performance} ";
 				}
@@ -887,7 +897,7 @@ sub error_in_perfdata {
 	#--- loop over perfdata
 	while ($perfdata) {
 		#--- label w/ \'
-		if ($perfdata=~/^\s*(\'.*?\')=(\S+)(.*)/) {
+		if ($perfdata=~/^\s*(\'[^']*\')=(\S+)(.*)/) {
 			$label=$1;
 			$data=$2;
 			$perfdata=$3;
@@ -905,17 +915,17 @@ sub error_in_perfdata {
 		#--- perfdata has label and data, now do detailed checks
 		my ($value,$warning,$critical,$min,$max)=split(/;/,$data);
 		my $uom="";
-		return "$label: no value in data $data" if ($value eq "");
+		return "$label: no value in data \'$data\'" if ($value eq "");
 		if ($value=~/([-0-9.]+)([^0-9-.]+)/) {
 			$value=$1;
 			$uom=$2;
 		}
-		$error.= "$label: value \'$value\' bad in data \'$data\' " if ($value && $value !~/^[-0-9.]+$/);
-		$error.= "$label: uom \'$uom\' bad in data \'$data\' " if ($uom ne "" && ($uom!~/s$/ && $uom!~/%$/ && $uom!~/B$/i && $uom!~/c$/));
-		$error.= "$label: warning \'$warning\' bad in data \'$data\' " if ($warning && $warning !~/^[-0-9.]+$/);
-		$error.= "$label: critical \'$critical\' bad in data \'$data\' " if ($critical && $critical !~/^[-0-9.]+$/);
-		$error.= "$label: min \'$min\' bad in data \'$data\' " if ($min && $min !~/^[-0-9.]+$/);
-		$error.= "$label: max \'$max\' bad in data \'$data\' " if ($max && $max !~/^[-0-9.]+$/);
+		$error.= "$label: bad value \'$value\' in data \'$data\' " if ($value && $value !~/^[-0-9.]+$/);
+		$error.= "$label: bad uom \'$uom\' in data \'$data\' " if ($uom ne "" && ($uom!~/s$/ && $uom!~/%$/ && $uom!~/b$/i && $uom!~/c$/));
+		$error.= "$label: bad warning \'$warning\' in data \'$data\' " if ($warning && $warning !~/^[-0-9.]+$/);
+		$error.= "$label: bad critical \'$critical\' in data \'$data\' " if ($critical && $critical !~/^[-0-9.]+$/);
+		$error.= "$label: bad min \'$min\' in data \'$data\' " if ($min && $min !~/^[-0-9.]+$/);
+		$error.= "$label: bad max \'$max\' in data \'$data\' " if ($max && $max !~/^[-0-9.]+$/);
 		return $error if ($error);
 
 		#--- done: perfdata is ok
