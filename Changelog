@@ -1,6 +1,7 @@
 
 ===== Changelog =====
 
+	* enhanced performance string error parsing
 	* performance labels delimiters '::' -> '_'
 	* minor fixes(eval error output, HTML::Entities use in eval...)
 	* added $STATE_<tag>$ vars

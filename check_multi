@@ -244,6 +244,7 @@ sub numerically { $a <=> $b }
 #---
 sub mytrim {
 	my ($src, $trim)=@_;
+	DEBUG3("mytrim: src:\'$src\' trim:\'$trim\'");
 	return ($src=~/[$trim]*(.*)[$trim]*/) ? $1 : $src;
 }
 
@@ -463,30 +464,33 @@ sub exec_command {
 			#--- split performance data from standard output
 			if ($cmds{$no}{output}=~/\|/) {
 				($cmds{$no}{output},$cmds{$no}{performance})=split(/\|/,$cmds{$no}{output});
+				DEBUG2("exec_command performance string: $cmds{$no}{performance}");
 				$cmds{$no}{performance}=mytrim($cmds{$no}{performance},"\\s");
 
 				#--- check performance data and suppress if found errors
-				if ($opt{report} & $DETAIL_PERFORMANCE && $cmds{$no}{process_perfdata}) {
+				if (($opt{report} & $DETAIL_PERFORMANCE) && $cmds{$no}{process_perfdata}) {
 					my $errstr=error_in_perfdata($cmds{$no}{performance});
 					if ($errstr) {
-						add_error("Perfdata error in >$cmds{$no}{performance}< beginning at \'$errstr\', perfdata discarded");
+						add_error("Perfdata: \'$errstr\', perfdata discarded");
 						$cmds{$no}{performance}=undef;
 					} else {
-						#--- preserve '::' as multi delimiter - replace all latter '::' with '_'
-						my @tmpperf=split(/\s+/,$cmds{$no}{performance});
-						$cmds{$no}{performance}="";
-						foreach my $token (@tmpperf) {
-							my @tmparr=split(/::/,$token);
-							DEBUG2("splitting: $token -> $#tmparr");
+						#--- preserve '::' as multi delimiter - replace all '::' with '_'
+						my $tmpperf="";
+						while ($cmds{$no}{performance}=~s/\s*([^=]+)=(\S+)\s*(.*)/$3/) {
+        						my $label=$1;
+        						my $data=$2;
+							my @tmparr=split(/::/,$label);
+							DEBUG2("exec_command before splitting: $label -> $#tmparr");
 							if ($#tmparr > 1) {
-								$cmds{$no}{performance}.=shift(@tmparr)."::".shift(@tmparr)."::";
-								$cmds{$no}{performance}.=join("_",@tmparr);
+								$tmpperf.=shift(@tmparr)."::".shift(@tmparr)."::";
+								$tmpperf.=join("_",@tmparr);
 							} else {
-								$cmds{$no}{performance}.=$token;
+								$tmpperf.=$label;
 							}
-							DEBUG2("after splitting: $cmds{$no}{performance}");
-							$cmds{$no}{performance}.=" ";
+							$tmpperf.="=$data ";
+							DEBUG2("exec_command after splitting: $tmpperf");
 						}
+						$cmds{$no}{performance}=$tmpperf;
 					}
 				}
 			}
@@ -511,7 +515,7 @@ sub exec_command {
 				if ($opt{report} & $DETAIL_PERFORMANCE && $cmds{$no}{process_perfdata}) {
 					my $errstr=error_in_perfdata($cmds{$no}{performance});
 					if ($errstr) {
-						add_error("Perfdata error in >$cmds{$no}{performance}< beginning at \'$errstr\', perfdata discarded");
+						add_error("perfdata \'$errstr\', perfdata discarded");
 						$cmds{$no}{performance}=undef;
 					}
 				}
@@ -861,7 +865,7 @@ sub report_perfdata {
 			if (defined($cmds{$no}{performance})) {
 				my $errstr=error_in_perfdata($cmds{$no}{performance});
 				if ($errstr) {
-					add_error("Perfdata error in >$cmds{$no}{performance}< beginning at \'$errstr\', perfdata suppressed");
+					add_error("perfdata \'$errstr\', perfdata suppressed");
 				} else {
 					print "$cmds{$no}{performance} ";
 				}
@@ -873,14 +877,50 @@ sub report_perfdata {
 }
 
 sub error_in_perfdata {
-	my $perfdata=join(" ", @_);
-	my @parr=split(/ /,$perfdata);
-	foreach (@parr) {
-		#--- perfdata pattern gratefully taken from Nagios::Plugin ;-)
-		next if (/^([^=]+)=([\d\.-]+)([\w%]*);?([\d\.-]+)?;?([\d\.-]+)?;?([\d\.-]+)?;?([\d\.-]+)?\s*/);
-		return $_;	# error in perfdata, return impacted string
+	my $perfdata=shift;
+	my $label="";
+	my $data="";
+	my $error="";
+	#---
+	#--- 'label'=value[UOM];[warn];[crit];[min];[max]
+	#---
+	#--- loop over perfdata
+	while ($perfdata) {
+		#--- label w/ \'
+		if ($perfdata=~/^\s*(\'.*?\')=(\S+)(.*)/) {
+			$label=$1;
+			$data=$2;
+			$perfdata=$3;
+		#--- label w/o \'
+		} elsif ($perfdata=~/^\s*(\S+)=(\S+)(.*)/) {
+			$label=$1;
+			$data=$2;
+			$perfdata=$3;
+		#--- invalid
+		} else {
+			return "perfdata invalid: $perfdata";
+		}
+		$perfdata=~s/^\s+//; $perfdata=~s/\s+$//;
+
+		#--- perfdata has label and data, now do detailed checks
+		my ($value,$warning,$critical,$min,$max)=split(/;/,$data);
+		my $uom="";
+		return "$label: no value in data $data" if ($value eq "");
+		if ($value=~/([-0-9.]+)([^0-9-.]+)/) {
+			$value=$1;
+			$uom=$2;
+		}
+		$error.= "$label: value \'$value\' bad in data \'$data\' " if ($value && $value !~/^[-0-9.]+$/);
+		$error.= "$label: uom \'$uom\' bad in data \'$data\' " if ($uom ne "" && ($uom!~/s$/ && $uom!~/%$/ && $uom!~/B$/i && $uom!~/c$/));
+		$error.= "$label: warning \'$warning\' bad in data \'$data\' " if ($warning && $warning !~/^[-0-9.]+$/);
+		$error.= "$label: critical \'$critical\' bad in data \'$data\' " if ($critical && $critical !~/^[-0-9.]+$/);
+		$error.= "$label: min \'$min\' bad in data \'$data\' " if ($min && $min !~/^[-0-9.]+$/);
+		$error.= "$label: max \'$max\' bad in data \'$data\' " if ($max && $max !~/^[-0-9.]+$/);
+		return $error if ($error);
+
+		#--- done: perfdata is ok
 	}
-	return undef;	# no error in perfdata
+	return undef;
 }
 
 #-------------------------------------------------------------------------------
