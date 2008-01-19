@@ -3,7 +3,7 @@
 #
 # check_multi - nagios plugin
 #
-# Copyright (c) 2007 Matthias Flacke (matthias.flacke at gmx.de)
+# Copyright (c) 2007-8 Matthias Flacke (matthias.flacke at gmx.de)
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -31,6 +31,7 @@ $MYSELF %cmds $returncode %rc $no $VERSION
 $OK $WARNING $CRITICAL $UNKNOWN
 $DETAIL_LIST $DETAIL_LIST_FULL $DETAIL_HTML $DETAIL_STDERR $DETAIL_PERFORMANCE
 $DETAIL_PERFORMANCE_CLASSIC $DETAIL_PNP_LINK $DETAIL_XML $DETAIL_NAGIOS2
+*DEBUG1 *DEBUG2 *DEBUG3
 );
 #-------------------------------------------------------------------------------
 #--- vars ----------------------------------------------------------------------
@@ -107,7 +108,7 @@ sub process_parameters {
 		"T|TIMEOUT=i"	=> \$opt{TIMEOUT},
 		"v|verbose:+"	=> \$opt{verbose},
 		"V|version"	=> \$opt{version},
-		"set=s"		=> \%{$opt{set}},
+		"s|set=s"	=> \%{$opt{set}},
 		"o|O|ok=s"	=> \$opt{ok},
 		"w|W|warning=s"	=> \$opt{warning},
 		"c|C|critical=s"=> \$opt{critical},
@@ -145,6 +146,10 @@ sub process_parameters {
 		$opt{name}=$MYSELF;
 		DEBUG1("process_parameters: PNP report option set and no name defined: taking $MYSELF as name");
 	}
+	if ($opt{report} & $DETAIL_HTML) {
+		require HTML::Entities;
+		DEBUG3("process_parameters: HTML report option set - loading HTML::Entities module");
+	}
 	if ($opt{ok}) {
 		$rc{expr}{$OK}=$opt{ok};
 	}
@@ -161,8 +166,11 @@ sub process_parameters {
 		print "$MYSELF: error - child timeout $opt{timeout}s must not be greater than parent timeout $opt{TIMEOUT}s\n";
 		return $UNKNOWN;
 	}
+	foreach my $option (sort keys(%{$opt{set}})) {
+		$ENV{"NAGIOS_".uc($option)}=$opt{set}{$option};
+	}
 	foreach my $option (sort keys(%opt)) {
-		DEBUG3("\$opt{$option}: $opt{$option}") if (defined($opt{$option}));
+		DEBUG3("process_parameters: \$opt{$option}=$opt{$option}") if (defined($opt{$option}));
 	}
 	return $OK;
 }
@@ -207,6 +215,7 @@ Options:
       512: Nagios 2 compatibility: one summary line of output only
 -s, --set <option>=<value>
    ignore_missing_cmd_file=(0|1) (don't complain if config file missing)	
+   suppress_perfdata=<tag1>[,<tag2>][,...] (don't provide perfdata)
 -l, --libexec
    path to plugins, default: $opt{libexec}
 -h, --help
@@ -235,6 +244,7 @@ sub numerically { $a <=> $b }
 #---
 sub mytrim {
 	my ($src, $trim)=@_;
+	DEBUG3("mytrim: src:\'$src\' trim:\'$trim\'");
 	return ($src=~/[$trim]*(.*)[$trim]*/) ? $1 : $src;
 }
 
@@ -243,10 +253,11 @@ sub mytrim {
 #---
 sub substitute_macros {
         my ($input)=@_;
-        while ((my $var)=($input=~/\$([A-Z0-9^\$]+)\$/)) {
-		last if (!defined($ENV{"NAGIOS_$var"}));
-		DEBUG3("substitute_macros: replacing env var NAGIOS_$var with $ENV{NAGIOS_$var}");
-                $input=~s/\$$var\$/$ENV{"NAGIOS_$var"}/g;
+        while ((my $var)=($input=~/\$([A-Za-z0-9_^\$]+)\$/)) {
+		DEBUG3("substitute_macros: var NAGIOS_${var} not defined") if (!defined($ENV{"NAGIOS_${var}"}));
+		last if (!defined($ENV{"NAGIOS_${var}"}));
+		DEBUG3("substitute_macros: replacing env var NAGIOS_${var} with $ENV{\"NAGIOS_${var}\"}");
+                $input=~s/\$$var\$/$ENV{"NAGIOS_${var}"}/g;
         }
         return $input;
 }
@@ -265,6 +276,7 @@ sub debug_message {
 #---
 sub add_error {
 	push @{$rc{error}}, @_;
+	DEBUG2("add_error: added error message \'@_\'");
 }
 
 #---
@@ -311,14 +323,14 @@ sub readfile {
 sub parse_commands {
 	my ($filenames)=@_;	# allow multiple filenames (array reference)
 	my $cmd_count=0;	# count stored commands
-	my ($cmd,$name,$plugin,$expr,$lineno,$i);
+	my ($line,$cmd,$type,$name,$plugin,$expr,$lineno,$i);
 
 	#--- loop over filenames
 	foreach my $filename (@{$filenames}) {
 
 		if (!open(FILE, $filename)) {
 			next if ($opt{set}{ignore_missing_cmd_file});
-			add_error("parse_command: cannot open config file $filename: $!");
+			add_error("parse_commands: cannot open config file $filename: $!");
 			$rc{top}=$UNKNOWN;
 			next;
 		}
@@ -328,43 +340,59 @@ sub parse_commands {
 	
 		$lineno=0;	# count sourcefile lines
 
-		#--- be liberate about tags - if they're duplicate, don't bother: it's up to the user
-		while (<FILE>) {
+		while ($line=<FILE>) {
+			chomp($line);
 			$lineno++;		
-			next if (/^\s*$/);	# skip empty lines
-			next if (/^\s*#/);	# skip comments
+
+			#--- check for continuation line with trailing '\'
+			if ($line =~ s/\\\s*$//) { 
+				$line .= <FILE>;
+				redo unless eof(FILE);
+			}
+			next if ($line=~/^\s*$/);	# skip empty lines
+			next if ($line=~/^\s*#/);	# skip comments
 		
-			chop($cmd=$_);
-			$cmd=substitute_macros($cmd);
-	
-			#--- format: 'command[ tag ] = plugin command line'
-			if ($cmd=~/\s*command\s*\[\s*(\S+)\s*\]\s*=\s*(.*)\s*/i) {
-				$name=$1;
-				$cmd=$2;
-				$plugin=(split(/\s+/,"$cmd"))[0];
-				$cmd="$opt{libexec}/$cmd" if ($plugin!~/\//);
+			#--- format: 'command [ tag ] = plugin command line'
+			#--- format: 'eval [ tag ] = expression'
+			if ($line=~/\s*(command|eval)\s*\[\s*(\S+)\s*\]\s*=\s*(.*)\s*/i) {
+				$type=lc($1);
+				$name=$2;
+				$cmd=$3;
+				$plugin=($type eq "command") ? (split(/\s+/,"$cmd"))[0] : "eval";
+				$cmd="$opt{libexec}/$cmd" if ($plugin!~/\// && $type ne "eval");
 				#--- find plugin with same name
-				for ($i=1; $i<=scalar(keys(%cmds));$i++) {
-					last if ($cmds{$i}{name} eq $name);
-				}
-				if ($cmds{$i}{command}) {
-					DEBUG2("parse_commands: overloaded $name with command \'$cmd\'");
-				} else {
-					DEBUG2("parse_commands: added $name with command \'$cmd\'");
+				if ($type eq "command" || $type eq "eval") {
+					for ($i=1; $i<=scalar(keys(%cmds));$i++) {
+						last if ($cmds{$i}{name} eq $name);
+					}
+					if ($cmds{$i}{command}) {
+						DEBUG2("parse_commands: overloaded $name with $type \'$cmd\'");
+					} else {
+						DEBUG2("parse_commands: added $name with $type \'$cmd\'");
+					}
 				}
 				#--- store vars into cmds structure
 				$cmds{$i}{command}=$cmd;
+				$cmds{$i}{type}=$type;
 				$cmds{$i}{plugin}=$plugin;
 				$cmds{$i}{name}=$name;
 				$cmds{$i}{rc}=$UNKNOWN;
+				if ($opt{set}{suppress_perfdata} && 
+				    $opt{set}{suppress_perfdata}=~/\b$name\b/i) {
+					$cmds{$i}{process_perfdata}=0;
+					DEBUG2("parse_commands: perfdata of [ $name ] suppressed");
+				} else {
+					$cmds{$i}{process_perfdata}=1;
+				}
 				$cmd_count=scalar(keys(%cmds));
+				DEBUG2("parse_commands: parsed $type [ $name ] = $cmd");
 
 			#--- format: 'state [ tag ] = (EXPR)
-			} elsif ($cmd=~/\s*state\s*\[\s*(\S+)\s*\]\s*=\s*(.*)\s*/i) {
+			} elsif ($line=~/\s*state\s*\[\s*(\S+)\s*\]\s*=\s*(.*)\s*/i) {
 				$name=uc($1);
 				$expr=$2;
 				if (!defined($rc{code}{$name})) {
-					add_error("parse_command: invalid state code specified in line $lineno: $name");
+					add_error("parse_commands: invalid state code specified in line $lineno: $name");
 					next;
 				}
 				# store state expression only if NOT set via commandline
@@ -375,7 +403,7 @@ sub parse_commands {
 					DEBUG2("parse_commands: cmdline precedence over state expression. Using \$opt{$name}: $opt{$name}");
 				}
 			} else {
-				add_error("parse_command: invalid format in line $lineno: $cmd");
+				add_error("parse_commands: invalid format in line $lineno: $cmd");
 				next;
 			}
 		}
@@ -395,45 +423,110 @@ sub exec_command {
 	#--- execute command with alarm timer to catch timeouts
 	$SIG{'ALRM'} = sub { die "timeout" };
 
+	#--- at runtime: substitute $MACRO$ macros
+	$cmds{$no}{command}=substitute_macros($cmds{$no}{command});
+
 	#--- measure command runtime;
 	my $cmd_start=time;
 
-	eval {
-		alarm($opt{timeout});
+        if ($cmds{$no}{type} eq "command") {
 
-		#--- prepare tmpfiles for stdout and stderr
-		$tmp_stdout=&get_tmpfile("/tmp", "${MYSELF}_stdout_$$");
-		$tmp_stderr=&get_tmpfile("/tmp", "${MYSELF}_stderr_$$");
+		eval {
+			alarm($opt{timeout});
+	
+			#--- prepare tmpfiles for stdout and stderr
+				$tmp_stdout=&get_tmpfile("/tmp", "${MYSELF}_stdout_$$");
+			$tmp_stderr=&get_tmpfile("/tmp", "${MYSELF}_stderr_$$");
+	
+				#--- execute command and store stdout/stderr/return code
+			`$cmds{$no}{command} 1>$tmp_stdout 2>$tmp_stderr`;
+			$cmds{$no}{rc}=$? >> 8;
+	
+			#--- store stdout/stderr and cleanup tmpfiles
+			$cmds{$no}{output}=readfile($tmp_stdout);
+			DEBUG2("exec_command: raw output >$cmds{$no}{output}<");
+			$cmds{$no}{stderr}=readfile($tmp_stderr);
+			DEBUG2("exec_command: raw stderr >$cmds{$no}{stderr}<");
+			unlink $tmp_stdout, $tmp_stderr;
+			chomp $cmds{$no}{output};	
+			chomp $cmds{$no}{stderr};
+	
+			#--- unknown return code? change it explicitly to UNKNOWN
+			if (! defined($rc{r2s}{$cmds{$no}{rc}})) {
+				$cmds{$no}{stderr}.=" RC was $cmds{$no}{rc}!";
+				$cmds{$no}{rc}=$UNKNOWN;
+			}
+			
+			#--- remove white chars from output
+			#$cmds{$no}{output}=mytrim($cmds{$no}{output},"\\n\\s");
+			$cmds{$no}{stderr}=mytrim($cmds{$no}{stderr},"\\n\\s");
+			$cmds{$no}{stdout}=HTML::Entities::encode_entities($cmds{$no}{stdout}) if (($opt{report} & $DETAIL_HTML) && $cmds{$no}{stdout});
+			$cmds{$no}{stderr}=HTML::Entities::encode_entities($cmds{$no}{stderr}) if (($opt{report} & $DETAIL_HTML) && $cmds{$no}{stderr});
+	
+			#--- split performance data from standard output
+			if ($cmds{$no}{output}=~/\|/) {
+				($cmds{$no}{output},$cmds{$no}{performance})=split(/\|/,$cmds{$no}{output});
+				DEBUG3("exec_command performance string: $cmds{$no}{performance}");
+				$cmds{$no}{performance}=mytrim($cmds{$no}{performance},"\\s");
 
-		#--- execute command and store stdout/stderr/return code
-		`$cmds{$no}{command} 1>$tmp_stdout 2>$tmp_stderr`;
-		$cmds{$no}{rc}=$? >> 8;
+				#--- check performance data and suppress if found errors
+				if (($opt{report} & $DETAIL_PERFORMANCE) && $cmds{$no}{process_perfdata}) {
+					my $errstr=error_in_perfdata($cmds{$no}{performance});
+					if ($errstr) {
+						add_error("perfdata discarded for $errstr");
+						$cmds{$no}{performance}=undef;
+					} else {
+						#--- preserve '::' as multi delimiter - replace all '::' with '_'
+						my $tmpperf="";
+						while ($cmds{$no}{performance}=~s/\s*([^=]+)=(\S+)\s*(.*)/$3/) {
+        						my $label=$1;
+        						my $data=$2;
+							my @tmparr=split(/::/,$label);
+							DEBUG3("exec_command before splitting: $label -> $#tmparr");
+							if ($#tmparr > 1) {
+								$tmpperf.=shift(@tmparr)."::".shift(@tmparr)."::";
+								$tmpperf.=join("_",@tmparr);
+							} else {
+								$tmpperf.=$label;
+							}
+							$tmpperf.="=$data ";
+							DEBUG3("exec_command after splitting: $tmpperf");
+						}
+						$cmds{$no}{performance}=$tmpperf;
+					}
+				}
+			}
+	
+			alarm(0);
+		};
+	} elsif ($cmds{$no}{type} eq "eval") {
+		$cmds{$no}{output}=eval($cmds{$no}{command});
+		if ($@) {
+			$cmds{$no}{output}.="[$@]";
+			$cmds{$no}{rc}=$WARNING;
+		} else {
+			chomp($cmds{$no}{output});
+			$ENV{"NAGIOS_".$cmds{$no}{name}}="$cmds{$no}{output}";
+			$cmds{$no}{rc}=$OK;
+			#--- split performance data from standard output
+			if ($cmds{$no}{output}=~/\|/) {
+				($cmds{$no}{output},$cmds{$no}{performance})=split(/\|/,$cmds{$no}{output});
+				$cmds{$no}{performance}=mytrim($cmds{$no}{performance},"\\s");
 
-		#--- store stdout/stderr and cleanup tmpfiles
-		$cmds{$no}{output}=readfile($tmp_stdout);
-		$cmds{$no}{stderr}=readfile($tmp_stderr);
-		unlink $tmp_stdout, $tmp_stderr;
-		chomp $cmds{$no}{output};	
-		chomp $cmds{$no}{stderr};
-
-		#--- unknown return code? change it explicitly to UNKNOWN
-		if (! defined($rc{r2s}{$cmds{$no}{rc}})) {
-			$cmds{$no}{stderr}.=" RC was $cmds{$no}{rc}!";
-			$cmds{$no}{rc}=$UNKNOWN;
-		}
-		
-		#--- remove white chars from output
-		#$cmds{$no}{output}=mytrim($cmds{$no}{output},"\\n\\s");
-		$cmds{$no}{stderr}=mytrim($cmds{$no}{stderr},"\\n\\s");
-
-		#--- split performance data from standard output
-		if ($cmds{$no}{output}=~/\|/) {
-			($cmds{$no}{output},$cmds{$no}{performance})=split(/\|/,$cmds{$no}{output});
-			$cmds{$no}{performance}=mytrim($cmds{$no}{performance},"\\s");
-		}
-
-		alarm(0);
-	};
+				#--- check performance data and suppress if found errors
+				if (($opt{report} & $DETAIL_PERFORMANCE) && $cmds{$no}{process_perfdata}) {
+					my $errstr=error_in_perfdata($cmds{$no}{performance});
+					if ($errstr) {
+						add_error("perfdata discarded for $errstr");
+						$cmds{$no}{performance}=undef;
+					}
+				}
+			}
+			DEBUG2("exec_command: environment var NAGIOS_$cmds{$no}{name}=$cmds{$no}{output}");
+                }
+		$cmds{$no}{runtime}=time-$cmd_start;
+		return $cmds{$no}{rc};
+	}
 	$cmds{$no}{runtime}=time-$cmd_start;
 	
 	#--- any oddities during command execution?
@@ -447,15 +540,23 @@ sub exec_command {
 		#--- catchall for unknown errors
 		} else {
 			alarm(0);
-       			die "$MYSELF: unexpected exception encountered:$!";
+       			die "$MYSELF: unexpected exception encountered:$@";
 		}
 		unlink $tmp_stdout, $tmp_stderr;
+	} else {
+		$ENV{"NAGIOS_".$cmds{$no}{name}}="$cmds{$no}{output}";
+		DEBUG2("exec_command: environment var NAGIOS_$cmds{$no}{name}=$cmds{$no}{output}");
+		$ENV{"NAGIOS_STATE_".$cmds{$no}{name}}="$cmds{$no}{rc}";
+		DEBUG2("exec_command: environment var NAGIOS_STATE_$cmds{$no}{name}=$cmds{$no}{rc}");
 	}
 	return $cmds{$no}{rc};
 }
 
 sub eval_result {
         my ($input)=@_;
+
+ 	#--- at runtime: substitute $MACRO$ macros
+        $input=substitute_macros($input);
 
         my $input_org=$input;
         my $message="";
@@ -476,7 +577,6 @@ sub eval_result {
         foreach my $no (sort keys(%cmds)) { 
                 $input=~s/\b($cmds{$no}{name})\b/$cmds{$no}{rc}/ig;
         }
-
 
         #--- evaluate expression
         my $result=eval "($input)";
@@ -576,7 +676,7 @@ sub report {
 			printf ", %s %s%s",
 				$cmds{$no}{name},
 				$cmds{$no}{output},
-				(defined($cmds{$no}{stderr}) && $cmds{$no}{stderr} ne "" && $opt{report} & $DETAIL_STDERR) ?
+				(defined($cmds{$no}{stderr}) && $cmds{$no}{stderr} ne "" && ($opt{report} & $DETAIL_STDERR)) ?
 			 	" [ STDERR: " . $cmds{$no}{stderr} . ']' : "";
 		} else {
 			printf "%s[%2.d] %s %s%s",
@@ -584,7 +684,7 @@ sub report {
 				$no,
 				$cmds{$no}{name},
 				$cmds{$no}{output},
-				(defined($cmds{$no}{stderr}) && $cmds{$no}{stderr} ne "" && $opt{report} & $DETAIL_STDERR) ?
+				(defined($cmds{$no}{stderr}) && $cmds{$no}{stderr} ne "" && ($opt{report} & $DETAIL_STDERR)) ?
 			 	" [ STDERR: " . $cmds{$no}{stderr} . ']' : "";
 		}
 	}
@@ -594,12 +694,20 @@ sub report {
 	DEBUG1("Commands executed:");
 	DEBUG1("-" x 80);
 	foreach $no (sort numerically keys %cmds) {
-		DEBUG1(sprintf "[%2.d] %s", $no, $cmds{$no}{command});
+		DEBUG1(sprintf "[%2.d] %-8s %s", $no, $cmds{$no}{type}, $cmds{$no}{command});
 	}
 
-	#--- print list of commands
+	#--- print results
 	DEBUG1("\n","-" x 80);
-	DEBUG1("Command runtime:");
+	DEBUG1("Command results:");
+	DEBUG1("-" x 80);
+	foreach $no (sort numerically keys %cmds) {
+		DEBUG1(sprintf "[%2.d] %-20s %s", $no, $cmds{$no}{name}, $cmds{$no}{output});
+	}
+
+	#--- print runtime
+	DEBUG1("\n","-" x 80);
+	DEBUG1("Command runtimes:");
 	DEBUG1("-" x 80);
 	foreach $no (sort numerically keys %cmds) {
 		DEBUG1(sprintf "[%2.d] %-20s %6.4fs", $no, $cmds{$no}{name}, $cmds{$no}{runtime});
@@ -648,28 +756,32 @@ sub report_html {
 	print " [" . join(", ",@{$rc{error}}) . "]" if (defined($rc{error}[0]));
 	
 	#--- loop over commands: report particular results for long plugin output
-	print "<table style='border-left-width:1px; border-left-style:dotted' border-rigth-width:0px; >";
+	print "<table style='border-left-width:1px; border-left-style:dotted; border-right-width:0px;' >";
 	foreach $no (sort numerically keys %cmds) {
 		print "<tr valign='top'>";
 		printf "<td nowrap>%s&nbsp;%2.d&nbsp;%s</td>", 
-			($opt{report} & $DETAIL_HTML) ? "<DIV CLASS=\'service$rc{label}{$cmds{$no}{rc}}\'>" : "",
+			($opt{report} & $DETAIL_HTML) ? "<DIV CLASS=\'service$rc{label}{$cmds{$no}{rc}}\' style='font-size:7pt'>" : "",
 			$no,
 			($opt{report} & $DETAIL_HTML) ? "</DIV>" : "";
-		if (	$opt{report} & $DETAIL_PERFORMANCE &&
-			$opt{report} & $DETAIL_PNP_LINK && 
-			defined($cmds{$no}{performance}) ) {
+		if (	($opt{report} & $DETAIL_PERFORMANCE) &&
+			($opt{report} & $DETAIL_PNP_LINK) && 
+			defined($cmds{$no}{performance}) &&
+			$cmds{$no}{process_perfdata}) {
 
+			my $hostname=($ENV{NAGIOS_HOSTNAME}) ? $ENV{NAGIOS_HOSTNAME} : `uname -n`; chomp($hostname);
+			DEBUG2("report_html: hostname is $hostname");
 			printf "<td nowrap>%s</td>", 
-				"<A HREF='/nagios/pnp/index.php?host=$ENV{NAGIOS_HOSTNAME}&srv=$cmds{$no}{name}' TARGET='_self'>" . 
-				"<img src='/nagios/images/action.gif' width=20 height=20 border=0 align=top alt='Show PNP chart for $ENV{NAGIOS_HOSTNAME} / $cmds{$no}{plugin}'></A>";
+				"<A HREF='/nagios/pnp/index.php?host=${hostname}&srv=$cmds{$no}{name}' TARGET='_self'>" . 
+				"<img src='/nagios/images/action.gif' width=20 height=20 border=0 align=top alt='Show PNP chart for $hostname / $cmds{$no}{plugin}'></A>";
 		} else {
 			printf "<td></td>";
 		}
-		printf "<td>%s</td>", ($cmds{$no}{name}) ? $cmds{$no}{name} : "";
-		printf "<td>%s</td>", ($cmds{$no}{output}=~/([^\n]*)\n(.*)/i) ? "$1</tr><tr><td></td><td colspan='10'>$2" : $cmds{$no}{output};
+		printf "<td>&nbsp;&nbsp;%s</td>", ($cmds{$no}{name}) ? $cmds{$no}{name} : "";
+		DEBUG2("report_html output:$cmds{$no}{output}");
+		printf "<td>%s</td>", ($cmds{$no}{output}=~/^([^\n]+)\n(.*)/i) ? "$1</td></tr><tr><td></td><td colspan='3'>$2" : $cmds{$no}{output};
 		if (	defined($cmds{$no}{stderr}) && 
 			$cmds{$no}{stderr} ne "" && 
-			$opt{report} & $DETAIL_STDERR) {
+			($opt{report} & $DETAIL_STDERR)) {
 
 			print " [ STDERR: " . $cmds{$no}{stderr} . "]";
 		}
@@ -680,16 +792,21 @@ sub report_html {
 }
 
 sub report_xml {
-	print "<!--\n" if ($opt{report} & $DETAIL_HTML);
-	print "<xml>\n";
-	print "<meta http-equiv=\"Content-Style-Type\" content=\"application/xml\">\n";
-	print "<?xml version=\"1.0\"?>\n";
-	print "<?xml-stylesheet type=\"text/xsl\" href=\"http://localhost/nagios/extinfo.xsl\"?>\n";
-	print "<PARENT name=\"$opt{name}\" plugins=\"$rc{nchecks}\" time=\"$rc{runtime}\">\n";
-	print "\t<output>";
+	#--- XML data and HTML option together only creates crap in your browser ;-)
+	if ($opt{report} & $DETAIL_HTML) {
+		add_error("HTML and XML output are mutually exclusive ;-), skipping XML");
+	}
+
+	my $xmlstr="";
+	$xmlstr.="<xml>\n";
+	$xmlstr.="<meta http-equiv=\"Content-Style-Type\" content=\"application/xml\">\n";
+	$xmlstr.="<?xml version=\"1.0\"?>\n";
+	$xmlstr.="<?xml-stylesheet type=\"text/xsl\" href=\"http://localhost/nagios/extinfo.xsl\"?>\n";
+	$xmlstr.="<PARENT name=\"$opt{name}\" plugins=\"$rc{nchecks}\" time=\"$rc{runtime}\">\n";
+	$xmlstr.="\t<output>";
 	#--- print header line (2): summary for particular states 
         if ($opt{report} & $DETAIL_LIST_FULL) {
-                print   "$rc{count}{$CRITICAL} critical" . ((@{$rc{list}{$CRITICAL}}) ? " (" . join(', ',@{$rc{list}{$CRITICAL}}) . ')' : "") . ", " .
+                $xmlstr.="$rc{count}{$CRITICAL} critical" . ((@{$rc{list}{$CRITICAL}}) ? " (" . join(', ',@{$rc{list}{$CRITICAL}}) . ')' : "") . ", " .
                         "$rc{count}{$WARNING} warning"   . ((@{$rc{list}{$WARNING}})  ? " (" . join(', ',@{$rc{list}{$WARNING}})  . ')' : "") . ", " .
                         "$rc{count}{$UNKNOWN} unknown"   . ((@{$rc{list}{$UNKNOWN}})  ? " (" . join(', ',@{$rc{list}{$UNKNOWN}})  . ')' : "") . ", " .
                         "$rc{count}{$OK} ok";
@@ -699,54 +816,136 @@ sub report_xml {
                 push @r, "$rc{count}{$WARNING} warning ("   . join(', ',@{$rc{list}{$WARNING}})  . ")" if (@{$rc{list}{$WARNING}});
                 push @r, "$rc{count}{$UNKNOWN} unknown ("   . join(', ',@{$rc{list}{$UNKNOWN}})  . ")" if (@{$rc{list}{$UNKNOWN}});
                 push @r, "$rc{count}{$OK} ok" if (@{$rc{list}{$OK}});
-                print join(", ", @r);
+                $xmlstr.=join(", ", @r);
         } else {
-                print   "$rc{count}{$CRITICAL} critical, " .
+                $xmlstr.="$rc{count}{$CRITICAL} critical, " .
                         "$rc{count}{$WARNING} warning, " .
                         "$rc{count}{$UNKNOWN} unknown, " .
                         "$rc{count}{$OK} ok";
         }
-	print "</output>\n";
-	print "<error>" . join(", ",@{$rc{error}}) . "</error>\n" if (defined($rc{error}[0]));
+	$xmlstr.="</output>\n";
+	$xmlstr.="<error>" . join(", ",@{$rc{error}}) . "</error>\n" if (defined($rc{error}[0]));
 
 	foreach $no (sort numerically keys %cmds) {
-		printf "\t<CHILD no=\"$no\">\n";
-		foreach my $token ("name","rc","output","stderr","plugin","command","performance") {
-			printf "\t\t<%s>%s</%s>\n",$token,$cmds{$no}{$token},$token if defined($cmds{$no}{$token});
+		$xmlstr.="\t<CHILD no=\"$no\">\n";
+		foreach my $token ("name","rc","output","stderr","plugin","command","performance","runtime") {
+			$xmlstr.=sprintf "\t\t<%s>%s</%s>\n",$token,$cmds{$no}{$token},$token if defined($cmds{$no}{$token});
 		}
-		printf "\t</CHILD>\n";
+		$xmlstr.="\t</CHILD>\n";
 	}
-	print "</PARENT>\n";
-	print "</xml>\n";
-	print "\n--> " if ($opt{report} & $DETAIL_HTML);
+	$xmlstr.="</PARENT>\n";
+	$xmlstr.="</xml>\n";
+	print $xmlstr;
 }
 
 sub report_perfdata {
 	#--- report performance data?
 	if ($opt{report} & $DETAIL_PERFORMANCE) {
-		printf "\|%s::%s::plugins=%d time=%.2f ",
-			($opt{name}) ? $opt{name} : $MYSELF,
-			$MYSELF, scalar(keys(%cmds)), time - $rc{starttime};
+		DEBUG2("report_perfdata (DETAIL_PERFORMANCE): name=" . ($opt{name}) ? $opt{name} : $MYSELF);
+		print "\|";
+		if (!defined($opt{set}{suppress_perfdata}) ||
+		   $opt{set}{suppress_perfdata}!~/\bplugins\b/) {
+			printf "%s::%s::plugins=%d ", 
+				($opt{name}) ? $opt{name} : $MYSELF, $MYSELF,
+				scalar(keys(%cmds));
+		}
+		if (!defined($opt{set}{suppress_perfdata}) ||
+		   $opt{set}{suppress_perfdata}!~/\btime\b/) {
+			printf "%s::%s::time=%f ", 
+				($opt{name}) ? $opt{name} : $MYSELF, $MYSELF,
+				time - $rc{starttime};
+		}
 		#--- one line per command, format: tag=output
 		foreach $no (sort numerically keys %cmds) {
+
+			#--- suppress_perfdata set? ignore perfdata
+			next if (! $cmds{$no}{process_perfdata});
+
 			if (defined($cmds{$no}{performance})) {
+				my $perfstr="";
 				#--- prevent concatenation of multi-labels if called recursively
-				if ($cmds{$no}{performance}=~/::.*::/) {
-					print "$cmds{$no}{name}$cmds{$no}{performance} ";
+				if ($cmds{$no}{performance}=~/check_multi::check_multi::(.*)/) {
+					$perfstr="$cmds{$no}{name}::check_multi::$1 ";
+				} elsif ($cmds{$no}{performance}=~/::check_multi::/) {
+					$perfstr="$cmds{$no}{performance} ";
 				} else {
-					print "$cmds{$no}{name}::$cmds{$no}{plugin}::$cmds{$no}{performance} ";
+					if ($cmds{$no}{performance}=~/^\s*\'([^']*)\'=(\S+)(.*)/) {
+						$perfstr="\'$cmds{$no}{name}::$cmds{$no}{plugin}::$1\'=$2$3 ";
+					} else {
+						$perfstr="$cmds{$no}{name}::$cmds{$no}{plugin}::$cmds{$no}{performance} ";
+					}
 				}
+				print $perfstr;
 			}
 		}
 	} elsif ($opt{report} & $DETAIL_PERFORMANCE_CLASSIC) {
-		printf "\|";
+		print "\|";
+
 		#--- one line per command, format: tag=output
 		foreach $no (sort numerically keys %cmds) {
-			print "$cmds{$no}{performance} " if (defined($cmds{$no}{performance}));
+
+			#--- suppress_perfdata set? ignore perfdata
+			next if (! $cmds{$no}{process_perfdata});
+
+			if (defined($cmds{$no}{performance})) {
+				my $errstr=error_in_perfdata($cmds{$no}{performance});
+				if ($errstr) {
+					add_error("perfdata discarded for $errstr");
+				} else {
+					print "$cmds{$no}{performance} ";
+				}
+			}
 		}
 	}
 	#--- final '\n' - dedicated to Wolfgang Barth ;-)
 	print "\n" if (!($opt{report} & $DETAIL_NAGIOS2));
+}
+
+sub error_in_perfdata {
+	my $perfdata=shift;
+	my $label="";
+	my $data="";
+	my $error="";
+	#---
+	#--- 'label'=value[UOM];[warn];[crit];[min];[max]
+	#---
+	#--- loop over perfdata
+	while ($perfdata) {
+		#--- label w/ \'
+		if ($perfdata=~/^\s*(\'[^']*\')=(\S+)(.*)/) {
+			$label=$1;
+			$data=$2;
+			$perfdata=$3;
+		#--- label w/o \'
+		} elsif ($perfdata=~/^\s*(\S+)=(\S+)(.*)/) {
+			$label=$1;
+			$data=$2;
+			$perfdata=$3;
+		#--- invalid
+		} else {
+			return "perfdata invalid: $perfdata";
+		}
+		$perfdata=~s/^\s+//; $perfdata=~s/\s+$//;
+
+		#--- perfdata has label and data, now do detailed checks
+		my ($value,$warning,$critical,$min,$max)=split(/;/,$data);
+		my $uom="";
+		return "$label: no value in data \'$data\'" if ($value eq "");
+		if ($value=~/([-0-9.]+)([^0-9-.]+)/) {
+			$value=$1;
+			$uom=$2;
+		}
+		$error.= "$label: bad value \'$value\' in data \'$data\' " if ($value && $value !~/^[-0-9.]+$/);
+		$error.= "$label: bad uom \'$uom\' in data \'$data\' " if ($uom ne "" && ($uom!~/s$/ && $uom!~/%$/ && $uom!~/b$/i && $uom!~/c$/));
+		$error.= "$label: bad warning \'$warning\' in data \'$data\' " if ($warning && $warning !~/^[-0-9.]+$/);
+		$error.= "$label: bad critical \'$critical\' in data \'$data\' " if ($critical && $critical !~/^[-0-9.]+$/);
+		$error.= "$label: bad min \'$min\' in data \'$data\' " if ($min && $min !~/^[-0-9.]+$/);
+		$error.= "$label: bad max \'$max\' in data \'$data\' " if ($max && $max !~/^[-0-9.]+$/);
+		return $error if ($error);
+
+		#--- done: perfdata is ok
+	}
+	return undef;
 }
 
 #-------------------------------------------------------------------------------
@@ -757,7 +956,7 @@ sub report_perfdata {
 exit $UNKNOWN if (&process_parameters != $OK);
 
 #--- don't run this as root ;-)
-DEBUG3("Userid: $>");
+DEBUG3("main: userid=$>");
 add_error("please don't run plugins as root!") if ($> == 0);
 
 #--- parse command file (nrpe format)
@@ -793,9 +992,8 @@ if (! ($opt{report} & $DETAIL_HTML)) {
 #--- report HTML output
 if ($opt{report} & $DETAIL_HTML) {
 	&report_html;
-}
-#--- need XML data
-if ($opt{report} & $DETAIL_XML) {
+#--- report XML output (only if not HTML)
+} elsif ($opt{report} & $DETAIL_XML) {
 	&report_xml;
 }
 

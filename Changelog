@@ -1,11 +1,28 @@
 
 ===== Changelog =====
 
+**0.16**	19.01.2008
+	* minor cleanups
+	* enhanced performance string error parsing
+	* performance labels delimiters '::' -> '_'
+	* minor fixes(eval error output, HTML::Entities use in eval...)
+	* added $STATE_<tag>$ vars
+	* fixed ::multi_label:: problems with ::tags
+	* new option -s suppress_perfdata=<tag1>,[<tag2>][,...]
+	* discarding incorrect perfdata (in order to save the other)
+	* fixed HTML::entities (thx to Gerhard Lausser)
+	* added set option: --set ENV_VAR=xyz
+	* added continuation lines capability for config files 
+	* some minor debugging changes
+	* added eval [ TAG ] = PERLEXPR
+	* ePN support removed again (too many error conditions)
+	* fixed HTML issues (table specific, thx to Wolfgang Barth)
+	* ePN support
 	* removed --state option (replaced by state evaluation)
 	* replaced -r 64 (command list) and -r 1024 (state eval) by verbose option
 	* added --verbose (level 0-3) option and DEBUG routine
 
-##0.15**
+**0.15**	21.11.2007
 	* added 'ignore_missing_cmd_file' option for command overloading
 	* added --set option to add multiple config values
 	* added command overloading mechanism
