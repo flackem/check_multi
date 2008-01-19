@@ -792,16 +792,21 @@ sub report_html {
 }
 
 sub report_xml {
-	print "<!--\n" if ($opt{report} & $DETAIL_HTML);
-	print "<xml>\n";
-	print "<meta http-equiv=\"Content-Style-Type\" content=\"application/xml\">\n";
-	print "<?xml version=\"1.0\"?>\n";
-	print "<?xml-stylesheet type=\"text/xsl\" href=\"http://localhost/nagios/extinfo.xsl\"?>\n";
-	print "<PARENT name=\"$opt{name}\" plugins=\"$rc{nchecks}\" time=\"$rc{runtime}\">\n";
-	print "\t<output>";
+	#--- XML data and HTML option together only creates crap in your browser ;-)
+	if ($opt{report} & $DETAIL_HTML) {
+		add_error("HTML and XML output are mutually exclusive ;-), skipping XML");
+	}
+
+	my $xmlstr="";
+	$xmlstr.="<xml>\n";
+	$xmlstr.="<meta http-equiv=\"Content-Style-Type\" content=\"application/xml\">\n";
+	$xmlstr.="<?xml version=\"1.0\"?>\n";
+	$xmlstr.="<?xml-stylesheet type=\"text/xsl\" href=\"http://localhost/nagios/extinfo.xsl\"?>\n";
+	$xmlstr.="<PARENT name=\"$opt{name}\" plugins=\"$rc{nchecks}\" time=\"$rc{runtime}\">\n";
+	$xmlstr.="\t<output>";
 	#--- print header line (2): summary for particular states 
         if ($opt{report} & $DETAIL_LIST_FULL) {
-                print   "$rc{count}{$CRITICAL} critical" . ((@{$rc{list}{$CRITICAL}}) ? " (" . join(', ',@{$rc{list}{$CRITICAL}}) . ')' : "") . ", " .
+                $xmlstr.="$rc{count}{$CRITICAL} critical" . ((@{$rc{list}{$CRITICAL}}) ? " (" . join(', ',@{$rc{list}{$CRITICAL}}) . ')' : "") . ", " .
                         "$rc{count}{$WARNING} warning"   . ((@{$rc{list}{$WARNING}})  ? " (" . join(', ',@{$rc{list}{$WARNING}})  . ')' : "") . ", " .
                         "$rc{count}{$UNKNOWN} unknown"   . ((@{$rc{list}{$UNKNOWN}})  ? " (" . join(', ',@{$rc{list}{$UNKNOWN}})  . ')' : "") . ", " .
                         "$rc{count}{$OK} ok";
@@ -811,35 +816,45 @@ sub report_xml {
                 push @r, "$rc{count}{$WARNING} warning ("   . join(', ',@{$rc{list}{$WARNING}})  . ")" if (@{$rc{list}{$WARNING}});
                 push @r, "$rc{count}{$UNKNOWN} unknown ("   . join(', ',@{$rc{list}{$UNKNOWN}})  . ")" if (@{$rc{list}{$UNKNOWN}});
                 push @r, "$rc{count}{$OK} ok" if (@{$rc{list}{$OK}});
-                print join(", ", @r);
+                $xmlstr.=join(", ", @r);
         } else {
-                print   "$rc{count}{$CRITICAL} critical, " .
+                $xmlstr.="$rc{count}{$CRITICAL} critical, " .
                         "$rc{count}{$WARNING} warning, " .
                         "$rc{count}{$UNKNOWN} unknown, " .
                         "$rc{count}{$OK} ok";
         }
-	print "</output>\n";
-	print "<error>" . join(", ",@{$rc{error}}) . "</error>\n" if (defined($rc{error}[0]));
+	$xmlstr.="</output>\n";
+	$xmlstr.="<error>" . join(", ",@{$rc{error}}) . "</error>\n" if (defined($rc{error}[0]));
 
 	foreach $no (sort numerically keys %cmds) {
-		printf "\t<CHILD no=\"$no\">\n";
-		foreach my $token ("name","rc","output","stderr","plugin","command","performance") {
-			printf "\t\t<%s>%s</%s>\n",$token,$cmds{$no}{$token},$token if defined($cmds{$no}{$token});
+		$xmlstr.="\t<CHILD no=\"$no\">\n";
+		foreach my $token ("name","rc","output","stderr","plugin","command","performance","runtime") {
+			$xmlstr.=sprintf "\t\t<%s>%s</%s>\n",$token,$cmds{$no}{$token},$token if defined($cmds{$no}{$token});
 		}
-		printf "\t</CHILD>\n";
+		$xmlstr.="\t</CHILD>\n";
 	}
-	print "</PARENT>\n";
-	print "</xml>\n";
-	print "\n--> " if ($opt{report} & $DETAIL_HTML);
+	$xmlstr.="</PARENT>\n";
+	$xmlstr.="</xml>\n";
+	print $xmlstr;
 }
 
 sub report_perfdata {
 	#--- report performance data?
 	if ($opt{report} & $DETAIL_PERFORMANCE) {
-		printf "\|%s::%s::plugins=%d time=%.2f ",
-			($opt{name}) ? $opt{name} : $MYSELF,
-			$MYSELF, scalar(keys(%cmds)), time - $rc{starttime};
 		DEBUG2("report_perfdata (DETAIL_PERFORMANCE): name=" . ($opt{name}) ? $opt{name} : $MYSELF);
+		print "\|";
+		if (!defined($opt{set}{suppress_perfdata}) ||
+		   $opt{set}{suppress_perfdata}!~/\bplugins\b/) {
+			printf "%s::%s::plugins=%d ", 
+				($opt{name}) ? $opt{name} : $MYSELF, $MYSELF,
+				scalar(keys(%cmds));
+		}
+		if (!defined($opt{set}{suppress_perfdata}) ||
+		   $opt{set}{suppress_perfdata}!~/\btime\b/) {
+			printf "%s::%s::time=%f ", 
+				($opt{name}) ? $opt{name} : $MYSELF, $MYSELF,
+				time - $rc{starttime};
+		}
 		#--- one line per command, format: tag=output
 		foreach $no (sort numerically keys %cmds) {
 
@@ -864,7 +879,7 @@ sub report_perfdata {
 			}
 		}
 	} elsif ($opt{report} & $DETAIL_PERFORMANCE_CLASSIC) {
-		printf "\|";
+		print "\|";
 
 		#--- one line per command, format: tag=output
 		foreach $no (sort numerically keys %cmds) {
@@ -977,9 +992,8 @@ if (! ($opt{report} & $DETAIL_HTML)) {
 #--- report HTML output
 if ($opt{report} & $DETAIL_HTML) {
 	&report_html;
-}
-#--- need XML data
-if ($opt{report} & $DETAIL_XML) {
+#--- report XML output (only if not HTML)
+} elsif ($opt{report} & $DETAIL_XML) {
 	&report_xml;
 }
 
