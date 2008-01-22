@@ -1,6 +1,8 @@
 
 ===== Changelog =====
 
+	* splitted eval into eeval (echo eval) and eval
+
 **0.16**	19.01.2008
 	* minor cleanups
 	* enhanced performance string error parsing
