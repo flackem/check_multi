@@ -30,7 +30,7 @@ use vars qw(
 $MYSELF %cmds $returncode %rc $no $VERSION
 $OK $WARNING $CRITICAL $UNKNOWN
 $DETAIL_LIST $DETAIL_LIST_FULL $DETAIL_HTML $DETAIL_STDERR $DETAIL_PERFORMANCE
-$DETAIL_PERFORMANCE_CLASSIC $DETAIL_PNP_LINK $DETAIL_XML $DETAIL_NAGIOS2
+$DETAIL_PERFORMANCE_CLASSIC $DETAIL_STATUS $DETAIL_PNP_LINK $DETAIL_XML $DETAIL_NAGIOS2
 *DEBUG1 *DEBUG2 *DEBUG3
 );
 #-------------------------------------------------------------------------------
@@ -52,6 +52,7 @@ $DETAIL_STDERR=4;
 $DETAIL_PERFORMANCE=8;
 $DETAIL_LIST_FULL=16;
 $DETAIL_PERFORMANCE_CLASSIC=32;
+$DETAIL_STATUS=64;
 $DETAIL_PNP_LINK=128;
 $DETAIL_XML=256;
 $DETAIL_NAGIOS2=512;
@@ -144,7 +145,7 @@ sub process_parameters {
 	}
 	if ($opt{report} & $DETAIL_PNP_LINK && !$opt{name}) {
 		$opt{name}=$MYSELF;
-		DEBUG1("process_parameters: PNP report option set and no name defined: taking $MYSELF as name");
+		DEBUG2("process_parameters: PNP report option set and no name defined: taking $MYSELF as name");
 	}
 	if ($opt{report} & $DETAIL_HTML) {
 		require HTML::Entities;
@@ -210,6 +211,7 @@ Options:
         8: show performance data (with check_multi_style)
        16: show full list of states, normally '0 warning' is omitted
        32: show old type of performance data (without check_multi style)
+       64: add explicit status (OK,WARNING,CRITICAL,UNKNOWN) in front of output
       128: add PNP action link if performance data available
       256: XML: print structured XML output
       512: Nagios 2 compatibility: one summary line of output only
@@ -690,11 +692,12 @@ sub report {
 				(defined($cmds{$no}{stderr}) && $cmds{$no}{stderr} ne "" && ($opt{report} & $DETAIL_STDERR)) ?
 			 	" [ STDERR: " . $cmds{$no}{stderr} . ']' : "";
 		} else {
-			printf "%s[%2.d] %s %s%s",
+			printf "%s[%2.d] %s %s%s%s",
 				($opt{report} & $DETAIL_NAGIOS2) ? ", " : "\n",
 				$no,
 				$cmds{$no}{name},
-				$cmds{$no}{output},
+				($opt{report} & $DETAIL_STATUS) ? "$rc{label}{$cmds{$no}{rc}} " : "",
+				($cmds{$no}{output}=~/\<!--(.*)--\>/) ? $1 : $cmds{$no}{output},
 				(defined($cmds{$no}{stderr}) && $cmds{$no}{stderr} ne "" && ($opt{report} & $DETAIL_STDERR)) ?
 			 	" [ STDERR: " . $cmds{$no}{stderr} . ']' : "";
 		}
@@ -1007,6 +1010,10 @@ if (! ($opt{report} & $DETAIL_HTML)) {
 #--- report HTML output
 if ($opt{report} & $DETAIL_HTML) {
 	&report_html;
+	#--- include ASCII version for notification scripts
+	print "\n<!--\n";
+	&report;
+	print "-->\n";
 #--- report XML output (only if not HTML)
 } elsif ($opt{report} & $DETAIL_XML) {
 	&report_xml;

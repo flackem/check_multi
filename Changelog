@@ -1,6 +1,7 @@
 
 ===== Changelog =====
 
+	* added ASCII output into HTML comments for notification scripts
 	* splitted eval into eeval (echo eval) and eval
 
 **0.16**	19.01.2008
