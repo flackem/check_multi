@@ -697,7 +697,7 @@ sub report {
 				$no,
 				$cmds{$no}{name},
 				($opt{report} & $DETAIL_STATUS) ? "$rc{label}{$cmds{$no}{rc}} " : "",
-				($cmds{$no}{output}=~/\<!--(.*)--\>/) ? $1 : $cmds{$no}{output},
+				($cmds{$no}{output}=~/\<!--(.*?)--\>/sg) ? $1 : $cmds{$no}{output},
 				(defined($cmds{$no}{stderr}) && $cmds{$no}{stderr} ne "" && ($opt{report} & $DETAIL_STDERR)) ?
 			 	" [ STDERR: " . $cmds{$no}{stderr} . ']' : "";
 		}
@@ -735,9 +735,6 @@ sub report {
 		DEBUG1(sprintf "%-8s %-40s %d", $rc{label}{$rc{s2r}{$s}}, $rc{expr}{$rc{s2r}{$s}}, $rc{match}{$rc{s2r}{$s}});
 	}
 	DEBUG1(sprintf "%8s %40s %s", "", "Overall state =>", $rc{label}{$rc{top}});
-
-	#--- final '\n' - dedicated to Wolfgang Barth ;-)
-	print "\n" if (!($opt{report} & $DETAIL_NAGIOS2));
 }
 
 sub report_html {
@@ -915,8 +912,6 @@ sub report_perfdata {
 			}
 		}
 	}
-	#--- final '\n' - dedicated to Wolfgang Barth ;-)
-	print "\n" if (!($opt{report} & $DETAIL_NAGIOS2));
 }
 
 sub error_in_perfdata {
@@ -1011,9 +1006,9 @@ if (! ($opt{report} & $DETAIL_HTML)) {
 if ($opt{report} & $DETAIL_HTML) {
 	&report_html;
 	#--- include ASCII version for notification scripts
-	print "\n<!--\n";
+	print "\n<!--";
 	&report;
-	print "-->\n";
+	print "-->";
 #--- report XML output (only if not HTML)
 } elsif ($opt{report} & $DETAIL_XML) {
 	&report_xml;
@@ -1021,6 +1016,13 @@ if ($opt{report} & $DETAIL_HTML) {
 
 #--- at last: perfdata
 &report_perfdata;
+
+#--- final '\n' - dedicated to Wolfgang Barth ;-)
+if (	!($opt{report} & $DETAIL_NAGIOS2) && 
+	!($opt{report} & $DETAIL_HTML) &&
+	!($opt{report} & $DETAIL_XML)) {
+	print "\n";
+}
 
 #--- return rc with highest severity
 exit $rc{top};
