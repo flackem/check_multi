@@ -428,7 +428,6 @@ sub exec_command {
 
 	#--- at runtime: substitute $MACRO$ macros and states
 	$cmds{$no}{command}=substitute_macros($cmds{$no}{command});
-	$cmds{$no}{command}=substitute_states($cmds{$no}{command});
 
 	#--- measure command runtime;
 	my $cmd_start=time;
@@ -859,15 +858,10 @@ sub report_perfdata {
 		DEBUG2("report_perfdata (DETAIL_PERFORMANCE): name=" . ($opt{name}) ? $opt{name} : $MYSELF);
 		print "\|";
 		if (!defined($opt{set}{suppress_perfdata}) ||
-		   $opt{set}{suppress_perfdata}!~/\bplugins\b/) {
-			printf "%s::%s::plugins=%d ", 
+		   $opt{set}{suppress_perfdata}!~/\bcheck_multi\b/) {
+			printf "%s::%s::plugins=%d time=%f ", 
 				($opt{name}) ? $opt{name} : $MYSELF, $MYSELF,
-				scalar(keys(%cmds));
-		}
-		if (!defined($opt{set}{suppress_perfdata}) ||
-		   $opt{set}{suppress_perfdata}!~/\btime\b/) {
-			printf "%s::%s::time=%f ", 
-				($opt{name}) ? $opt{name} : $MYSELF, $MYSELF,
+				scalar(keys(%cmds)),
 				time - $rc{starttime};
 		}
 		#--- one line per command, format: tag=output

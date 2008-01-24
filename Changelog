@@ -1,6 +1,8 @@
 
 ===== Changelog =====
 
+	* fixed state substitution (now only for state statements)
+	* fixed check_multi performance data labels
 	* added ASCII output into HTML comments for notification scripts
 	* splitted eval into eeval (echo eval) and eval
 
