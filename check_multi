@@ -480,24 +480,6 @@ sub exec_command {
 					if ($errstr) {
 						add_error("perfdata discarded for $errstr");
 						$cmds{$no}{performance}=undef;
-					} else {
-						#--- preserve '::' as multi delimiter - replace all '::' with '_'
-						my $tmpperf="";
-						while ($cmds{$no}{performance}=~s/\s*([^=]+)=(\S+)\s*(.*)/$3/) {
-        						my $label=$1;
-        						my $data=$2;
-							my @tmparr=split(/::/,$label);
-							DEBUG3("exec_command before splitting: $label -> $#tmparr");
-							if ($#tmparr > 1) {
-								$tmpperf.=shift(@tmparr)."::".shift(@tmparr)."::";
-								$tmpperf.=join("_",@tmparr);
-							} else {
-								$tmpperf.=$label;
-							}
-							$tmpperf.="=$data ";
-							DEBUG3("exec_command after splitting: $tmpperf");
-						}
-						$cmds{$no}{performance}=$tmpperf;
 					}
 				}
 			}
@@ -730,12 +712,14 @@ sub report {
 
 	#--- print state settings and RC evaluation result
 	DEBUG1("\n","-" x 80);
-	DEBUG1(sprintf "%-8s %-40s %s", "State","Expression","Evaluates to");
+	DEBUG1(sprintf "%-8s %-55s %s", "State","Expression","Evaluates to");
 	DEBUG1("-" x 80);
 	foreach my $s (sort numerically keys %{$rc{s2r}}) {
-		DEBUG1(sprintf "%-8s %-40s %d", $rc{label}{$rc{s2r}{$s}}, $rc{expr}{$rc{s2r}{$s}}, $rc{match}{$rc{s2r}{$s}});
+		DEBUG1(sprintf "%-8s %-55s %s", $rc{label}{$rc{s2r}{$s}}, $rc{expr}{$rc{s2r}{$s}}, ($rc{match}{$rc{s2r}{$s}}) ? "TRUE" : "FALSE");
 	}
-	DEBUG1(sprintf "%8s %40s %s", "", "Overall state =>", $rc{label}{$rc{top}});
+	DEBUG1("-" x 80);
+	DEBUG1(sprintf "%8s %55s %s", "", "Overall state =>", $rc{label}{$rc{top}});
+	DEBUG1("-" x 80);
 }
 
 sub report_html {
@@ -857,6 +841,7 @@ sub report_xml {
 }
 
 sub report_perfdata {
+	my $perftmp="";
 	#--- report performance data?
 	if ($opt{report} & $DETAIL_PERFORMANCE) {
 		DEBUG2("report_perfdata (DETAIL_PERFORMANCE): name=" . ($opt{name}) ? $opt{name} : $MYSELF);
@@ -875,22 +860,41 @@ sub report_perfdata {
 			next if (! $cmds{$no}{process_perfdata});
 
 			if (defined($cmds{$no}{performance})) {
-				my $perfstr="";
 				#--- prevent concatenation of multi-labels if called recursively
 				if ($cmds{$no}{performance}=~/check_multi::check_multi::(.*)/) {
-					$perfstr="$cmds{$no}{name}::check_multi::$1 ";
+					$perftmp="$cmds{$no}{name}::check_multi::$1 ";
 				} elsif ($cmds{$no}{performance}=~/::check_multi::/) {
-					$perfstr="$cmds{$no}{performance} ";
+					$perftmp="$cmds{$no}{performance} ";
 				} else {
 					#--- do we have an explicit plugin specification? take it
 					my $plugin=($cmds{$no}{pplugin} ne "") ? $cmds{$no}{pplugin} : $cmds{$no}{plugin};
 					if ($cmds{$no}{performance}=~/^\s*\'([^']*)\'=(\S+)(.*)/) {
-						$perfstr="\'$cmds{$no}{name}::${plugin}::$1\'=$2$3 ";
+						$perftmp="\'$cmds{$no}{name}::${plugin}::$1\'=$2$3 ";
 					} else {
-						$perfstr="$cmds{$no}{name}::${plugin}::$cmds{$no}{performance} ";
+						$perftmp="$cmds{$no}{name}::${plugin}::$cmds{$no}{performance} ";
 					}
 				}
-				print $perfstr;
+				$cmds{$no}{performance}="";
+				DEBUG3("report_perfdata before splitting: $perftmp");
+				#--- preserve '::' as multi delimiter - replace all '::' with '_'
+				while ($perftmp=~/\s*([^=]+)=(\S+)\s*(.*)/) {
+        				my $label=$1;
+        				my $data=$2;
+					$perftmp=$3;
+
+					my @tmparr=split(/::/,$label);
+					DEBUG3("report_perfdata token before splitting: $label [0-$#tmparr]:" . join("|",@tmparr));
+					if ($#tmparr > 1) {
+						$cmds{$no}{performance}.=shift(@tmparr)."::".shift(@tmparr)."::";
+						$cmds{$no}{performance}.=join("_",@tmparr);
+					} else {
+						$cmds{$no}{performance}.=$label;
+					}
+					$cmds{$no}{performance}.="=$data ";
+					DEBUG3("report_perfdata remaining perftmp: $perftmp");
+				}
+				DEBUG3("report_perfdata complete after splitting: $cmds{$no}{performance}");
+				print $cmds{$no}{performance};
 			}
 		}
 	} elsif ($opt{report} & $DETAIL_PERFORMANCE_CLASSIC) {

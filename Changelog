@@ -1,6 +1,7 @@
 
 ===== Changelog =====
 
+	* fixed perfdata label sanitizing (thx Jens)
 	* added explicit perfdata plugin specification (thx to Joerg Linge)
 	* fixed state substitution (now only for state statements)
 	* fixed check_multi performance data labels
