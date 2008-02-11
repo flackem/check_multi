@@ -83,7 +83,9 @@ my %opt=(
 	"libexec"	=> "/usr/local/nagios/libexec",
 	"name"		=> "",
 	"report"	=> 13,
-	"set"		=> {},
+	"set"		=> {
+		"file_extension" => "txt",
+	},
 	"timeout"	=> 10,
 	"TIMEOUT"	=> 60,
 	"ok"		=> undef,
@@ -140,7 +142,11 @@ sub process_parameters {
 	} else {
 		#--- check if filenames are directories and replace with '*cmd' files
 		for (my $i=0;$i<@{$opt{filename}}; $i++) {
-		        splice(@{$opt{filename}},$i,1,glob "$opt{filename}[$i]/*cmd") if (-d $opt{filename}[$i]);
+			if (-d $opt{filename}[$i]) {
+				DEBUG3("process_parameters: parsing command files with extension $opt{set}->{file_extension}");
+				DEBUG3("process_parameters: file list: " . join(",", glob "$opt{filename}[$i]/*$opt{set}->{file_extension}"));
+				splice(@{$opt{filename}},$i,1,glob "$opt{filename}[$i]/*$opt{set}->{file_extension}");
+			}
 		}
 	}
 	if ($opt{report} & $DETAIL_PNP_LINK && !$opt{name}) {
@@ -216,6 +222,7 @@ Options:
       256: XML: print structured XML output
       512: Nagios 2 compatibility: one summary line of output only
 -s, --set <option>=<value>
+	file_extension=cmd (which files to search if config directory specified)
    ignore_missing_cmd_file=(0|1) (don't complain if config file missing)	
    suppress_perfdata=<tag1>[,<tag2>][,...] (don't provide perfdata)
 -l, --libexec

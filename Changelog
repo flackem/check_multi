@@ -1,6 +1,7 @@
 
 ===== Changelog =====
 
+	* added file_extension setting to specify config file extension
 	* fixed perfdata label sanitizing (thx Jens)
 	* added explicit perfdata plugin specification (thx to Joerg Linge)
 	* fixed state substitution (now only for state statements)
