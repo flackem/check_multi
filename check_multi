@@ -841,20 +841,15 @@ sub report_xml {
 sub report_perfdata {
 	#--- report performance data?
 	if ($opt{report} & $DETAIL_PERFORMANCE) {
-		DEBUG2("report_perfdata (DETAIL_PERFORMANCE): name=" . ($opt{name}) ? $opt{name} : $MYSELF);
-		print "\|";
-		if (!defined($opt{set}{suppress_perfdata}) ||
-		   $opt{set}{suppress_perfdata}!~/\bplugins\b/) {
-			printf "%s::%s::plugins=%d ", 
-				($opt{name}) ? $opt{name} : $MYSELF, $MYSELF,
-				scalar(keys(%cmds));
-		}
-		if (!defined($opt{set}{suppress_perfdata}) ||
-		   $opt{set}{suppress_perfdata}!~/\btime\b/) {
-			printf "%s::%s::time=%f ", 
-				($opt{name}) ? $opt{name} : $MYSELF, $MYSELF,
-				time - $rc{starttime};
-		}
+                DEBUG2("report_perfdata (DETAIL_PERFORMANCE): name=" . ($opt{name}) ? $opt{name} : $MYSELF);
+                print "\|";
+                if (!defined($opt{set}{suppress_perfdata}) ||
+                   $opt{set}{suppress_perfdata}!~/\bcheck_multi\b/) {
+                        printf "%s::%s::plugins=%d time=%f ",
+                                ($opt{name}) ? $opt{name} : $MYSELF, $MYSELF,
+                                scalar(keys(%cmds)),
+                                time - $rc{starttime};
+                }
 		#--- one line per command, format: tag=output
 		foreach $no (sort numerically keys %cmds) {
 
