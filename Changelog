@@ -1,6 +1,7 @@
 
 ===== Changelog =====
 
+	* added -x / execute option to provide commandline also for commands
 	* added file_extension setting to specify config file extension
 	* fixed perfdata label sanitizing (thx Jens)
 	* added explicit perfdata plugin specification (thx to Joerg Linge)
@@ -10,6 +11,7 @@
 	* splitted eval into eeval (echo eval) and eval
 
 **0.16**	19.01.2008
+	* multi label fix backported into stable 0.16
 	* minor cleanups
 	* enhanced performance string error parsing
 	* performance labels delimiters '::' -> '_'

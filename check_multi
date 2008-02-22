@@ -83,9 +83,7 @@ my %opt=(
 	"libexec"	=> "/usr/local/nagios/libexec",
 	"name"		=> "",
 	"report"	=> 13,
-	"set"		=> {
-		"file_extension" => "txt",
-	},
+	"set"		=> {},
 	"timeout"	=> 10,
 	"TIMEOUT"	=> 60,
 	"ok"		=> undef,
@@ -107,11 +105,12 @@ sub process_parameters {
 		"l|libexec=s"	=> \$opt{libexec},
 		"n|name=s"	=> \$opt{name},
 		"r|report:i"	=> \$opt{report},
+		"s|set=s"	=> \%{$opt{set}},
 		"t|timeout=i"	=> \$opt{timeout},
 		"T|TIMEOUT=i"	=> \$opt{TIMEOUT},
 		"v|verbose:+"	=> \$opt{verbose},
 		"V|version"	=> \$opt{version},
-		"s|set=s"	=> \%{$opt{set}},
+		"x|execute=s"	=> \@{$opt{execute}},
 		"o|O|ok=s"	=> \$opt{ok},
 		"w|W|warning=s"	=> \$opt{warning},
 		"c|C|critical=s"=> \$opt{critical},
@@ -135,18 +134,14 @@ sub process_parameters {
         	return $UNKNOWN;
 	}
 
-	if (! $opt{filename}[0]) {
-        	print "$MYSELF error: no config file(s) specified\n";
+	if (! $opt{filename}[0] && ! $opt{execute}[0]) {
+        	print "$MYSELF error: no config file(s) or command parameters specified\n";
 		short_usage();
         	return $UNKNOWN;
 	} else {
 		#--- check if filenames are directories and replace with '*cmd' files
 		for (my $i=0;$i<@{$opt{filename}}; $i++) {
-			if (-d $opt{filename}[$i]) {
-				DEBUG3("process_parameters: parsing command files with extension $opt{set}->{file_extension}");
-				DEBUG3("process_parameters: file list: " . join(",", glob "$opt{filename}[$i]/*$opt{set}->{file_extension}"));
-				splice(@{$opt{filename}},$i,1,glob "$opt{filename}[$i]/*$opt{set}->{file_extension}");
-			}
+		        splice(@{$opt{filename}},$i,1,glob "$opt{filename}[$i]/*cmd") if (-d $opt{filename}[$i]);
 		}
 	}
 	if ($opt{report} & $DETAIL_PNP_LINK && !$opt{name}) {
@@ -184,8 +179,9 @@ sub process_parameters {
 
 sub short_usage {
 print <<SHORTEOF;
-$MYSELF -f <config file> [-n name] [-t timeout] [-T TIMEOUT] [-r level] [-l libexec_path] [-s option=value]
-        [-w <expr>] [-c <expr>] [-u <expr>] [-o <expr>]
+$MYSELF -f <config file> [-n name] [-t timeout] [-T TIMEOUT] 
+	[-r level] [-l libexec_path] [-s option=value]
+        [-x command] [-w <expr>] [-c <expr>] [-u <expr>] [-o <expr>]
 $MYSELF [-h | --help]
 $MYSELF [-v | --verbose]
 $MYSELF [-V | --version]
@@ -222,7 +218,6 @@ Options:
       256: XML: print structured XML output
       512: Nagios 2 compatibility: one summary line of output only
 -s, --set <option>=<value>
-	file_extension=cmd (which files to search if config directory specified)
    ignore_missing_cmd_file=(0|1) (don't complain if config file missing)	
    suppress_perfdata=<tag1>[,<tag2>][,...] (don't provide perfdata)
 -l, --libexec
@@ -235,6 +230,7 @@ Options:
    print version information
 
 Extended mode - specify extra settings for threshold interpretation:
+-x, --execute "command [ tag ] = check_xyz"
 -w, --warning  <expression>
 -c, --critical <expression>
 -u, --unknown  <expression>
@@ -327,101 +323,110 @@ sub readfile {
 }
 
 #---
-#--- parse command file and fill %cmds structure
+#--- parse command file and call line parser
 #---
-sub parse_commands {
+sub parse_files {
 	my ($filenames)=@_;	# allow multiple filenames (array reference)
-	my $cmd_count=0;	# count stored commands
-	my ($line,$cmd,$type,$name,$plugin,$pplugin,$expr,$lineno,$i);
+	my (@lines)=();
 
 	#--- loop over filenames
 	foreach my $filename (@{$filenames}) {
 
 		if (!open(FILE, $filename)) {
 			next if ($opt{set}{ignore_missing_cmd_file});
-			add_error("parse_commands: cannot open config file $filename: $!");
+			add_error("parse_files: cannot open config file $filename: $!");
 			$rc{top}=$UNKNOWN;
 			next;
+		} else {
+			@lines=<FILE>;
+			close FILE;
 		}
 		DEBUG2("-" x 80);
-		DEBUG2("parse_commands: parsing file $filename");
+		DEBUG2("parse_files: parsing file $filename with $#lines lines");
 		DEBUG2("-" x 80);
 	
-		$lineno=0;	# count sourcefile lines
+		parse_lines(@lines);
+	}
+	return scalar(keys(%cmds));
+}
 
-		while ($line=<FILE>) {
-			chomp($line);
-			$lineno++;		
+#---
+#--- parse command array and fill %cmds structure
+#---
+sub parse_lines {
+	my @lines=@_;
+	my ($line,$cmd,$type,$name,$plugin,$pplugin,$expr,$lineno,$i);
 
-			#--- check for continuation line with trailing '\'
-			if ($line =~ s/\\\s*$//) { 
-				$line .= <FILE>;
-				redo unless eof(FILE);
+	$lineno=0;	# count sourcefile lines
+	while ($line=shift(@lines)) {
+		chomp($line);
+		$lineno++;		
+
+		#--- check for continuation line with trailing '\'
+		if ($line =~ s/\\\s*$//) { 
+			$line .= shift(@lines);
+			redo unless ($#lines<=0);
+		}
+		next if ($line=~/^\s*$/);	# skip empty lines
+		next if ($line=~/^\s*#/);	# skip comments
+	
+		#--- format: 'command [ tag[::plugin] ] = plugin command line'
+		#--- format: 'eval    [ tag[::plugin] ] = expression'
+		#--- format: 'eeval   [ tag[::plugin] ] = expression'
+		if ($line=~/\s*(command|eval|eeval)\s*\[\s*([^:\s]+)[:]*(\S*)\s*\]\s*=\s*(.*)\s*/i) {
+			$type=lc($1);
+			$name=$2;
+			$pplugin=$3;
+			$cmd=$4;
+			$plugin=($type eq "command") ? (split(/\s+/,"$cmd"))[0] : "eval";
+			$cmd="$opt{libexec}/$cmd" if ($plugin!~/\// && $type!~/eval$/);
+			#--- overloading: find plugin with same name
+			if ($type eq "command" || $type=~/eval$/) {
+				for ($i=1; $i<=scalar(keys(%cmds));$i++) {
+					last if ($cmds{$i}{name} eq $name);
+				}
+				if ($cmds{$i}{command}) {
+					DEBUG2("parse_lines: overloaded $name with $type \'$cmd\'");
+				} else {
+					DEBUG2("parse_lines: added $name with $type \'$cmd\'");
+				}
 			}
-			next if ($line=~/^\s*$/);	# skip empty lines
-			next if ($line=~/^\s*#/);	# skip comments
-		
-			#--- format: 'command [ tag[::plugin] ] = plugin command line'
-			#--- format: 'eval    [ tag[::plugin] ] = expression'
-			#--- format: 'eeval   [ tag[::plugin] ] = expression'
-			if ($line=~/\s*(command|eval|eeval)\s*\[\s*([^:\s]+)[:]*(\S*)\s*\]\s*=\s*(.*)\s*/i) {
-				$type=lc($1);
-				$name=$2;
-				$pplugin=$3;
-				$cmd=$4;
-				$plugin=($type eq "command") ? (split(/\s+/,"$cmd"))[0] : "eval";
-				$cmd="$opt{libexec}/$cmd" if ($plugin!~/\// && $type!~/eval$/);
-				#--- overloading: find plugin with same name
-				if ($type eq "command" || $type=~/eval$/) {
-					for ($i=1; $i<=scalar(keys(%cmds));$i++) {
-						last if ($cmds{$i}{name} eq $name);
-					}
-					if ($cmds{$i}{command}) {
-						DEBUG2("parse_commands: overloaded $name with $type \'$cmd\'");
-					} else {
-						DEBUG2("parse_commands: added $name with $type \'$cmd\'");
-					}
-				}
-				#--- store vars into cmds structure
-				$cmds{$i}{command}=$cmd;
-				$cmds{$i}{type}=$type;
-				$cmds{$i}{plugin}=$plugin;
-				$cmds{$i}{pplugin}=$pplugin;
-				$cmds{$i}{name}=$name;
-				$cmds{$i}{rc}=$UNKNOWN;
-				if ($opt{set}{suppress_perfdata} && 
-				    $opt{set}{suppress_perfdata}=~/\b$name\b/i) {
-					$cmds{$i}{process_perfdata}=0;
-					DEBUG2("parse_commands: perfdata of [ $name ] will be suppressed");
-				} else {
-					$cmds{$i}{process_perfdata}=1;
-				}
-				$cmd_count=scalar(keys(%cmds));
-				DEBUG2("parse_commands: parsed $type [ $name ] = $cmd");
-
-			#--- format: 'state [ tag ] = (EXPR)
-			} elsif ($line=~/\s*state\s*\[\s*(\S+)\s*\]\s*=\s*(.*)\s*/i) {
-				$name=uc($1);
-				$expr=$2;
-				if (!defined($rc{code}{$name})) {
-					add_error("parse_commands: invalid state code specified in line $lineno: $name");
-					next;
-				}
-				# store state expression only if NOT set via commandline
-				if (!defined($opt{lc($name)})) {
-					DEBUG2("parse_commands: added state{$rc{code}{$name}} expression: $expr");
-					$rc{expr}{$rc{code}{$name}}=$expr; 
-				} else {
-					DEBUG2("parse_commands: cmdline precedence over state expression. Using \$opt{$name}: $opt{$name}");
-				}
+			#--- store vars into cmds structure
+			$cmds{$i}{command}=$cmd;
+			$cmds{$i}{type}=$type;
+			$cmds{$i}{plugin}=$plugin;
+			$cmds{$i}{pplugin}=$pplugin;
+			$cmds{$i}{name}=$name;
+			$cmds{$i}{rc}=$UNKNOWN;
+			if ($opt{set}{suppress_perfdata} && 
+			    $opt{set}{suppress_perfdata}=~/\b$name\b/i) {
+				$cmds{$i}{process_perfdata}=0;
+				DEBUG2("parse_lines: perfdata of [ $name ] will be suppressed");
 			} else {
-				add_error("parse_commands: invalid format in line $lineno: $cmd");
+				$cmds{$i}{process_perfdata}=1;
+			}
+			DEBUG2("parse_lines: parsed $type [ $name ] = $cmd");
+
+		#--- format: 'state [ tag ] = (EXPR)
+		} elsif ($line=~/\s*state\s*\[\s*(\S+)\s*\]\s*=\s*(.*)\s*/i) {
+			$name=uc($1);
+			$expr=$2;
+			if (!defined($rc{code}{$name})) {
+				add_error("parse_lines: invalid state code specified in line $lineno: $name");
 				next;
 			}
+			# store state expression only if NOT set via commandline
+			if (!defined($opt{lc($name)})) {
+				DEBUG2("parse_lines: added state{$rc{code}{$name}} expression: $expr");
+				$rc{expr}{$rc{code}{$name}}=$expr; 
+			} else {
+				DEBUG2("parse_lines: cmdline precedence over state expression. Using \$opt{$name}: $opt{$name}");
+			}
+		} else {
+			add_error("parse_lines: invalid format in line $lineno: $cmd");
+			next;
 		}
-		close FILE;
 	}
-	return $cmd_count;
 }
 
 #---
@@ -800,11 +805,11 @@ sub report_html {
 
 sub report_xml {
 	#--- XML data and HTML option together only creates crap in your browser ;-)
-	if ($opt{report} & $DETAIL_HTML) {
-		add_error("HTML and XML output are mutually exclusive ;-), skipping XML");
-	}
+	#if ($opt{report} & $DETAIL_HTML) {
+	#	add_error("HTML and XML output are mutually exclusive ;-), skipping XML");
+	#}
 
-	my $xmlstr="";
+	my $xmlstr="<div id=\"check_multi_xml\" style='display:none'>";
 	#$xmlstr.="<meta http-equiv=\"Content-Style-Type\" content=\"application/xml\">\n";
 	$xmlstr.="<?xml version=\"1.0\"?>\n";
 	$xmlstr.="<?xml-stylesheet type=\"text/xsl\" href=\"extinfo.xsl\"?>\n";
@@ -843,7 +848,7 @@ sub report_xml {
 		}
 		$xmlstr.="\t</CHILD>\n";
 	}
-	$xmlstr.="</PARENT>\n";
+	$xmlstr.="</PARENT>\n</div>\n";
 	print $xmlstr;
 }
 
@@ -984,7 +989,9 @@ DEBUG3("main: userid=$>");
 add_error("please don't run plugins as root!") if ($> == 0);
 
 #--- parse command file (nrpe format)
-&parse_commands($opt{filename});
+&parse_files($opt{filename});
+#--- parse single command lines
+&parse_lines(@{$opt{execute}});
 
 #--- initialize timer for overall timeout
 $rc{starttime}=time;
@@ -1017,11 +1024,6 @@ if (! ($opt{report} & $DETAIL_HTML) &&
 #--- report HTML output
 if ($opt{report} & $DETAIL_HTML) {
 	&report_html;
-	#--- include ASCII version 
-	#--- (hack for notification scripts until XML xsl is ready ;-)
-	print "\n<!--";
-	&report;
-	print "-->";
 } 
 #--- report XML output 
 if ($opt{report} & $DETAIL_XML) {
