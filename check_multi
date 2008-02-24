@@ -339,6 +339,7 @@ sub parse_files {
 			next;
 		} else {
 			@lines=<FILE>;
+			push @lines, ""; # add empty line to avoid last line eval problem
 			close FILE;
 		}
 		DEBUG2("-" x 80);
@@ -423,7 +424,7 @@ sub parse_lines {
 				DEBUG2("parse_lines: cmdline precedence over state expression. Using \$opt{$name}: $opt{$name}");
 			}
 		} else {
-			add_error("parse_lines: invalid format in line $lineno: $cmd");
+			add_error("parse_lines: invalid format in line $lineno: $line");
 			next;
 		}
 	}
@@ -500,13 +501,17 @@ sub exec_command {
 		};
 	} elsif ($cmds{$no}{type} eq "eval" || $cmds{$no}{type} eq "eeval") {
 		$cmds{$no}{output}=eval($cmds{$no}{command});
+		if ($cmds{$no}{type} eq "eeval") {
+			$cmds{$no}{rc}=$?>>8;
+		} elsif ($cmds{$no}{type} eq "eval") {
+			$cmds{$no}{rc}=$OK;
+		}
 		if ($@) {
 			$cmds{$no}{output}.="[$@]";
 			$cmds{$no}{rc}=$WARNING;
 		} else {
 			chomp($cmds{$no}{output});
 			$ENV{"NAGIOS_".$cmds{$no}{name}}="$cmds{$no}{output}";
-			$cmds{$no}{rc}=$OK;
 			#--- split performance data from standard output
 			if ($cmds{$no}{output}=~/\|/) {
 				($cmds{$no}{output},$cmds{$no}{performance})=split(/\|/,$cmds{$no}{output});
@@ -539,7 +544,8 @@ sub exec_command {
 		#--- catchall for unknown errors
 		} else {
 			alarm(0);
-       			die "$MYSELF: unexpected exception encountered:$@";
+			$cmds{$no}{rc}=$UNKNOWN;
+       			add_error("unexpected exception encountered:$@");
 		}
 		unlink $tmp_stdout, $tmp_stderr;
 	} else {
@@ -708,10 +714,10 @@ sub report {
 
 	#--- print results
 	DEBUG1("\n","-" x 80);
-	DEBUG1("Command results:");
+	DEBUG1("Command results:           RC Output");
 	DEBUG1("-" x 80);
 	foreach $no (sort numerically keys %cmds) {
-		DEBUG1(sprintf "[%2.d] %-20s %s", $no, $cmds{$no}{name}, $cmds{$no}{output});
+		DEBUG1(sprintf "[%2.d] %-20s %3d %s", $no, $cmds{$no}{name}, $cmds{$no}{rc}, $cmds{$no}{output});
 	}
 
 	#--- print runtime
@@ -1004,6 +1010,7 @@ foreach $no (sort numerically keys %cmds) {
 	if (time + $opt{timeout} > $rc{endtime}) {
 		$cmds{$no}{output}="UNKNOWN - execution cancelled after global timeout ($opt{TIMEOUT}s)";
 		$cmds{$no}{rc}=$UNKNOWN;
+		$cmds{$no}{runtime}=0;
 		$rc{count}{$UNKNOWN}++;
 		push @{$rc{list}{$UNKNOWN}},$cmds{$no}{name};
 		next;
