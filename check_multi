@@ -794,9 +794,12 @@ sub report_html {
 		} else {
 			printf "<td></td>";
 		}
-		printf "<td>&nbsp;&nbsp;%s</td>", ($cmds{$no}{name}) ? $cmds{$no}{name} : "";
+		printf "<td CLASS='dataVal'>&nbsp;&nbsp;%s</td>", ($cmds{$no}{name}) ? $cmds{$no}{name} : "";
 		DEBUG2("report_html output:$cmds{$no}{output}");
-		printf "<td>%s</td>", ($cmds{$no}{output}=~/^([^\n]+)\n(.*)/i) ? "$1</td></tr><tr><td></td><td colspan='3'>$2" : $cmds{$no}{output};
+		printf "<td CLASS='dataVal'>%s</td>", 
+				($cmds{$no}{output}=~/^([^\n]+)\n(.*)/i) 
+				? "$1</td></tr><tr><td></td><td colspan='3' CLASS='dataVal'>$2" 
+				: $cmds{$no}{output};
 		if (	defined($cmds{$no}{stderr}) && 
 			$cmds{$no}{stderr} ne "" && 
 			($opt{report} & $DETAIL_STDERR)) {
