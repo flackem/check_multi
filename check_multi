@@ -954,13 +954,16 @@ sub error_in_perfdata {
 			$label=$1;
 			$data=$2;
 			$perfdata=$3;
+			DEBUG3("error_in_perfdata: parsed perfdata -'label':$1 data:$2 rest:$3");	
 		#--- label w/o \'
-		} elsif ($perfdata=~/^\s*(\S+)=(\S+)(.*)/) {
+		} elsif ($perfdata=~/^\s*(\[^=]+)=(\S+)(.*)/) {
 			$label=$1;
 			$data=$2;
 			$perfdata=$3;
+			DEBUG3("error_in_perfdata: parsed perfdata - label:$1 data:$2 rest:$3");	
 		#--- invalid
 		} else {
+			DEBUG3("error_in_perfdata: general parsing error - invalid perfdata");	
 			return "invalid perfdata: $perfdata";
 		}
 		$perfdata=~s/^\s+//; $perfdata=~s/\s+$//;

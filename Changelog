@@ -1,6 +1,7 @@
 
 ===== Changelog =====
 
+	* fixed regex in perfdata check routine (thx denschi)
 	* fixed CSS tags for HTML output (thx TheCry)
 	* print command runtime 0 if command is not executed due to timeout
 	* last rc from eval will also be mentioned for state evaluation
