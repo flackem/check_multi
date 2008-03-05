@@ -944,19 +944,21 @@ sub error_in_perfdata {
 	my $label="";
 	my $data="";
 	my $error="";
+	my $uom="";
 	#---
 	#--- 'label'=value[UOM];[warn];[crit];[min];[max]
 	#---
 	#--- loop over perfdata
 	while ($perfdata) {
+		DEBUG3("error_in_perfdata: parsing perfdata:$perfdata");	
 		#--- label w/ \'
-		if ($perfdata=~/^\s*(\'[^']*\')=(\S+)(.*)/) {
+		if ($perfdata=~/^\s*(\'[^']*\')=([^ ]+)(.*)/) {
 			$label=$1;
 			$data=$2;
 			$perfdata=$3;
 			DEBUG3("error_in_perfdata: parsed perfdata -'label':$1 data:$2 rest:$3");	
 		#--- label w/o \'
-		} elsif ($perfdata=~/^\s*(\[^=]+)=(\S+)(.*)/) {
+		} elsif ($perfdata=~/^\s*([^=]+)=([^ ]+)(.*)/) {
 			$label=$1;
 			$data=$2;
 			$perfdata=$3;
@@ -964,20 +966,19 @@ sub error_in_perfdata {
 		#--- invalid
 		} else {
 			DEBUG3("error_in_perfdata: general parsing error - invalid perfdata");	
-			return "invalid perfdata: $perfdata";
+			return "general error in '$perfdata'";
 		}
 		$perfdata=~s/^\s+//; $perfdata=~s/\s+$//;
 
 		#--- perfdata has label and data, now do detailed checks
 		my ($value,$warning,$critical,$min,$max)=split(/;/,$data);
-		my $uom="";
 		return "$label: no value in data \'$data\'" if ($value eq "");
-		if ($value=~/([-0-9.]+)([^0-9-.]+)/) {
+		if ($value=~/([-0-9.]+)([^0-9-.]{0,2})/) {
 			$value=$1;
 			$uom=$2;
 		}
 		$error.= "$label: bad value \'$value\' in data \'$data\' " if ($value && $value !~/^[-0-9.]+$/);
-		$error.= "$label: bad uom \'$uom\' in data \'$data\' " if ($uom ne "" && ($uom!~/s$/ && $uom!~/%$/ && $uom!~/b$/i && $uom!~/c$/));
+		$error.= "$label: bad UOM \'$uom\' in data \'$data\' " if ($uom ne "" && ($uom!~/s$/ && $uom!~/%$/ && $uom!~/b$/i && $uom!~/c$/));
 		$error.= "$label: bad warning \'$warning\' in data \'$data\' " if ($warning && $warning !~/^[-0-9.]+$/);
 		$error.= "$label: bad critical \'$critical\' in data \'$data\' " if ($critical && $critical !~/^[-0-9.]+$/);
 		$error.= "$label: bad min \'$min\' in data \'$data\' " if ($min && $min !~/^[-0-9.]+$/);
@@ -986,6 +987,7 @@ sub error_in_perfdata {
 
 		#--- done: perfdata is ok
 	}
+	DEBUG3("error_in_perfdata: no errors found");	
 	return undef;
 }
 
