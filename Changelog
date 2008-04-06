@@ -1,6 +1,9 @@
 
 ===== Changelog =====
 
+	* error messages in plugin output instead of long plugin output
+	* indentation of recursive checks in ASCII mode
+	* perl module version check for Getopt::Long
 	* added control variable for use of HTML::Entities
 	* restrict tag characters to A-Za-z0-9_:
 	* add libexec path to PATH var during check_multi runtime

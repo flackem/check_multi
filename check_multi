@@ -79,15 +79,19 @@ $returncode=0;
 );
 
 my %opt=(
-	"filename"	=> [ ],
+	"execute"	=> [],
+	"filename"	=> [],
 	"libexec"	=> "/usr/local/nagios/libexec",
 	"name"		=> "",
 	"report"	=> 13,
-	"set"		=> {},
+	"set"		=> {
+		indent => " ",
+	},
 	"timeout"	=> 10,
 	"TIMEOUT"	=> 60,
-	"ok"		=> undef,
 	"verbose"	=> 0,
+
+	"ok"		=> undef,
 	"warning"	=> undef,
 	"critical"	=> undef,
 	"unknown"	=> undef,
@@ -153,7 +157,7 @@ sub process_parameters {
                 $opt{use_html_entities} = 1;
         	unless (eval "require HTML::Entities;1") {
                 	$opt{use_html_entities} = 0;
-			DEBUG1("process_parameters: HTML::Entities not available");
+			DEBUG2("process_parameters: HTML::Entities not available");
         	}
 	}
 	#--- set libexec-dir at the beginning of PATH var
@@ -704,6 +708,7 @@ sub report {
 				(defined($cmds{$no}{stderr}) && $cmds{$no}{stderr} ne "" && ($opt{report} & $DETAIL_STDERR)) ?
 			 	" [ STDERR: " . $cmds{$no}{stderr} . ']' : "";
 		} else {
+			$cmds{$no}{output}=~s/\n/\n$opt{set}{indent}/g;
 			printf "%s[%2.d] %s %s%s%s",
 				($opt{report} & $DETAIL_NAGIOS2) ? ", " : "\n",
 				$no,
@@ -752,6 +757,7 @@ sub report {
 }
 
 sub report_html {
+	
 	#--- print header line (1): name, state, number of plugins
 	printf "$opt{name} " if $opt{name};
 	print "$rc{label}{$rc{top}} - " . keys(%cmds) . " plugins checked, ";
@@ -775,13 +781,19 @@ sub report_html {
 			"$rc{count}{$UNKNOWN} unknown, " .
 			"$rc{count}{$OK} ok";
 	}
-	print "\n";
 
 	#--- print general errors if any occured
 	print " [" . join(", ",@{$rc{error}}) . "]" if (defined($rc{error}[0]));
-	
+	print "\n";
+
+        #print '<SCRIPT LANGUAGE="JavaScript"> function Toggle(node) { if (node.nextSibling.style.display == \'none\') { if (node.childNodes.length > 0) { node.childNodes.item(0).replaceData(0,1,"-"); } node.nextSibling.style.display = \'block\'; } else { if (node.childNodes.length > 0) { node.childNodes.item(0).replaceData(0,1,"+"); } node.nextSibling.style.display = \'none\'; } } </SCRIPT>';
+
 	#--- loop over commands: report particular results for long plugin output
-	print "<table style='border-left-width:1px; border-left-style:dotted; border-right-width:0px;' >";
+	#my $firstrun=1;
+	#print "<A onClick='Toggle(this)' style='line-height:0.1em;color:#4444FF;'>-</A>";
+	#print "<DIV style='display:block'>";
+
+	print "<table style='border-left-width:1px; border-left-style:dotted; border-right-width:0px;>";
 	foreach $no (sort numerically keys %cmds) {
 
 		#--- skip eval
@@ -807,6 +819,10 @@ sub report_html {
 		}
 		printf "<td CLASS='dataVal'>&nbsp;&nbsp;%s</td>", ($cmds{$no}{name}) ? $cmds{$no}{name} : "";
 		DEBUG2("report_html output:$cmds{$no}{output}");
+		#if ($firstrun) {
+		#	$cmds{$no}{output}=~s/-<\/A><DIV style='display:block'>/+<\/A><DIV style='display:none'>/;
+		#	$firstrun=0;
+		#}
 		printf "<td CLASS='dataVal'>%s</td>", 
 				($cmds{$no}{output}=~/^([^\n]+)\n(.*)/i) 
 				? "$1</td></tr><tr><td></td><td colspan='3' CLASS='dataVal'>$2" 
@@ -820,6 +836,7 @@ sub report_html {
 		print "</tr>";
 	}
 	print "</table>";
+	#print "</div>";
 
 }
 
@@ -1005,6 +1022,12 @@ sub error_in_perfdata {
 #-------------------------------------------------------------------------------
 #--- main ----------------------------------------------------------------------
 #-------------------------------------------------------------------------------
+
+#--- check version of modules
+if ($Getopt::Long::VERSION < 2.27) {
+	print "Error: module Getopt::Long version $Getopt::Long::VERSION is too old, minimum version is 2.27\n";
+	exit $UNKNOWN;
+}
 
 #--- parse command line options
 exit $UNKNOWN if (&process_parameters != $OK);
