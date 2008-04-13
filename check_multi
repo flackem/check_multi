@@ -31,6 +31,7 @@ $MYSELF %cmds $returncode %rc $no $VERSION
 $OK $WARNING $CRITICAL $UNKNOWN
 $DETAIL_LIST $DETAIL_LIST_FULL $DETAIL_HTML $DETAIL_STDERR $DETAIL_PERFORMANCE
 $DETAIL_PERFORMANCE_CLASSIC $DETAIL_STATUS $DETAIL_PNP_LINK $DETAIL_XML $DETAIL_NAGIOS2
+$DETAIL_COLLAPSE
 *DEBUG1 *DEBUG2 *DEBUG3
 );
 #-------------------------------------------------------------------------------
@@ -56,6 +57,7 @@ $DETAIL_STATUS=64;
 $DETAIL_PNP_LINK=128;
 $DETAIL_XML=256;
 $DETAIL_NAGIOS2=512;
+$DETAIL_COLLAPSE=1024;
 #
 #--- vars
 $no=0;
@@ -86,6 +88,7 @@ my %opt=(
 	"report"	=> 13,
 	"set"		=> {
 		indent => " ",
+		no_collapse => 1,
 	},
 	"timeout"	=> 10,
 	"TIMEOUT"	=> 60,
@@ -786,12 +789,18 @@ sub report_html {
 	print " [" . join(", ",@{$rc{error}}) . "]" if (defined($rc{error}[0]));
 	print "\n";
 
-        #print '<SCRIPT LANGUAGE="JavaScript"> function Toggle(node) { if (node.nextSibling.style.display == \'none\') { if (node.childNodes.length > 0) { node.childNodes.item(0).replaceData(0,1,"-"); } node.nextSibling.style.display = \'block\'; } else { if (node.childNodes.length > 0) { node.childNodes.item(0).replaceData(0,1,"+"); } node.nextSibling.style.display = \'none\'; } } </SCRIPT>';
 
 	#--- loop over commands: report particular results for long plugin output
-	#my $firstrun=1;
-	#print "<A onClick='Toggle(this)' style='line-height:0.1em;color:#4444FF;'>-</A>";
-	#print "<DIV style='display:block'>";
+	if (!defined($opt{set}{no_collapse})) {
+        	print '<SCRIPT LANGUAGE="JavaScript"> function Toggle(node) { if (node.nextSibling.style.display == \'none\') { if (node.childNodes.length > 0) { node.childNodes.item(0).replaceData(0,1,"-"); } node.nextSibling.style.display = \'block\'; } else { if (node.childNodes.length > 0) { node.childNodes.item(0).replaceData(0,1,"+"); } node.nextSibling.style.display = \'none\'; } } </SCRIPT>';
+		if ($rc{top} == $OK) {
+			print "<A onClick='Toggle(this)' style='line-height:0.1em;color:#4444FF;font-size:1.5em'>+</A>";
+			printf "<DIV style='display:none'>";
+		} else {
+			print "<A onClick='Toggle(this)' style='line-height:0.1em;color:#4444FF;font-size:1.5em'>-</A>";
+			printf "<DIV style='display:block'>";
+		}
+	}
 
 	print "<table style='border-left-width:1px; border-left-style:dotted; border-right-width:0px;>";
 	foreach $no (sort numerically keys %cmds) {
@@ -819,10 +828,6 @@ sub report_html {
 		}
 		printf "<td CLASS='dataVal'>&nbsp;&nbsp;%s</td>", ($cmds{$no}{name}) ? $cmds{$no}{name} : "";
 		DEBUG2("report_html output:$cmds{$no}{output}");
-		#if ($firstrun) {
-		#	$cmds{$no}{output}=~s/-<\/A><DIV style='display:block'>/+<\/A><DIV style='display:none'>/;
-		#	$firstrun=0;
-		#}
 		printf "<td CLASS='dataVal'>%s</td>", 
 				($cmds{$no}{output}=~/^([^\n]+)\n(.*)/i) 
 				? "$1</td></tr><tr><td></td><td colspan='3' CLASS='dataVal'>$2" 
@@ -836,8 +841,7 @@ sub report_html {
 		print "</tr>";
 	}
 	print "</table>";
-	#print "</div>";
-
+	print "</div>" if (!defined($opt{set}{no_collapse}));
 }
 
 sub report_xml {

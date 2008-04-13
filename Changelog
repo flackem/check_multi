@@ -1,6 +1,7 @@
 
 ===== Changelog =====
 
+	* collapse option to hide OK output in HTML view
 	* error messages in plugin output instead of long plugin output
 	* indentation of recursive checks in ASCII mode
 	* perl module version check for Getopt::Long
