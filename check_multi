@@ -88,7 +88,7 @@ my %opt=(
 	"report"	=> 13,
 	"set"		=> {
 		indent => " ",
-		no_collapse => 1,
+		collapse => 1,
 	},
 	"timeout"	=> 10,
 	"TIMEOUT"	=> 60,
@@ -185,6 +185,9 @@ sub process_parameters {
 	}
 	foreach my $option (sort keys(%{$opt{set}})) {
 		$ENV{"NAGIOS_".uc($option)}=$opt{set}{$option};
+	}
+	if (!defined($ENV{"NAGIOS_CHECK_MULTI_PPID"})) {
+		$ENV{"NAGIOS_CHECK_MULTI_PPID"}=$$;
 	}
 	foreach my $option (sort keys(%opt)) {
 		DEBUG3("process_parameters: \$opt{$option}=$opt{$option}") if (defined($opt{$option}));
@@ -760,14 +763,15 @@ sub report {
 }
 
 sub report_html {
+	my $output="";
 	
 	#--- print header line (1): name, state, number of plugins
-	printf "$opt{name} " if $opt{name};
-	print "$rc{label}{$rc{top}} - " . keys(%cmds) . " plugins checked, ";
+	$output.="$opt{name} " if $opt{name};
+	$output.="$rc{label}{$rc{top}} - " . keys(%cmds) . " plugins checked, ";
 
 	#--- print header line (2): summary for particular states 
 	if ($opt{report} & $DETAIL_LIST_FULL) {
-		print	"$rc{count}{$CRITICAL} critical" . ((@{$rc{list}{$CRITICAL}}) ? " (" . join(', ',@{$rc{list}{$CRITICAL}}) . ')' : "") . ", " .
+		$output.="$rc{count}{$CRITICAL} critical" . ((@{$rc{list}{$CRITICAL}}) ? " (" . join(', ',@{$rc{list}{$CRITICAL}}) . ')' : "") . ", " .
 			"$rc{count}{$WARNING} warning"   . ((@{$rc{list}{$WARNING}})  ? " (" . join(', ',@{$rc{list}{$WARNING}})  . ')' : "") . ", " .
 			"$rc{count}{$UNKNOWN} unknown"   . ((@{$rc{list}{$UNKNOWN}})  ? " (" . join(', ',@{$rc{list}{$UNKNOWN}})  . ')' : "") . ", " .
 			"$rc{count}{$OK} ok";
@@ -777,39 +781,39 @@ sub report_html {
 		push @r, "$rc{count}{$WARNING} warning ("   . join(', ',@{$rc{list}{$WARNING}})  . ")" if (@{$rc{list}{$WARNING}});
 		push @r, "$rc{count}{$UNKNOWN} unknown ("   . join(', ',@{$rc{list}{$UNKNOWN}})  . ")" if (@{$rc{list}{$UNKNOWN}});
 		push @r, "$rc{count}{$OK} ok" if (@{$rc{list}{$OK}});
-		print join(", ", @r);
+		$output.=join(", ", @r);
 	} else {
-		print	"$rc{count}{$CRITICAL} critical, " .
+		$output.="$rc{count}{$CRITICAL} critical, " .
 			"$rc{count}{$WARNING} warning, " .
 			"$rc{count}{$UNKNOWN} unknown, " .
 			"$rc{count}{$OK} ok";
 	}
 
 	#--- print general errors if any occured
-	print " [" . join(", ",@{$rc{error}}) . "]" if (defined($rc{error}[0]));
-	print "\n";
+	$output.=" [" . join(", ",@{$rc{error}}) . "]" if (defined($rc{error}[0]));
+	$output.="\n";
 
 
 	#--- loop over commands: report particular results for long plugin output
-	if (!defined($opt{set}{no_collapse})) {
-        	print '<SCRIPT LANGUAGE="JavaScript"> function Toggle(node) { if (node.nextSibling.style.display == \'none\') { if (node.childNodes.length > 0) { node.childNodes.item(0).replaceData(0,1,"-"); } node.nextSibling.style.display = \'block\'; } else { if (node.childNodes.length > 0) { node.childNodes.item(0).replaceData(0,1,"+"); } node.nextSibling.style.display = \'none\'; } } </SCRIPT>';
-		if ($rc{top} == $OK) {
-			print "<A onClick='Toggle(this)' style='line-height:0.1em;color:#4444FF;font-size:1.5em'>+</A>";
-			printf "<DIV style='display:none'>";
+	if ($opt{set}{collapse} == 1) {
+        	$output.='<SCRIPT LANGUAGE="JavaScript"> function Toggle(node) { if (node.nextSibling.style.display == \'none\') { if (node.childNodes.length > 0) { node.childNodes.item(0).replaceData(0,1,"-"); } node.nextSibling.style.display = \'block\'; } else { if (node.childNodes.length > 0) { node.childNodes.item(0).replaceData(0,1,"+"); } node.nextSibling.style.display = \'none\'; } } </SCRIPT>';
+		if ($rc{top} == $OK && $ENV{"NAGIOS_CHECK_MULTI_PPID"} != $$) {
+			$output.="<A onClick='Toggle(this)' style='line-height:0.1em;color:#4444FF;font-size:1.5em'>+</A>";
+			$output.="<DIV style='display:none'>";
 		} else {
-			print "<A onClick='Toggle(this)' style='line-height:0.1em;color:#4444FF;font-size:1.5em'>-</A>";
-			printf "<DIV style='display:block'>";
+			$output.="<A onClick='Toggle(this)' style='line-height:0.1em;color:#4444FF;font-size:1.5em'>-</A>";
+			$output.="<DIV style='display:block'>";
 		}
 	}
 
-	print "<table style='border-left-width:1px; border-left-style:dotted; border-right-width:0px;>";
+	$output.="<table style='border-left-width:1px; border-left-style:dotted; border-right-width:0px;>";
 	foreach $no (sort numerically keys %cmds) {
 
 		#--- skip eval
 		next if ($cmds{$no}{type} eq "eval");
 
-		print "<tr valign='top'>";
-		printf "<td nowrap>%s&nbsp;%2.d&nbsp;%s</td>", 
+		$output.="<tr valign='top'>";
+		$output.=sprintf "<td nowrap>%s&nbsp;%2.d&nbsp;%s</td>", 
 			($opt{report} & $DETAIL_HTML) ? "<DIV CLASS=\'service$rc{label}{$cmds{$no}{rc}}\' style='font-size:7pt'>" : "",
 			$no,
 			($opt{report} & $DETAIL_HTML) ? "</DIV>" : "";
@@ -820,15 +824,15 @@ sub report_html {
 
 			my $hostname=($ENV{NAGIOS_HOSTNAME}) ? $ENV{NAGIOS_HOSTNAME} : `uname -n`; chomp($hostname);
 			DEBUG2("report_html: hostname is $hostname");
-			printf "<td nowrap>%s</td>", 
+			$output.=sprintf "<td nowrap>%s</td>", 
 				"<A HREF='/nagios/pnp/index.php?host=${hostname}&srv=$cmds{$no}{name}' TARGET='_self'>" . 
 				"<img src='/nagios/images/action.gif' width=20 height=20 border=0 align=top alt='Show PNP chart for $hostname / $cmds{$no}{plugin}'></A>";
 		} else {
-			printf "<td></td>";
+			$output.="<td></td>";
 		}
-		printf "<td CLASS='dataVal'>&nbsp;&nbsp;%s</td>", ($cmds{$no}{name}) ? $cmds{$no}{name} : "";
+		$output.=sprintf "<td CLASS='dataVal'>&nbsp;&nbsp;%s</td>", ($cmds{$no}{name}) ? $cmds{$no}{name} : "";
 		DEBUG2("report_html output:$cmds{$no}{output}");
-		printf "<td CLASS='dataVal'>%s</td>", 
+		$output.=sprintf "<td CLASS='dataVal'>%s</td>", 
 				($cmds{$no}{output}=~/^([^\n]+)\n(.*)/i) 
 				? "$1</td></tr><tr><td></td><td colspan='3' CLASS='dataVal'>$2" 
 				: $cmds{$no}{output};
@@ -836,12 +840,26 @@ sub report_html {
 			$cmds{$no}{stderr} ne "" && 
 			($opt{report} & $DETAIL_STDERR)) {
 
-			print " [ STDERR: " . $cmds{$no}{stderr} . "]";
+			$output.=" [ STDERR: " . $cmds{$no}{stderr} . "]";
 		}
-		print "</tr>";
+		$output.="</tr>";
 	}
-	print "</table>";
-	print "</div>" if (!defined($opt{set}{no_collapse}));
+	$output.="</table>";
+	$output.="</div>" if ($opt{set}{collapse} == 1);
+
+	#--- run only if in top check_multi (if called recursively)
+	#if ($ENV{"NAGIOS_CHECK_MULTI_PPID"} == $$) {
+		#my $count_block=($output=~s/display:none/display:none/g);
+		#DEBUG1("count_block:$count_block NAGIOS_CHECK_MULTI_PPID:$ENV{NAGIOS_CHECK_MULTI_PPID} PID:$$");
+		##--- replace none with block if only one level
+	 	#if ($count_block >= 1) {
+			#$output=~s/display\:none/display\:block/;
+			#$output=~s/\>\+\</\>\-\</;
+		#}	
+	#}
+	
+	#--- last not least: output ;-)
+	print $output;
 }
 
 sub report_xml {
