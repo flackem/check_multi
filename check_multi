@@ -31,6 +31,7 @@ $MYSELF %cmds $returncode %rc $no $VERSION
 $OK $WARNING $CRITICAL $UNKNOWN
 $DETAIL_LIST $DETAIL_LIST_FULL $DETAIL_HTML $DETAIL_STDERR $DETAIL_PERFORMANCE
 $DETAIL_PERFORMANCE_CLASSIC $DETAIL_STATUS $DETAIL_PNP_LINK $DETAIL_XML $DETAIL_NAGIOS2
+$DETAIL_COLLAPSE
 *DEBUG1 *DEBUG2 *DEBUG3
 );
 #-------------------------------------------------------------------------------
@@ -56,6 +57,7 @@ $DETAIL_STATUS=64;
 $DETAIL_PNP_LINK=128;
 $DETAIL_XML=256;
 $DETAIL_NAGIOS2=512;
+$DETAIL_COLLAPSE=1024;
 #
 #--- vars
 $no=0;
@@ -79,15 +81,20 @@ $returncode=0;
 );
 
 my %opt=(
-	"filename"	=> [ ],
+	"execute"	=> [],
+	"filename"	=> [],
 	"libexec"	=> "/usr/local/nagios/libexec",
 	"name"		=> "",
 	"report"	=> 13,
-	"set"		=> {},
+	"set"		=> {
+		indent => " ",
+		collapse => 1,
+	},
 	"timeout"	=> 10,
 	"TIMEOUT"	=> 60,
-	"ok"		=> undef,
 	"verbose"	=> 0,
+
+	"ok"		=> undef,
 	"warning"	=> undef,
 	"critical"	=> undef,
 	"unknown"	=> undef,
@@ -148,9 +155,17 @@ sub process_parameters {
 		$opt{name}=$MYSELF;
 		DEBUG2("process_parameters: PNP report option set and no name defined: taking $MYSELF as name");
 	}
+	#--- if no module HTML::Entities available - set var
 	if ($opt{report} & $DETAIL_HTML) {
-		require HTML::Entities;
-		DEBUG3("process_parameters: HTML report option set - loading HTML::Entities module");
+                $opt{use_html_entities} = 1;
+        	unless (eval "require HTML::Entities;1") {
+                	$opt{use_html_entities} = 0;
+			DEBUG2("process_parameters: HTML::Entities not available");
+        	}
+	}
+	#--- set libexec-dir at the beginning of PATH var
+	if ($opt{libexec}) {
+		$ENV{PATH}="$opt{libexec}:$ENV{PATH}";
 	}
 	if ($opt{ok}) {
 		$rc{expr}{$OK}=$opt{ok};
@@ -170,6 +185,9 @@ sub process_parameters {
 	}
 	foreach my $option (sort keys(%{$opt{set}})) {
 		$ENV{"NAGIOS_".uc($option)}=$opt{set}{$option};
+	}
+	if (!defined($ENV{"NAGIOS_CHECK_MULTI_PPID"})) {
+		$ENV{"NAGIOS_CHECK_MULTI_PPID"}=$$;
 	}
 	foreach my $option (sort keys(%opt)) {
 		DEBUG3("process_parameters: \$opt{$option}=$opt{$option}") if (defined($opt{$option}));
@@ -380,7 +398,11 @@ sub parse_lines {
 			$pplugin=$3;
 			$cmd=$4;
 			$plugin=($type eq "command") ? (split(/\s+/,"$cmd"))[0] : "eval";
-			$cmd="$opt{libexec}/$cmd" if ($plugin!~/\// && $type!~/eval$/);
+			#--- invalid characters found?
+			if ($name!~/^[\w:]+$/) {
+				add_error("parse_lines: tag $name invalid, using non allowed characters");
+				next;
+			}
 			#--- overloading: find plugin with same name
 			if ($type eq "command" || $type=~/eval$/) {
 				for ($i=1; $i<=scalar(keys(%cmds));$i++) {
@@ -476,10 +498,9 @@ sub exec_command {
 			}
 			
 			#--- remove white chars from output
-			#$cmds{$no}{output}=mytrim($cmds{$no}{output},"\\n\\s");
 			$cmds{$no}{stderr}=mytrim($cmds{$no}{stderr},"\\n\\s");
-			$cmds{$no}{stdout}=HTML::Entities::encode_entities($cmds{$no}{stdout}) if (($opt{report} & $DETAIL_HTML) && $cmds{$no}{stdout});
-			$cmds{$no}{stderr}=HTML::Entities::encode_entities($cmds{$no}{stderr}) if (($opt{report} & $DETAIL_HTML) && $cmds{$no}{stderr});
+			$cmds{$no}{stdout}=HTML::Entities::encode_entities($cmds{$no}{stdout}) if ($opt{use_html_entities} && $cmds{$no}{stdout});
+			$cmds{$no}{stderr}=HTML::Entities::encode_entities($cmds{$no}{stderr}) if ($opt{use_html_entities} && $cmds{$no}{stderr});
 	
 			#--- split performance data from standard output
 			if ($cmds{$no}{output}=~/\|/) {
@@ -693,6 +714,7 @@ sub report {
 				(defined($cmds{$no}{stderr}) && $cmds{$no}{stderr} ne "" && ($opt{report} & $DETAIL_STDERR)) ?
 			 	" [ STDERR: " . $cmds{$no}{stderr} . ']' : "";
 		} else {
+			$cmds{$no}{output}=~s/\n/\n$opt{set}{indent}/g;
 			printf "%s[%2.d] %s %s%s%s",
 				($opt{report} & $DETAIL_NAGIOS2) ? ", " : "\n",
 				$no,
@@ -741,13 +763,15 @@ sub report {
 }
 
 sub report_html {
+	my $output="";
+	
 	#--- print header line (1): name, state, number of plugins
-	printf "$opt{name} " if $opt{name};
-	print "$rc{label}{$rc{top}} - " . keys(%cmds) . " plugins checked, ";
+	$output.="$opt{name} " if $opt{name};
+	$output.="$rc{label}{$rc{top}} - " . keys(%cmds) . " plugins checked, ";
 
 	#--- print header line (2): summary for particular states 
 	if ($opt{report} & $DETAIL_LIST_FULL) {
-		print	"$rc{count}{$CRITICAL} critical" . ((@{$rc{list}{$CRITICAL}}) ? " (" . join(', ',@{$rc{list}{$CRITICAL}}) . ')' : "") . ", " .
+		$output.="$rc{count}{$CRITICAL} critical" . ((@{$rc{list}{$CRITICAL}}) ? " (" . join(', ',@{$rc{list}{$CRITICAL}}) . ')' : "") . ", " .
 			"$rc{count}{$WARNING} warning"   . ((@{$rc{list}{$WARNING}})  ? " (" . join(', ',@{$rc{list}{$WARNING}})  . ')' : "") . ", " .
 			"$rc{count}{$UNKNOWN} unknown"   . ((@{$rc{list}{$UNKNOWN}})  ? " (" . join(', ',@{$rc{list}{$UNKNOWN}})  . ')' : "") . ", " .
 			"$rc{count}{$OK} ok";
@@ -757,27 +781,39 @@ sub report_html {
 		push @r, "$rc{count}{$WARNING} warning ("   . join(', ',@{$rc{list}{$WARNING}})  . ")" if (@{$rc{list}{$WARNING}});
 		push @r, "$rc{count}{$UNKNOWN} unknown ("   . join(', ',@{$rc{list}{$UNKNOWN}})  . ")" if (@{$rc{list}{$UNKNOWN}});
 		push @r, "$rc{count}{$OK} ok" if (@{$rc{list}{$OK}});
-		print join(", ", @r);
+		$output.=join(", ", @r);
 	} else {
-		print	"$rc{count}{$CRITICAL} critical, " .
+		$output.="$rc{count}{$CRITICAL} critical, " .
 			"$rc{count}{$WARNING} warning, " .
 			"$rc{count}{$UNKNOWN} unknown, " .
 			"$rc{count}{$OK} ok";
 	}
-	print "\n";
 
 	#--- print general errors if any occured
-	print " [" . join(", ",@{$rc{error}}) . "]" if (defined($rc{error}[0]));
-	
+	$output.=" [" . join(", ",@{$rc{error}}) . "]" if (defined($rc{error}[0]));
+	$output.="\n";
+
+
 	#--- loop over commands: report particular results for long plugin output
-	print "<table style='border-left-width:1px; border-left-style:dotted; border-right-width:0px;' >";
+	if ($opt{set}{collapse} == 1) {
+        	$output.='<SCRIPT LANGUAGE="JavaScript"> function Toggle(node) { if (node.nextSibling.style.display == \'none\') { if (node.childNodes.length > 0) { node.childNodes.item(0).replaceData(0,1,"-"); } node.nextSibling.style.display = \'block\'; } else { if (node.childNodes.length > 0) { node.childNodes.item(0).replaceData(0,1,"+"); } node.nextSibling.style.display = \'none\'; } } </SCRIPT>';
+		if ($rc{top} == $OK && $ENV{"NAGIOS_CHECK_MULTI_PPID"} != $$) {
+			$output.="<A onClick='Toggle(this)' style='line-height:0.1em;color:#4444FF;font-size:1.5em'>+</A>";
+			$output.="<DIV style='display:none'>";
+		} else {
+			$output.="<A onClick='Toggle(this)' style='line-height:0.1em;color:#4444FF;font-size:1.5em'>-</A>";
+			$output.="<DIV style='display:block'>";
+		}
+	}
+
+	$output.="<table style='border-left-width:1px; border-left-style:dotted; border-right-width:0px;>";
 	foreach $no (sort numerically keys %cmds) {
 
 		#--- skip eval
 		next if ($cmds{$no}{type} eq "eval");
 
-		print "<tr valign='top'>";
-		printf "<td nowrap>%s&nbsp;%2.d&nbsp;%s</td>", 
+		$output.="<tr valign='top'>";
+		$output.=sprintf "<td nowrap>%s&nbsp;%2.d&nbsp;%s</td>", 
 			($opt{report} & $DETAIL_HTML) ? "<DIV CLASS=\'service$rc{label}{$cmds{$no}{rc}}\' style='font-size:7pt'>" : "",
 			$no,
 			($opt{report} & $DETAIL_HTML) ? "</DIV>" : "";
@@ -788,15 +824,15 @@ sub report_html {
 
 			my $hostname=($ENV{NAGIOS_HOSTNAME}) ? $ENV{NAGIOS_HOSTNAME} : `uname -n`; chomp($hostname);
 			DEBUG2("report_html: hostname is $hostname");
-			printf "<td nowrap>%s</td>", 
+			$output.=sprintf "<td nowrap>%s</td>", 
 				"<A HREF='/nagios/pnp/index.php?host=${hostname}&srv=$cmds{$no}{name}' TARGET='_self'>" . 
 				"<img src='/nagios/images/action.gif' width=20 height=20 border=0 align=top alt='Show PNP chart for $hostname / $cmds{$no}{plugin}'></A>";
 		} else {
-			printf "<td></td>";
+			$output.="<td></td>";
 		}
-		printf "<td CLASS='dataVal'>&nbsp;&nbsp;%s</td>", ($cmds{$no}{name}) ? $cmds{$no}{name} : "";
+		$output.=sprintf "<td CLASS='dataVal'>&nbsp;&nbsp;%s</td>", ($cmds{$no}{name}) ? $cmds{$no}{name} : "";
 		DEBUG2("report_html output:$cmds{$no}{output}");
-		printf "<td CLASS='dataVal'>%s</td>", 
+		$output.=sprintf "<td CLASS='dataVal'>%s</td>", 
 				($cmds{$no}{output}=~/^([^\n]+)\n(.*)/i) 
 				? "$1</td></tr><tr><td></td><td colspan='3' CLASS='dataVal'>$2" 
 				: $cmds{$no}{output};
@@ -804,12 +840,26 @@ sub report_html {
 			$cmds{$no}{stderr} ne "" && 
 			($opt{report} & $DETAIL_STDERR)) {
 
-			print " [ STDERR: " . $cmds{$no}{stderr} . "]";
+			$output.=" [ STDERR: " . $cmds{$no}{stderr} . "]";
 		}
-		print "</tr>";
+		$output.="</tr>";
 	}
-	print "</table>";
+	$output.="</table>";
+	$output.="</div>" if ($opt{set}{collapse} == 1);
 
+	#--- run only if in top check_multi (if called recursively)
+	#if ($ENV{"NAGIOS_CHECK_MULTI_PPID"} == $$) {
+		#my $count_block=($output=~s/display:none/display:none/g);
+		#DEBUG1("count_block:$count_block NAGIOS_CHECK_MULTI_PPID:$ENV{NAGIOS_CHECK_MULTI_PPID} PID:$$");
+		##--- replace none with block if only one level
+	 	#if ($count_block >= 1) {
+			#$output=~s/display\:none/display\:block/;
+			#$output=~s/\>\+\</\>\-\</;
+		#}	
+	#}
+	
+	#--- last not least: output ;-)
+	print $output;
 }
 
 sub report_xml {
@@ -944,19 +994,21 @@ sub error_in_perfdata {
 	my $label="";
 	my $data="";
 	my $error="";
+	my $uom="";
 	#---
 	#--- 'label'=value[UOM];[warn];[crit];[min];[max]
 	#---
 	#--- loop over perfdata
 	while ($perfdata) {
+		DEBUG3("error_in_perfdata: parsing perfdata:$perfdata");	
 		#--- label w/ \'
-		if ($perfdata=~/^\s*(\'[^']*\')=(\S+)(.*)/) {
+		if ($perfdata=~/^\s*(\'[^']*\')=([^ ]+)(.*)/) {
 			$label=$1;
 			$data=$2;
 			$perfdata=$3;
 			DEBUG3("error_in_perfdata: parsed perfdata -'label':$1 data:$2 rest:$3");	
 		#--- label w/o \'
-		} elsif ($perfdata=~/^\s*(\[^=]+)=(\S+)(.*)/) {
+		} elsif ($perfdata=~/^\s*([^=]+)=([^ ]+)(.*)/) {
 			$label=$1;
 			$data=$2;
 			$perfdata=$3;
@@ -964,20 +1016,19 @@ sub error_in_perfdata {
 		#--- invalid
 		} else {
 			DEBUG3("error_in_perfdata: general parsing error - invalid perfdata");	
-			return "invalid perfdata: $perfdata";
+			return "general error in '$perfdata'";
 		}
 		$perfdata=~s/^\s+//; $perfdata=~s/\s+$//;
 
 		#--- perfdata has label and data, now do detailed checks
 		my ($value,$warning,$critical,$min,$max)=split(/;/,$data);
-		my $uom="";
 		return "$label: no value in data \'$data\'" if ($value eq "");
-		if ($value=~/([-0-9.]+)([^0-9-.]+)/) {
+		if ($value=~/([-0-9.]+)([^0-9-.]{0,2})/) {
 			$value=$1;
 			$uom=$2;
 		}
 		$error.= "$label: bad value \'$value\' in data \'$data\' " if ($value && $value !~/^[-0-9.]+$/);
-		$error.= "$label: bad uom \'$uom\' in data \'$data\' " if ($uom ne "" && ($uom!~/s$/ && $uom!~/%$/ && $uom!~/b$/i && $uom!~/c$/));
+		$error.= "$label: bad UOM \'$uom\' in data \'$data\' " if ($uom ne "" && ($uom!~/s$/ && $uom!~/%$/ && $uom!~/b$/i && $uom!~/c$/));
 		$error.= "$label: bad warning \'$warning\' in data \'$data\' " if ($warning && $warning !~/^[-0-9.]+$/);
 		$error.= "$label: bad critical \'$critical\' in data \'$data\' " if ($critical && $critical !~/^[-0-9.]+$/);
 		$error.= "$label: bad min \'$min\' in data \'$data\' " if ($min && $min !~/^[-0-9.]+$/);
@@ -986,12 +1037,19 @@ sub error_in_perfdata {
 
 		#--- done: perfdata is ok
 	}
+	DEBUG3("error_in_perfdata: no errors found");	
 	return undef;
 }
 
 #-------------------------------------------------------------------------------
 #--- main ----------------------------------------------------------------------
 #-------------------------------------------------------------------------------
+
+#--- check version of modules
+if ($Getopt::Long::VERSION < 2.27) {
+	print "Error: module Getopt::Long version $Getopt::Long::VERSION is too old, minimum version is 2.27\n";
+	exit $UNKNOWN;
+}
 
 #--- parse command line options
 exit $UNKNOWN if (&process_parameters != $OK);
