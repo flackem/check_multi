@@ -87,8 +87,10 @@ my %opt=(
 	"name"		=> "",
 	"report"	=> 13,
 	"set"		=> {
-		indent => " ",
 		collapse => 1,
+		file_extension => "cmd",
+		ignore_missing_cmd_file => 0,
+		indent => " ",
 	},
 	"timeout"	=> 10,
 	"TIMEOUT"	=> 60,
@@ -148,7 +150,7 @@ sub process_parameters {
 	} else {
 		#--- check if filenames are directories and replace with '*cmd' files
 		for (my $i=0;$i<@{$opt{filename}}; $i++) {
-		        splice(@{$opt{filename}},$i,1,glob "$opt{filename}[$i]/*cmd") if (-d $opt{filename}[$i]);
+		        splice(@{$opt{filename}},$i,1,glob "$opt{filename}[$i]/*$opt{set}->{file_extension}") if (-d $opt{filename}[$i]);
 		}
 	}
 	if ($opt{report} & $DETAIL_PNP_LINK && !$opt{name}) {
