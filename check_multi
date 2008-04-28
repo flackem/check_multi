@@ -355,7 +355,8 @@ sub parse_files {
 		if (!open(FILE, $filename)) {
 			next if ($opt{set}{ignore_missing_cmd_file});
 			add_error("parse_files: cannot open config file $filename: $!");
-			$rc{top}=$UNKNOWN;
+			$rc{top}=$UNKNOWN;		# top RC to UNKNOWN
+			$rc{expr}{$OK}="0==1";	# OK: false
 			next;
 		} else {
 			@lines=<FILE>;
@@ -650,7 +651,7 @@ sub result_rating {
 		my $state=$rc{s2r}{$s};
 		
         	my ($result,$message)=eval_result($rc{expr}{$state});
-		#print "result:$result ref(result):".ref($result)." message:$message\n";
+			#print "result:$result ref(result):".ref($result)." message:$message\n";
         	if (! defined($result) || $result eq "") {
                 	#print "NO: $message\n";
         	} elsif ($result < 0) {
