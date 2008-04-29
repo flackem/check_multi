@@ -1065,6 +1065,12 @@ add_error("please don't run plugins as root!") if ($> == 0);
 &parse_files($opt{filename});
 #--- parse single command lines
 &parse_lines(@{$opt{execute}});
+#--- yet no child checks defined? Throw UNKNOWN
+if (!%cmds) {
+	add_error("no checks defined");
+	$rc{top}=$UNKNOWN;	# top RC to UNKNOWN
+	$rc{expr}{$OK}="0==1";	# OK: false
+}
 
 #--- initialize timer for overall timeout
 $rc{starttime}=time;

@@ -1,9 +1,11 @@
 
 ===== Changelog =====
 
-   * fixed plugin state for command file not found to UNKNOWN (thx Rudolf)
+	* added error message if no plugin defined at all
+	* fixed plugin state for command file not found to UNKNOWN (thx Rudolf)
 
-**0.17** 16.04.2008
+**0.17**	16.04.2008
+	* added recursive call detection
 	* collapse option to hide OK output in HTML view
 	* error messages in plugin output instead of long plugin output
 	* indentation of recursive checks in ASCII mode
