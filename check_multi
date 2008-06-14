@@ -398,6 +398,7 @@ sub parse_lines {
 		if ($line=~/\s*(command|eval|eeval)\s*\[\s*([^:\s]+)[:]*(\S*)\s*\]\s*=\s*(.*)\s*/i) {
 			$type=lc($1);
 			$name=$2;
+			$name=substitute_macros($name);
 			$pplugin=$3;
 			$cmd=$4;
 			$plugin=($type eq "command") ? (split(/\s+/,"$cmd"))[0] : "eval";

@@ -1,6 +1,7 @@
 
 ===== Changelog =====
 
+	* macro_substitution now also in tags (thx Willi)
 	* added error message if no plugin defined at all
 	* fixed plugin state for command file not found to UNKNOWN (thx Rudolf)
 
