@@ -27,7 +27,7 @@ use Getopt::Long qw(:config no_ignore_case bundling);
 BEGIN { eval("use Time::HiRes qw(time)") }
 use lib "/usr/local/nagios/libexec";
 use vars qw(
-$MYSELF %cmds $returncode %rc $no $VERSION
+$MYSELF %cmds $returncode %rc $no $VERSION $tmp_stdout $tmp_stderr
 $OK $WARNING $CRITICAL $UNKNOWN
 $DETAIL_LIST $DETAIL_LIST_FULL $DETAIL_HTML $DETAIL_STDERR $DETAIL_PERFORMANCE
 $DETAIL_PERFORMANCE_CLASSIC $DETAIL_STATUS $DETAIL_PNP_LINK $DETAIL_XML $DETAIL_NAGIOS2
@@ -63,6 +63,8 @@ $DETAIL_COLLAPSE=1024;
 $no=0;
 %cmds=();
 $returncode=0;
+$tmp_stdout="";
+$tmp_stderr="";
 %rc=(
 	label	=> { $OK => "OK", $WARNING => "WARNING", $CRITICAL => "CRITICAL", $UNKNOWN => "UNKNOWN", },
 	code	=> { "OK" => $OK, "WARNING" => $WARNING, "CRITICAL" => $CRITICAL, "UNKNOWN" => $UNKNOWN, },
@@ -297,6 +299,35 @@ sub debug_message {
 }
 
 #---
+#--- install signal handlers
+#--- 
+sub install_signal_handler {
+	my ($handler, @signals)=@_;
+	foreach my $signal (@signals) {
+    		$SIG{$signal} = \&signal_handler;
+	}
+}
+
+#---
+#--- got signal? report what we have and terminate savely
+#--- 
+sub signal_handler {
+	my $signal=$_[0];
+
+	#--- reinstall signal_handler (just paranoid ;)
+	install_signal_handler(\install_signal_handler, $signal);
+
+	#--- do reports before quitting
+	add_error("Got signal $signal");
+	&result_rating;
+	&report_all;
+
+	#--- cleanup end exit
+	unlink $tmp_stdout, $tmp_stderr;
+	exit $rc{top};
+}
+
+#---
 #--- add error(s) to global error list
 #---
 sub add_error {
@@ -398,15 +429,21 @@ sub parse_lines {
 		if ($line=~/\s*(command|eval|eeval)\s*\[\s*([^:\s]+)[:]*(\S*)\s*\]\s*=\s*(.*)\s*/i) {
 			$type=lc($1);
 			$name=$2;
-			$name=substitute_macros($name);
 			$pplugin=$3;
 			$cmd=$4;
 			$plugin=($type eq "command") ? (split(/\s+/,"$cmd"))[0] : "eval";
+
 			#--- invalid characters found?
+			$name=substitute_macros($name);
 			if ($name!~/^[\w:]+$/) {
-				add_error("parse_lines: tag $name invalid, using non allowed characters");
+				if ($name=~/\$([^\$]+)\$/) {
+					add_error("parse_lines: tag $name invalid - macro \$$1\$ not found");
+				} else {
+					add_error("parse_lines: tag $name invalid - using non allowed characters");
+				}
 				next;
 			}
+
 			#--- overloading: find plugin with same name
 			if ($type eq "command" || $type=~/eval$/) {
 				for ($i=1; $i<=scalar(keys(%cmds));$i++) {
@@ -425,6 +462,9 @@ sub parse_lines {
 			$cmds{$i}{pplugin}=$pplugin;
 			$cmds{$i}{name}=$name;
 			$cmds{$i}{rc}=$UNKNOWN;
+			$cmds{$i}{output}="";
+			$cmds{$i}{stderr}="";
+			$cmds{$i}{runtime}=0;
 			if ($opt{set}{suppress_perfdata} && 
 			    $opt{set}{suppress_perfdata}=~/\b$name\b/i) {
 				$cmds{$i}{process_perfdata}=0;
@@ -461,8 +501,6 @@ sub parse_lines {
 #---
 sub exec_command {
 	my ($no)=@_;
-	my $tmp_stdout="";
-	my $tmp_stderr="";
 
 	#--- execute command with alarm timer to catch timeouts
 	$SIG{'ALRM'} = sub { die "timeout" };
@@ -666,7 +704,36 @@ sub result_rating {
 }
 
 #---
-#--- report results stored in %cmds
+#--- start different report routines
+#---
+sub report_all {
+	#--- classical report
+	if (! ($opt{report} & $DETAIL_HTML) &&
+    	! ($opt{report} & $DETAIL_XML)) {
+		&report;
+	}
+	#--- report HTML output
+	if ($opt{report} & $DETAIL_HTML) {
+		&report_html;
+	} 
+	#--- report XML output 
+	if ($opt{report} & $DETAIL_XML) {
+		&report_xml;
+	}
+	
+	#--- at last: perfdata
+	&report_perfdata;
+	
+	#--- final '\n' - dedicated to Wolfgang Barth ;-)
+	if (	!($opt{report} & $DETAIL_NAGIOS2) && 
+		!($opt{report} & $DETAIL_HTML) &&
+		!($opt{report} & $DETAIL_XML)) {
+		print "\n";
+	}
+}
+
+#---
+#--- report results stored in %cmds (ASCII report)
 #---
 sub report {
 
@@ -1055,6 +1122,9 @@ if ($Getopt::Long::VERSION < 2.27) {
 	exit $UNKNOWN;
 }
 
+#--- take care against signals
+install_signal_handler(\install_signal_handler, "INT", "TERM", "QUIT", "HUP");
+
 #--- parse command line options
 exit $UNKNOWN if (&process_parameters != $OK);
 
@@ -1066,7 +1136,7 @@ add_error("please don't run plugins as root!") if ($> == 0);
 &parse_files($opt{filename});
 #--- parse single command lines
 &parse_lines(@{$opt{execute}});
-#--- yet no child checks defined? Throw UNKNOWN
+#--- no child checks defined yet? Throw UNKNOWN
 if (!%cmds) {
 	add_error("no checks defined");
 	$rc{top}=$UNKNOWN;	# top RC to UNKNOWN
@@ -1097,29 +1167,8 @@ foreach $no (sort numerically keys %cmds) {
 #--- prepare output
 &result_rating;
 
-#--- classical report
-if (! ($opt{report} & $DETAIL_HTML) &&
-    ! ($opt{report} & $DETAIL_XML)) {
-	&report;
-}
-#--- report HTML output
-if ($opt{report} & $DETAIL_HTML) {
-	&report_html;
-} 
-#--- report XML output 
-if ($opt{report} & $DETAIL_XML) {
-	&report_xml;
-}
-
-#--- at last: perfdata
-&report_perfdata;
-
-#--- final '\n' - dedicated to Wolfgang Barth ;-)
-if (	!($opt{report} & $DETAIL_NAGIOS2) && 
-	!($opt{report} & $DETAIL_HTML) &&
-	!($opt{report} & $DETAIL_XML)) {
-	print "\n";
-}
+#--- report
+&report_all;
 
 #--- return rc with highest severity
 exit $rc{top};
