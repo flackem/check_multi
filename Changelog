@@ -1,6 +1,7 @@
 
 ===== Changelog =====
 
+	* fixed perfdata parser (thx Gerhard)
 	* added signal handler to catch terminating signals (cleanup,report)
 	* macro_substitution now also in tags (thx Willi)
 	* added error message if no plugin defined at all
