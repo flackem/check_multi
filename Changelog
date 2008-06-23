@@ -1,6 +1,7 @@
 
 ===== Changelog =====
 
+	* added tag_notes_link to implement notes_url as link behind tag in extinfo
 	* added notes_url for child checks and MULTI_TAG var
 	* fixed perfdata parser (thx Gerhard)
 	* added signal handler to catch terminating signals (cleanup,report)

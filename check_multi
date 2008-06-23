@@ -96,6 +96,7 @@ my %opt=(
 		target		=> "_self",
 		action_url	=> "",
 		notes_url	=> "",
+		tag_notes_link	=> 0,
 	},
 	"timeout"	=> 10,
 	"TIMEOUT"	=> 60,
@@ -936,7 +937,12 @@ sub report_html {
 			$output.="<td></td>";
 		}
 		#--- and the rest...
-		$output.=sprintf "<td CLASS='dataVal'>&nbsp;&nbsp;%s</td>", ($cmds{$no}{name}) ? $cmds{$no}{name} : "";
+		if (!$opt{set}{tag_notes_link}) {
+			$output.=sprintf "<td CLASS='dataVal'>&nbsp;&nbsp;%s</td>", ($cmds{$no}{name}) ? $cmds{$no}{name} : "";
+		} else {
+			my $notes_url=substitute_macros($opt{set}{notes_url});
+			$output.=sprintf "<td CLASS='dataVal'>&nbsp;&nbsp;<A HREF=\'$notes_url\' TARGET=\'$opt{set}{target}\'>%s</A></td>", ($cmds{$no}{name}) ? $cmds{$no}{name} : "";
+		}
 		DEBUG2("report_html output:$cmds{$no}{output}");
 		$output.=sprintf "<td CLASS='dataVal'>%s</td>", 
 				($cmds{$no}{output}=~/^([^\n]+)\n(.*)/i) 
