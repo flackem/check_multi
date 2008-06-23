@@ -1,6 +1,7 @@
 
 ===== Changelog =====
 
+	* added notes_url for child checks and MULTI_TAG var
 	* fixed perfdata parser (thx Gerhard)
 	* added signal handler to catch terminating signals (cleanup,report)
 	* macro_substitution now also in tags (thx Willi)

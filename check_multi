@@ -30,8 +30,8 @@ use vars qw(
 $MYSELF %cmds $returncode %rc $no $VERSION $tmp_stdout $tmp_stderr
 $OK $WARNING $CRITICAL $UNKNOWN
 $DETAIL_LIST $DETAIL_LIST_FULL $DETAIL_HTML $DETAIL_STDERR $DETAIL_PERFORMANCE
-$DETAIL_PERFORMANCE_CLASSIC $DETAIL_STATUS $DETAIL_PNP_LINK $DETAIL_XML $DETAIL_NAGIOS2
-$DETAIL_COLLAPSE
+$DETAIL_PERFORMANCE_CLASSIC $DETAIL_STATUS $DETAIL_PERFORMANCE_LINK $DETAIL_XML $DETAIL_NAGIOS2
+$DETAIL_NOTES_LINK
 *DEBUG1 *DEBUG2 *DEBUG3
 );
 #-------------------------------------------------------------------------------
@@ -54,10 +54,10 @@ $DETAIL_PERFORMANCE=8;
 $DETAIL_LIST_FULL=16;
 $DETAIL_PERFORMANCE_CLASSIC=32;
 $DETAIL_STATUS=64;
-$DETAIL_PNP_LINK=128;
+$DETAIL_PERFORMANCE_LINK=128;
 $DETAIL_XML=256;
 $DETAIL_NAGIOS2=512;
-$DETAIL_COLLAPSE=1024;
+$DETAIL_NOTES_LINK=1024;
 #
 #--- vars
 $no=0;
@@ -89,10 +89,13 @@ my %opt=(
 	"name"		=> "",
 	"report"	=> 13,
 	"set"		=> {
-		collapse => 1,
-		file_extension => "cmd",
+		collapse	=> 1,
+		file_extension	=> "cmd",
 		ignore_missing_cmd_file => 0,
-		indent => " ",
+		indent		=> " ",
+		target		=> "_self",
+		action_url	=> "",
+		notes_url	=> "",
 	},
 	"timeout"	=> 10,
 	"TIMEOUT"	=> 60,
@@ -155,9 +158,13 @@ sub process_parameters {
 		        splice(@{$opt{filename}},$i,1,glob "$opt{filename}[$i]/*$opt{set}->{file_extension}") if (-d $opt{filename}[$i]);
 		}
 	}
-	if ($opt{report} & $DETAIL_PNP_LINK && !$opt{name}) {
+	if ($opt{report} & $DETAIL_PERFORMANCE_LINK && !$opt{name}) {
 		$opt{name}=$MYSELF;
-		DEBUG2("process_parameters: PNP report option set and no name defined: taking $MYSELF as name");
+		DEBUG2("process_parameters: performance report option set and no name defined: taking $MYSELF as name");
+	}
+	if ($opt{report} & $DETAIL_NOTES_LINK && !$opt{set}{notes_url}) {
+		$opt{set}{notes_url}=$ENV{NAGIOS_SERVICENOTESURL};
+		DEBUG2("process_parameters: notes report option set - taking Nagios SERVICENOTESURL $ENV{NAGIOS_SERVICENOTESURL}");
 	}
 	#--- if no module HTML::Entities available - set var
 	if ($opt{report} & $DETAIL_HTML) {
@@ -236,12 +243,16 @@ Options:
        16: show full list of states, normally '0 warning' is omitted
        32: show old type of performance data (without check_multi style)
        64: add explicit status (OK,WARNING,CRITICAL,UNKNOWN) in front of output
-      128: add PNP action link if performance data available
+      128: add action link if performance data available
       256: XML: print structured XML output
       512: Nagios 2 compatibility: one summary line of output only
+     1024: show notes_url
 -s, --set <option>=<value>
+   action_url=<URL> - see Nagios action_url
    ignore_missing_cmd_file=(0|1) (don't complain if config file missing)	
+   notes_url=<URL> - see Nagios notes_url
    suppress_perfdata=<tag1>[,<tag2>][,...] (don't provide perfdata)
+   target=<target> - frame target for action_url and notes_url
 -l, --libexec
    path to plugins, default: $opt{libexec}
 -h, --help
@@ -281,10 +292,18 @@ sub mytrim {
 sub substitute_macros {
         my ($input)=@_;
         while ((my $var)=($input=~/\$([A-Za-z0-9_^\$]+)\$/)) {
-		DEBUG3("substitute_macros: var NAGIOS_${var} not defined") if (!defined($ENV{"NAGIOS_${var}"}));
-		last if (!defined($ENV{"NAGIOS_${var}"}));
-		DEBUG3("substitute_macros: replacing env var NAGIOS_${var} with $ENV{\"NAGIOS_${var}\"}");
-                $input=~s/\$$var\$/$ENV{"NAGIOS_${var}"}/g;
+		#--- 1. check for NAGIOS var
+		if (defined($ENV{"NAGIOS_${var}"})) {
+			DEBUG3("substitute_macros: replacing env var NAGIOS_${var} with $ENV{\"NAGIOS_${var}\"}");
+                	$input=~s/\$$var\$/$ENV{"NAGIOS_${var}"}/g;
+		#--- 2. check for MULTI var
+		} elsif (defined($ENV{"MULTI_${var}"})) {
+			DEBUG3("substitute_macros: replacing env var MULTI_${var} with $ENV{\"MULTI_${var}\"}");
+                	$input=~s/\$$var\$/$ENV{"MULTI_${var}"}/g;
+		#--- 3. nothing to substitute
+		} else {
+			DEBUG3("substitute_macros: var NAGIOS_${var}/MULTI_${var} not defined");
+		}
         }
         return $input;
 }
@@ -510,6 +529,7 @@ sub exec_command {
 
 	#--- measure command runtime;
 	my $cmd_start=time;
+	$ENV{"MULTI_TAG"}=$cmds{$no}{name};
 
         if ($cmds{$no}{type} eq "command") {
 
@@ -883,24 +903,39 @@ sub report_html {
 		#--- skip eval
 		next if ($cmds{$no}{type} eq "eval");
 
+		#--- allow commands to get tag name
+		$ENV{"MULTI_TAG"}=$cmds{$no}{name};
+
 		$output.="<tr valign='top'>";
 		$output.=sprintf "<td nowrap>%s&nbsp;%2.d&nbsp;%s</td>", 
 			($opt{report} & $DETAIL_HTML) ? "<DIV CLASS=\'service$rc{label}{$cmds{$no}{rc}}\' style='font-size:7pt'>" : "",
 			$no,
 			($opt{report} & $DETAIL_HTML) ? "</DIV>" : "";
+		#--- Action url
 		if (	($opt{report} & $DETAIL_PERFORMANCE) &&
-			($opt{report} & $DETAIL_PNP_LINK) && 
+			($opt{report} & $DETAIL_PERFORMANCE_LINK) && 
 			defined($cmds{$no}{performance}) &&
 			$cmds{$no}{process_perfdata}) {
 
 			my $hostname=($ENV{NAGIOS_HOSTNAME}) ? $ENV{NAGIOS_HOSTNAME} : `uname -n`; chomp($hostname);
 			DEBUG2("report_html: hostname is $hostname");
 			$output.=sprintf "<td nowrap>%s</td>", 
-				"<A HREF='/nagios/pnp/index.php?host=${hostname}&srv=$cmds{$no}{name}' TARGET='_self'>" . 
-				"<img src='/nagios/images/action.gif' width=20 height=20 border=0 align=top alt='Show PNP chart for $hostname / $cmds{$no}{plugin}'></A>";
+				"<A HREF='/nagios/pnp/index.php?host=${hostname}&srv=$cmds{$no}{name}' TARGET=\'$opt{set}{target}\'>" . 
+				"<img src='/nagios/images/action.gif' width=20 height=20 border=0 align=top alt='Show performance chart for $hostname / $cmds{$no}{plugin}'></A>";
 		} else {
 			$output.="<td></td>";
 		}
+		#--- Notes url
+		if (	($opt{report} & $DETAIL_NOTES_LINK) &&
+			defined($opt{set}{notes_url})) {
+			my $notes_url=substitute_macros($opt{set}{notes_url});
+			$output.=sprintf "<td nowrap>%s</td>", 
+				"<A HREF=\'$notes_url\' TARGET=\'$opt{set}{target}\'>" . 
+				"<img src='/nagios/images/notes.gif' width=20 height=20 border=0 align=top alt='Show notes for $cmds{$no}{plugin}'></A>";
+		} else {
+			$output.="<td></td>";
+		}
+		#--- and the rest...
 		$output.=sprintf "<td CLASS='dataVal'>&nbsp;&nbsp;%s</td>", ($cmds{$no}{name}) ? $cmds{$no}{name} : "";
 		DEBUG2("report_html output:$cmds{$no}{output}");
 		$output.=sprintf "<td CLASS='dataVal'>%s</td>", 
