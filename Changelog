@@ -1,6 +1,7 @@
 
 ===== Changelog =====
 
+	* minor fixes for notes_url links: alternation of link and icon, column spanning
 	* added tag_notes_link to implement notes_url as link behind tag in extinfo
 	* added notes_url for child checks and MULTI_TAG var
 	* fixed perfdata parser (thx Gerhard)

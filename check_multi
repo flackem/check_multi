@@ -928,7 +928,8 @@ sub report_html {
 		}
 		#--- Notes url
 		if (	($opt{report} & $DETAIL_NOTES_LINK) &&
-			defined($opt{set}{notes_url})) {
+			defined($opt{set}{notes_url}) &&
+			!$opt{set}{tag_notes_link}) {
 			my $notes_url=substitute_macros($opt{set}{notes_url});
 			$output.=sprintf "<td nowrap>%s</td>", 
 				"<A HREF=\'$notes_url\' TARGET=\'$opt{set}{target}\'>" . 
@@ -946,7 +947,7 @@ sub report_html {
 		DEBUG2("report_html output:$cmds{$no}{output}");
 		$output.=sprintf "<td CLASS='dataVal'>%s</td>", 
 				($cmds{$no}{output}=~/^([^\n]+)\n(.*)/i) 
-				? "$1</td></tr><tr><td></td><td colspan='3' CLASS='dataVal'>$2" 
+				? "$1</td></tr><tr><td></td><td colspan='5' CLASS='dataVal'>$2" 
 				: $cmds{$no}{output};
 		if (	defined($cmds{$no}{stderr}) && 
 			$cmds{$no}{stderr} ne "" && 
