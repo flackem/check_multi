@@ -97,6 +97,7 @@ my %opt=(
 		action_url	=> "",
 		notes_url	=> "",
 		tag_notes_link	=> 0,
+		no_checks_rc => $UNKNOWN,
 	},
 	"timeout"	=> 10,
 	"TIMEOUT"	=> 60,
@@ -291,8 +292,8 @@ sub mytrim {
 #--- substitute macros a la $HOSTNAME$ from environment
 #---
 sub substitute_macros {
-        my ($input)=@_;
-        while ((my $var)=($input=~/\$([A-Za-z0-9_^\$]+)\$/)) {
+	my ($input)=@_;
+	while ((my $var)=($input=~/\$([A-Za-z0-9_^\$]+)\$/)) {
 		#--- 1. check for NAGIOS var
 		if (defined($ENV{"NAGIOS_${var}"})) {
 			DEBUG3("substitute_macros: replacing env var NAGIOS_${var} with $ENV{\"NAGIOS_${var}\"}");
@@ -304,9 +305,10 @@ sub substitute_macros {
 		#--- 3. nothing to substitute
 		} else {
 			DEBUG3("substitute_macros: var NAGIOS_${var}/MULTI_${var} not defined");
+			last;
 		}
-        }
-        return $input;
+	}
+	return $input;
 }
 
 #---
@@ -642,29 +644,29 @@ sub exec_command {
 }
 
 sub eval_result {
-        my ($input)=@_;
-        my $input_org=$input;
-        my $message="";
+	my ($input)=@_;
+	my $input_org=$input;
+	my $message="";
 
  	#--- at runtime: substitute $MACRO$ macros and $STATES$
-        $input=substitute_macros($input);
+	$input=substitute_macros($input);
 	$input=substitute_states($input);
 
-        #--- evaluate expression
-        my $result=eval "($input)";
+	#--- evaluate expression
+	my $result=eval "($input)";
 
-        #--- catch error
-        if ($@) {
-                $message="Evaluation error in \'$input_org\': $@\n";
-                $message=~s/\n/ /g;
-                return (-1,$message);
-        #--- return result
-        } else {
-                $message="eval_result: input:\'$input_org\' parsed:\'$input\' result:\'$result\'\n";
-                $message=~s/\n/ /g;
+	#--- catch error
+	if ($@) {
+		$message="Evaluation error in \'$input_org\': $@\n";
+		$message=~s/\n/ /g;
+		return (-1,$message);
+	#--- return result
+	} else {
+		$message="eval_result: input:\'$input_org\' parsed:\'$input\' result:\'$result\'\n";
+		$message=~s/\n/ /g;
 		DEBUG2($message);
-                return ($result,$message);
-        }
+		return ($result,$message);
+	}
 }
 
 sub substitute_states {
@@ -1181,8 +1183,8 @@ add_error("please don't run plugins as root!") if ($> == 0);
 #--- no child checks defined yet? Throw UNKNOWN
 if (!%cmds) {
 	add_error("no checks defined");
-	$rc{top}=$UNKNOWN;	# top RC to UNKNOWN
-	$rc{expr}{$OK}="0==1";	# OK: false
+	$rc{top}=$opt{set}{no_checks_rc};
+	$rc{expr}{$OK}="0==1" if ($opt{set}{no_checks_rc} != $OK);
 }
 
 #--- initialize timer for overall timeout
