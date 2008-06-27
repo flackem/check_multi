@@ -304,8 +304,8 @@ sub substitute_macros {
                 	$input=~s/\$$var\$/$ENV{"MULTI_${var}"}/g;
 		#--- 3. nothing to substitute
 		} else {
-			DEBUG3("substitute_macros: var NAGIOS_${var}/MULTI_${var} not defined");
-			last;
+                	$input=~s/\$$var\$//g;
+			DEBUG3("substitute_macros: var NAGIOS_${var}/MULTI_${var} not defined: removed \$$var\$");
 		}
 	}
 	return $input;
