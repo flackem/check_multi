@@ -133,7 +133,7 @@ sub process_parameters {
 		"u|U|unknown=s"	=> \$opt{unknown},)
 	) {
 		short_usage();
-        	return $UNKNOWN;
+		return $UNKNOWN;
 	}
 	*DEBUG1=($opt{verbose}>=1) ? \&debug_message : sub {};
 	*DEBUG2=($opt{verbose}>=2) ? \&debug_message : sub {};
@@ -141,23 +141,23 @@ sub process_parameters {
 
 	if ($opt{version}) {
 		print "$MYSELF: v$VERSION\n";
-        	return $UNKNOWN;
+		return $UNKNOWN;
 	}
 
 	if ($opt{help}) {
 		short_usage();
-        	long_usage();
-        	return $UNKNOWN;
+		long_usage();
+		return $UNKNOWN;
 	}
 
 	if (! $opt{filename}[0] && ! $opt{execute}[0]) {
-        	print "$MYSELF error: no config file(s) or command parameters specified\n";
+		print "$MYSELF error: no config file(s) or command parameters specified\n";
 		short_usage();
-        	return $UNKNOWN;
+		return $UNKNOWN;
 	} else {
 		#--- check if filenames are directories and replace with '*cmd' files
 		for (my $i=0;$i<@{$opt{filename}}; $i++) {
-		        splice(@{$opt{filename}},$i,1,glob "$opt{filename}[$i]/*$opt{set}->{file_extension}") if (-d $opt{filename}[$i]);
+			splice(@{$opt{filename}},$i,1,glob "$opt{filename}[$i]/*$opt{set}->{file_extension}") if (-d $opt{filename}[$i]);
 		}
 	}
 	if ($opt{report} & $DETAIL_PERFORMANCE_LINK && !$opt{name}) {
@@ -170,11 +170,11 @@ sub process_parameters {
 	}
 	#--- if no module HTML::Entities available - set var
 	if ($opt{report} & $DETAIL_HTML) {
-                $opt{use_html_entities} = 1;
-        	unless (eval "require HTML::Entities;1") {
-                	$opt{use_html_entities} = 0;
+		$opt{use_html_entities} = 1;
+		unless (eval "require HTML::Entities;1") {
+			$opt{use_html_entities} = 0;
 			DEBUG2("process_parameters: HTML::Entities not available");
-        	}
+		}
 	}
 	#--- set libexec-dir at the beginning of PATH var
 	if ($opt{libexec}) {
@@ -212,7 +212,7 @@ sub short_usage {
 print <<SHORTEOF;
 $MYSELF -f <config file> [-n name] [-t timeout] [-T TIMEOUT] 
 	[-r level] [-l libexec_path] [-s option=value]
-        [-x command] [-w <expr>] [-c <expr>] [-u <expr>] [-o <expr>]
+	[-x command] [-w <expr>] [-c <expr>] [-u <expr>] [-o <expr>]
 $MYSELF [-h | --help]
 $MYSELF [-v | --verbose]
 $MYSELF [-V | --version]
@@ -297,14 +297,14 @@ sub substitute_macros {
 		#--- 1. check for NAGIOS var
 		if (defined($ENV{"NAGIOS_${var}"})) {
 			DEBUG3("substitute_macros: replacing env var NAGIOS_${var} with $ENV{\"NAGIOS_${var}\"}");
-                	$input=~s/\$$var\$/$ENV{"NAGIOS_${var}"}/g;
+			$input=~s/\$$var\$/$ENV{"NAGIOS_${var}"}/g;
 		#--- 2. check for MULTI var
 		} elsif (defined($ENV{"MULTI_${var}"})) {
 			DEBUG3("substitute_macros: replacing env var MULTI_${var} with $ENV{\"MULTI_${var}\"}");
-                	$input=~s/\$$var\$/$ENV{"MULTI_${var}"}/g;
+			$input=~s/\$$var\$/$ENV{"MULTI_${var}"}/g;
 		#--- 3. nothing to substitute
 		} else {
-                	$input=~s/\$$var\$//g;
+			$input=~s/\$$var\$//g;
 			DEBUG3("substitute_macros: var NAGIOS_${var}/MULTI_${var} not defined: removed \$$var\$");
 		}
 	}
@@ -326,7 +326,7 @@ sub debug_message {
 sub install_signal_handler {
 	my ($handler, @signals)=@_;
 	foreach my $signal (@signals) {
-    		$SIG{$signal} = \&signal_handler;
+		$SIG{$signal} = \&signal_handler;
 	}
 }
 
@@ -534,7 +534,7 @@ sub exec_command {
 	my $cmd_start=time;
 	$ENV{"MULTI_TAG"}=$cmds{$no}{name};
 
-        if ($cmds{$no}{type} eq "command") {
+	if ($cmds{$no}{type} eq "command") {
 
 		eval {
 			alarm($opt{timeout});
@@ -613,7 +613,7 @@ sub exec_command {
 				}
 			}
 			DEBUG2("exec_command: environment var NAGIOS_$cmds{$no}{name}=$cmds{$no}{output}");
-                }
+		}
 		$cmds{$no}{runtime}=time-$cmd_start;
 		return $cmds{$no}{rc};
 	}
@@ -631,7 +631,7 @@ sub exec_command {
 		} else {
 			alarm(0);
 			$cmds{$no}{rc}=$UNKNOWN;
-       			add_error("unexpected exception encountered:$@");
+			add_error("unexpected exception encountered:$@");
 		}
 		unlink $tmp_stdout, $tmp_stderr;
 	} else {
@@ -712,13 +712,13 @@ sub result_rating {
 		
 		my $state=$rc{s2r}{$s};
 		
-        	my ($result,$message)=eval_result($rc{expr}{$state});
-			#print "result:$result ref(result):".ref($result)." message:$message\n";
-        	if (! defined($result) || $result eq "") {
-                	#print "NO: $message\n";
-        	} elsif ($result < 0) {
-                	add_error("result_rating: parsing error ($message)");
-        	} else {
+		my ($result,$message)=eval_result($rc{expr}{$state});
+		#print "result:$result ref(result):".ref($result)." message:$message\n";
+		if (! defined($result) || $result eq "") {
+			#print "NO: $message\n";
+		} elsif ($result < 0) {
+			add_error("result_rating: parsing error ($message)");
+		} else {
 			$rc{match}{$state}=1;
 			$rc{top}=$state;
 			#print "YES: $rc{label}{$state} matches, $message TOP:$rc{top}\n";
@@ -732,7 +732,7 @@ sub result_rating {
 sub report_all {
 	#--- classical report
 	if (! ($opt{report} & $DETAIL_HTML) &&
-    	! ($opt{report} & $DETAIL_XML)) {
+	    ! ($opt{report} & $DETAIL_XML)) {
 		&report;
 	}
 	#--- report HTML output
@@ -890,7 +890,7 @@ sub report_html {
 
 	#--- loop over commands: report particular results for long plugin output
 	if ($opt{set}{collapse} == 1) {
-        	$output.='<SCRIPT LANGUAGE="JavaScript"> function Toggle(node) { if (node.nextSibling.style.display == \'none\') { if (node.childNodes.length > 0) { node.childNodes.item(0).replaceData(0,1,"-"); } node.nextSibling.style.display = \'block\'; } else { if (node.childNodes.length > 0) { node.childNodes.item(0).replaceData(0,1,"+"); } node.nextSibling.style.display = \'none\'; } } </SCRIPT>';
+		$output.='<SCRIPT LANGUAGE="JavaScript"> function Toggle(node) { if (node.nextSibling.style.display == \'none\') { if (node.childNodes.length > 0) { node.childNodes.item(0).replaceData(0,1,"-"); } node.nextSibling.style.display = \'block\'; } else { if (node.childNodes.length > 0) { node.childNodes.item(0).replaceData(0,1,"+"); } node.nextSibling.style.display = \'none\'; } } </SCRIPT>';
 		if ($rc{top} == $OK && $ENV{"NAGIOS_CHECK_MULTI_PPID"} != $$) {
 			$output.="<A onClick='Toggle(this)' style='line-height:0.1em;color:#4444FF;font-size:1.5em'>+</A>";
 			$output.="<DIV style='display:none'>";
@@ -993,24 +993,24 @@ sub report_xml {
 	$xmlstr.="\t<time>$rc{runtime}</time>\n";
 	$xmlstr.="\t<output>";
 	#--- print header line (2): summary for particular states 
-        if ($opt{report} & $DETAIL_LIST_FULL) {
-                $xmlstr.="$rc{count}{$CRITICAL} critical" . ((@{$rc{list}{$CRITICAL}}) ? " (" . join(', ',@{$rc{list}{$CRITICAL}}) . ')' : "") . ", " .
-                        "$rc{count}{$WARNING} warning"   . ((@{$rc{list}{$WARNING}})  ? " (" . join(', ',@{$rc{list}{$WARNING}})  . ')' : "") . ", " .
-                        "$rc{count}{$UNKNOWN} unknown"   . ((@{$rc{list}{$UNKNOWN}})  ? " (" . join(', ',@{$rc{list}{$UNKNOWN}})  . ')' : "") . ", " .
-                        "$rc{count}{$OK} ok";
-        } elsif ($opt{report} & $DETAIL_LIST) {
-                my @r=();
-                push @r, "$rc{count}{$CRITICAL} critical (" . join(', ',@{$rc{list}{$CRITICAL}}) . ")" if (@{$rc{list}{$CRITICAL}});
-                push @r, "$rc{count}{$WARNING} warning ("   . join(', ',@{$rc{list}{$WARNING}})  . ")" if (@{$rc{list}{$WARNING}});
-                push @r, "$rc{count}{$UNKNOWN} unknown ("   . join(', ',@{$rc{list}{$UNKNOWN}})  . ")" if (@{$rc{list}{$UNKNOWN}});
-                push @r, "$rc{count}{$OK} ok" if (@{$rc{list}{$OK}});
-                $xmlstr.=join(", ", @r);
-        } else {
-                $xmlstr.="$rc{count}{$CRITICAL} critical, " .
-                        "$rc{count}{$WARNING} warning, " .
-                        "$rc{count}{$UNKNOWN} unknown, " .
-                        "$rc{count}{$OK} ok";
-        }
+	if ($opt{report} & $DETAIL_LIST_FULL) {
+		$xmlstr.="$rc{count}{$CRITICAL} critical" . ((@{$rc{list}{$CRITICAL}}) ? " (" . join(', ',@{$rc{list}{$CRITICAL}}) . ')' : "") . ", " .
+			"$rc{count}{$WARNING} warning"   . ((@{$rc{list}{$WARNING}})  ? " (" . join(', ',@{$rc{list}{$WARNING}})  . ')' : "") . ", " .
+			"$rc{count}{$UNKNOWN} unknown"   . ((@{$rc{list}{$UNKNOWN}})  ? " (" . join(', ',@{$rc{list}{$UNKNOWN}})  . ')' : "") . ", " .
+			"$rc{count}{$OK} ok";
+	} elsif ($opt{report} & $DETAIL_LIST) {
+		my @r=();
+		push @r, "$rc{count}{$CRITICAL} critical (" . join(', ',@{$rc{list}{$CRITICAL}}) . ")" if (@{$rc{list}{$CRITICAL}});
+		push @r, "$rc{count}{$WARNING} warning ("   . join(', ',@{$rc{list}{$WARNING}})  . ")" if (@{$rc{list}{$WARNING}});
+		push @r, "$rc{count}{$UNKNOWN} unknown ("   . join(', ',@{$rc{list}{$UNKNOWN}})  . ")" if (@{$rc{list}{$UNKNOWN}});
+		push @r, "$rc{count}{$OK} ok" if (@{$rc{list}{$OK}});
+		$xmlstr.=join(", ", @r);
+	} else {
+		$xmlstr.="$rc{count}{$CRITICAL} critical, " .
+			"$rc{count}{$WARNING} warning, " .
+			"$rc{count}{$UNKNOWN} unknown, " .
+			"$rc{count}{$OK} ok";
+	}
 	$xmlstr.="</output>\n";
 	$xmlstr.="\t<error>" . join(", ",@{$rc{error}}) . "</error>\n" if (defined($rc{error}[0]));
 
@@ -1064,8 +1064,8 @@ sub report_perfdata {
 				DEBUG3("report_perfdata before splitting: $perftmp");
 				#--- preserve '::' as multi delimiter - replace all '::' with '_'
 				while ($perftmp=~/\s*([^=]+)=(\S+)\s*(.*)/) {
-        				my $label=$1;
-        				my $data=$2;
+					my $label=$1;
+					my $data=$2;
 					$perftmp=$3;
 
 					my @tmparr=split(/::/,$label);
