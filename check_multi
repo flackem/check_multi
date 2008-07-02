@@ -967,7 +967,7 @@ sub report_html {
 		}
 		DEBUG2("report_html output:$cmds{$no}{output}");
 		$output.=sprintf "<td CLASS='dataVal'>%s</td>", 
-				($cmds{$no}{output}=~/^([^\n]+)\n(.*)/i) 
+				($cmds{$no}{output}=~/^([^\n]+)\n(.*)/is) 
 				? "$1</td></tr><tr><td></td><td colspan='5' CLASS='dataVal'>$2" 
 				: $cmds{$no}{output};
 		if (	defined($cmds{$no}{stderr}) && 
