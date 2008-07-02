@@ -439,11 +439,13 @@ sub parse_lines {
 
 		#--- check for continuation line with trailing '\'
 		if ($line =~ s/\\\s*$//) { 
-			$line .= shift(@lines);
+			$line =~ s/#.*//;	# remove comments
+			$line .= shift(@lines); # add next line
 			redo unless ($#lines<=0);
 		}
 		next if ($line=~/^\s*$/);	# skip empty lines
 		next if ($line=~/^\s*#/);	# skip comments
+		$line =~ s/#.*//;		# remove comments
 	
 		#--- format: 'command [ tag[::plugin] ] = plugin command line'
 		#--- format: 'eval    [ tag[::plugin] ] = expression'
@@ -569,9 +571,26 @@ sub exec_command {
 	
 			#--- split performance data from standard output
 			if ($cmds{$no}{output}=~/\|/) {
-				($cmds{$no}{output},$cmds{$no}{performance})=split(/\|/,$cmds{$no}{output});
-				DEBUG3("exec_command performance string: $cmds{$no}{performance}");
-				$cmds{$no}{performance}=mytrim($cmds{$no}{performance},"\\s");
+				DEBUG3("exec_command(1): output contains \|");
+				if ($cmds{$no}{output}=~/([^\n]*)\n(.*)/s) {
+					DEBUG3("exec_command(2): output contains \\n");
+					my $rest=$2;
+					DEBUG3("exec_command(3): \$1:$1");
+					DEBUG3("exec_command(4): \$2:$2");
+					($cmds{$no}{output},$cmds{$no}{performance})=split(/\|/,$1);
+					DEBUG3("exec_command(5): rest:>$rest<");
+					if ($rest=~/(.*)\|(.*)/s) {
+						$cmds{$no}{output}.="\n$1";
+						$cmds{$no}{performance}.=" " . join(' ', split(/\n/,$2));
+					} else {
+						$cmds{$no}{output}.="\n$rest";
+					}
+					DEBUG3("exec_command(6): output:$cmds{$no}{output} performance:$cmds{$no}{performance}");
+				} else {
+					($cmds{$no}{output},$cmds{$no}{performance})=split(/\|/,$cmds{$no}{output});
+					DEBUG3("exec_command performance string: $cmds{$no}{performance}");
+					$cmds{$no}{performance}=mytrim($cmds{$no}{performance},"\\s");
+				}
 
 				#--- check performance data and suppress if found errors
 				if (($opt{report} & $DETAIL_PERFORMANCE) && $cmds{$no}{process_perfdata}) {
