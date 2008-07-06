@@ -1,10 +1,11 @@
 
 ===== Changelog =====
 
+	* more indentation for HTML view - indent_label var created
 	* fixed handling of splitted multiline performance data (thx to Lorenz Bucher)
 	* added '#' comments functionality within lines (not complete comment lines)
-        * macro handling: non found $MACRO$ will be replaced by ''
-        * fixed substitute_macros
+	* macro handling: non found $MACRO$ will be replaced by ''
+	* fixed substitute_macros
 	* minor fixes for notes_url links: alternation of link and icon, column spanning
 	* added tag_notes_link to implement notes_url as link behind tag in extinfo
 	* added notes_url for child checks and MULTI_TAG var

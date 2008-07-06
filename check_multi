@@ -89,15 +89,16 @@ my %opt=(
 	"name"		=> "",
 	"report"	=> 13,
 	"set"		=> {
+		action_url	=> "",
 		collapse	=> 1,
 		file_extension	=> "cmd",
 		ignore_missing_cmd_file => 0,
 		indent		=> " ",
-		target		=> "_self",
-		action_url	=> "",
+		no_checks_rc	=> $UNKNOWN,
 		notes_url	=> "",
+		target		=> "_self",
 		tag_notes_link	=> 0,
-		no_checks_rc => $UNKNOWN,
+		indent_label	=> 1,
 	},
 	"timeout"	=> 10,
 	"TIMEOUT"	=> 60,
@@ -204,6 +205,9 @@ sub process_parameters {
 	}
 	foreach my $option (sort keys(%opt)) {
 		DEBUG3("process_parameters: \$opt{$option}=$opt{$option}") if (defined($opt{$option}));
+	}
+	foreach my $option (sort keys(%{$opt{set}})) {
+		DEBUG3("process_parameters: \$opt{set}{$option}=$opt{set}{$option}") if (defined($opt{set}{$option}));
 	}
 	return $OK;
 }
@@ -594,8 +598,7 @@ sub exec_command {
 
 				#--- check performance data and suppress if found errors
 				if (($opt{report} & $DETAIL_PERFORMANCE) && $cmds{$no}{process_perfdata}) {
-					my $errstr=error_in_perfdata($cmds{$no}{performance});
-					if ($errstr) {
+					if (my $errstr=error_in_perfdata($cmds{$no}{performance})) {
 						add_error("perfdata discarded for $errstr");
 						$cmds{$no}{performance}=undef;
 					}
@@ -624,8 +627,7 @@ sub exec_command {
 
 				#--- check performance data and suppress if found errors
 				if (($opt{report} & $DETAIL_PERFORMANCE) && $cmds{$no}{process_perfdata}) {
-					my $errstr=error_in_perfdata($cmds{$no}{performance});
-					if ($errstr) {
+					if (my $errstr=error_in_perfdata($cmds{$no}{performance})) {
 						add_error("perfdata discarded for $errstr");
 						$cmds{$no}{performance}=undef;
 					}
@@ -919,7 +921,7 @@ sub report_html {
 		}
 	}
 
-	$output.="<table style='border-left-width:1px; border-left-style:dotted; border-right-width:0px;>";
+	$output.="<table style='border-left-width:1px; border-left-style:dotted; border-right-width:0px;' id=multi_table>";
 	foreach $no (sort numerically keys %cmds) {
 
 		#--- skip eval
@@ -966,9 +968,12 @@ sub report_html {
 			$output.=sprintf "<td CLASS='dataVal'>&nbsp;&nbsp;<A HREF=\'$notes_url\' TARGET=\'$opt{set}{target}\'>%s</A></td>", ($cmds{$no}{name}) ? $cmds{$no}{name} : "";
 		}
 		DEBUG2("report_html output:$cmds{$no}{output}");
+		DEBUG3("HTML check_multi recursive levels: " . scalar ($cmds{$no}{output}=~s/multi_table/multi_table/g));
 		$output.=sprintf "<td CLASS='dataVal'>%s</td>", 
 				($cmds{$no}{output}=~/^([^\n]+)\n(.*)/is) 
-				? "$1</td></tr><tr><td></td><td colspan='5' CLASS='dataVal'>$2" 
+				? (($opt{set}{indent_label}) 
+					? "$1</td></tr><tr><td colspan='4'></td><td colspan='1' CLASS='dataVal'>$2"
+					: "$1</td></tr><tr><td></td><td colspan='5' CLASS='dataVal'>$2")
 				: $cmds{$no}{output};
 		if (	defined($cmds{$no}{stderr}) && 
 			$cmds{$no}{stderr} ne "" && 
@@ -1112,8 +1117,7 @@ sub report_perfdata {
 			next if (! $cmds{$no}{process_perfdata});
 
 			if (defined($cmds{$no}{performance})) {
-				my $errstr=error_in_perfdata($cmds{$no}{performance});
-				if ($errstr) {
+				if (my $errstr=error_in_perfdata($cmds{$no}{performance})) {
 					add_error("perfdata discarded for $errstr");
 				} else {
 					print "$cmds{$no}{performance} ";
@@ -1129,6 +1133,8 @@ sub error_in_perfdata {
 	my $data="";
 	my $error="";
 	my $uom="";
+
+
 	#---
 	#--- 'label'=value[UOM];[warn];[crit];[min];[max]
 	#---
