@@ -99,6 +99,7 @@ my %opt=(
 		target		=> "_self",
 		tag_notes_link	=> 0,
 		indent_label	=> 1,
+		exec_open3	=> 0,
 	},
 	"timeout"	=> 10,
 	"TIMEOUT"	=> 60,
@@ -176,6 +177,20 @@ sub process_parameters {
 			$opt{use_html_entities} = 0;
 			DEBUG2("process_parameters: HTML::Entities not available");
 		}
+	}
+	#--- if no modules IPC::Open3 or IO::Select, use old backquote exec and temp files
+	if ($opt{set}{exec_open3}) {
+		unless (eval "use IPC::Open3;1") {
+			$opt{set}{exec_open3}=0;
+			DEBUG2("process_parameters: IPC::Open3 not available");
+		}
+	}
+	if ($opt{set}{exec_open3}) {
+		unless (eval "use IO::Select;1") {
+			$opt{set}{exec_open3}=0;
+			DEBUG2("process_parameters: IO::Select not available");
+		}
+		DEBUG2("process_parameters: IPC::Open3 and IO::Select modules loaded");
 	}
 	#--- set libexec-dir at the beginning of PATH var
 	if ($opt{libexec}) {
@@ -349,7 +364,7 @@ sub signal_handler {
 	&report_all;
 
 	#--- cleanup end exit
-	unlink $tmp_stdout, $tmp_stderr;
+	unlink $tmp_stdout, $tmp_stderr if ($opt{set}{exec_open3} == 0);
 	exit $rc{top};
 }
 
@@ -545,23 +560,54 @@ sub exec_command {
 		eval {
 			alarm($opt{timeout});
 	
-			#--- prepare tmpfiles for stdout and stderr
-			$tmp_stdout=&get_tmpfile("/tmp", "${MYSELF}_stdout_$$");
-			$tmp_stderr=&get_tmpfile("/tmp", "${MYSELF}_stderr_$$");
+			#--- classic exec with temporary files
+			if (!$opt{set}{exec_open3}) {
+
+				#--- prepare tmpfiles for stdout and stderr
+				$tmp_stdout=&get_tmpfile("/tmp", "${MYSELF}_stdout_$$");
+				$tmp_stderr=&get_tmpfile("/tmp", "${MYSELF}_stderr_$$");
 	
 				#--- execute command and store stdout/stderr/return code
-			`$cmds{$no}{command} 1>$tmp_stdout 2>$tmp_stderr`;
-			$cmds{$no}{rc}=$? >> 8;
+				`$cmds{$no}{command} 1>$tmp_stdout 2>$tmp_stderr`;
+				$cmds{$no}{rc}=$? >> 8;
 	
-			#--- store stdout/stderr and cleanup tmpfiles
-			$cmds{$no}{output}=readfile($tmp_stdout);
-			DEBUG2("exec_command: raw output >$cmds{$no}{output}<");
-			$cmds{$no}{stderr}=readfile($tmp_stderr);
-			DEBUG2("exec_command: raw stderr >$cmds{$no}{stderr}<");
-			unlink $tmp_stdout, $tmp_stderr;
-			chomp $cmds{$no}{output};	
-			chomp $cmds{$no}{stderr};
-	
+				#--- store stdout/stderr and cleanup tmpfiles
+				$cmds{$no}{output}=readfile($tmp_stdout);
+				DEBUG2("exec_command: raw output >$cmds{$no}{output}<");
+				$cmds{$no}{stderr}=readfile($tmp_stderr);
+				DEBUG2("exec_command: raw stderr >$cmds{$no}{stderr}<");
+				unlink $tmp_stdout, $tmp_stderr;
+				chomp $cmds{$no}{output};	
+				chomp $cmds{$no}{stderr};
+
+			#--- new open3 exec
+			} else {
+				my $pid=open3(*CIN,*COUT,*CERR,$cmds{$no}{command});
+				close(CIN); # no STDIN needed, so immediately close STDIN filehandle
+				$SIG{CHLD}=sub {
+					$cmds{$no}{rc}=$?>>8 if waitpid($pid, 0) > 0;
+    				DEBUG2("REAPER: status $cmds{$no}{rc} on $pid");
+				};
+
+				my $sel=IO::Select->new();
+				$sel->add(*CERR,*COUT);
+				while (my @ready = $sel->can_read) {
+					foreach my $fh (@ready) {
+        				if (fileno($fh) == fileno(CERR)) {
+               		$cmds{$no}{stderr}.=scalar <CERR>; 
+						} else {
+               		$cmds{$no}{output}.=scalar <COUT>; 
+						}
+        				$sel->remove($fh) if eof($fh);
+    				}
+				}
+				close(COUT);
+				close(CERR);
+				DEBUG2("exec_command: open3 raw output >$cmds{$no}{output}<");
+				DEBUG2("exec_command: open3 raw stderr >$cmds{$no}{stderr}<");
+				chomp $cmds{$no}{output};	
+				chomp $cmds{$no}{stderr};
+			}	
 			#--- unknown return code? change it explicitly to UNKNOWN
 			if (! defined($rc{r2s}{$cmds{$no}{rc}})) {
 				$cmds{$no}{stderr}.=" RC was $cmds{$no}{rc}!";
