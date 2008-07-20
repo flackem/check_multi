@@ -100,6 +100,7 @@ my %opt=(
 		tag_notes_link	=> 0,
 		indent_label	=> 1,
 		exec_open3	=> 0,
+		username	=> "nagios",
 	},
 	"timeout"	=> 10,
 	"TIMEOUT"	=> 60,
@@ -145,13 +146,14 @@ sub process_parameters {
 		print "$MYSELF: v$VERSION\n";
 		return $UNKNOWN;
 	}
-
 	if ($opt{help}) {
 		short_usage();
 		long_usage();
 		return $UNKNOWN;
 	}
-
+	if ($opt{set}{username}) {
+		drop_privileges($opt{set}{username});
+	}
 	if (! $opt{filename}[0] && ! $opt{execute}[0]) {
 		print "$MYSELF error: no config file(s) or command parameters specified\n";
 		short_usage();
@@ -275,6 +277,7 @@ Options:
    suppress_perfdata=<tag1>[,<tag2>][,...] (don't provide perfdata)
    target=<target> - frame target for action_url and notes_url
 -l, --libexec
+pt{set}{gid}
    path to plugins, default: $opt{libexec}
 -h, --help
    print detailed help screen
@@ -305,6 +308,32 @@ sub mytrim {
 	my ($src, $trim)=@_;
 	DEBUG3("mytrim: src:\'$src\' trim:\'$trim\'");
 	return ($src=~/[$trim]*(.*)[$trim]*/) ? $1 : $src;
+}
+
+#---
+#--- gracefully derived from Privileges:Drop ;-)
+#---
+sub drop_privileges {
+	my ($user)=@_;
+	if($< != 0 and $> != 0 and $( =~ /0/ and $) =~ /0/) {
+        	DEBUG2("drop_privileges: already running as uid $< - no need to drop privileges");
+	} else {
+        	DEBUG3("drop_privileges: before - UID: $< EUID:$> GID:$( EGID:$)");
+        	my ($uid,$gid,$home,$shell)=(getpwnam($user))[2,3,7,8];
+        	DEBUG3("drop_privileges: got uid $uid gid $gid home $home and shell $shell for user $user");
+		if ($uid && $gid) {
+        		$)=$(=$gid;
+        		$>=$<=$uid;
+        		$ENV{USER}=$user;
+        		$ENV{LOGNAME}=$user;
+        		$ENV{HOME}=$home;
+        		$ENV{SHELL}=$shell;
+        		DEBUG3("drop_privileges: after  - UID: $< EUID:$> GID:$( EGID:$)");
+			add_error("running as user $user");
+		} else {
+			add_error("unknown user $user");
+		}
+	}
 }
 
 #---
