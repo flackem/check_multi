@@ -81,6 +81,7 @@ $tmp_stderr="";
 	runtime => 0.0,
 	nchecks => 0,
 );
+*DEBUG0=\&debug_message;
 
 my %opt=(
 	"execute"	=> [],
@@ -100,7 +101,7 @@ my %opt=(
 		tag_notes_link	=> 0,
 		indent_label	=> 1,
 		exec_open3	=> 0,
-		username	=> "nagios",
+		run_as_user	=> "nagios",
 	},
 	"timeout"	=> 10,
 	"TIMEOUT"	=> 60,
@@ -117,6 +118,13 @@ my %opt=(
 #-------------------------------------------------------------------------------
 
 sub process_parameters {
+
+	#--- drop privileges to 'run_as_user', if current UID is root
+	if (drop_privileges($opt{set}{run_as_user}) != $OK) {
+		#--- if drop fails, exit with state UNKNOWN
+		DEBUG0("Don't run check_multi as root!");
+		return $UNKNOWN; 
+	}
 
 	if (! GetOptions(
 		"f|filename=s"	=> \@{$opt{filename}},
@@ -150,9 +158,6 @@ sub process_parameters {
 		short_usage();
 		long_usage();
 		return $UNKNOWN;
-	}
-	if ($opt{set}{username}) {
-		drop_privileges($opt{set}{username});
 	}
 	if (! $opt{filename}[0] && ! $opt{execute}[0]) {
 		print "$MYSELF error: no config file(s) or command parameters specified\n";
@@ -316,11 +321,13 @@ sub mytrim {
 sub drop_privileges {
 	my ($user)=@_;
 	if($< != 0 and $> != 0 and $( =~ /0/ and $) =~ /0/) {
-        	DEBUG2("drop_privileges: already running as uid $< - no need to drop privileges");
+		return $OK;
 	} else {
-        	DEBUG3("drop_privileges: before - UID: $< EUID:$> GID:$( EGID:$)");
+		if (!$user) {
+			DEBUG0("drop_privileges: no user specified");
+			return $UNKNOWN;	
+		}
         	my ($uid,$gid,$home,$shell)=(getpwnam($user))[2,3,7,8];
-        	DEBUG3("drop_privileges: got uid $uid gid $gid home $home and shell $shell for user $user");
 		if ($uid && $gid) {
         		$)=$(=$gid;
         		$>=$<=$uid;
@@ -328,12 +335,15 @@ sub drop_privileges {
         		$ENV{LOGNAME}=$user;
         		$ENV{HOME}=$home;
         		$ENV{SHELL}=$shell;
-        		DEBUG3("drop_privileges: after  - UID: $< EUID:$> GID:$( EGID:$)");
-			add_error("running as user $user");
+			push @{$rc{error}}, "dropped privileges: running as user $user";
+			return $OK;
 		} else {
-			add_error("unknown user $user");
+			DEBUG0("drop_privileges: unknown user $user");
+			return $UNKNOWN;
 		}
 	}
+	DEBUG0("drop_privileges: indefinite error");
+	return $UNKNOWN;
 }
 
 #---
@@ -393,7 +403,7 @@ sub signal_handler {
 	&report_all;
 
 	#--- cleanup end exit
-	unlink $tmp_stdout, $tmp_stderr if ($opt{set}{exec_open3} == 0);
+	unlink $tmp_stdout, $tmp_stderr if (!$opt{set}{exec_open3});
 	exit $rc{top};
 }
 
@@ -609,26 +619,26 @@ sub exec_command {
 				chomp $cmds{$no}{output};	
 				chomp $cmds{$no}{stderr};
 
-			#--- new open3 exec
+			#--- new open3 exec (to be tested carefully before getting standard ;-))
 			} else {
 				my $pid=open3(*CIN,*COUT,*CERR,$cmds{$no}{command});
-				close(CIN); # no STDIN needed, so immediately close STDIN filehandle
+				close(CIN); # not needed: close STDIN filehandle
 				$SIG{CHLD}=sub {
 					$cmds{$no}{rc}=$?>>8 if waitpid($pid, 0) > 0;
-    				DEBUG2("REAPER: status $cmds{$no}{rc} on $pid");
+					DEBUG2("REAPER: status $cmds{$no}{rc} on $pid");
 				};
 
 				my $sel=IO::Select->new();
 				$sel->add(*CERR,*COUT);
 				while (my @ready = $sel->can_read) {
 					foreach my $fh (@ready) {
-        				if (fileno($fh) == fileno(CERR)) {
-               		$cmds{$no}{stderr}.=scalar <CERR>; 
+						if (fileno($fh) == fileno(CERR)) {
+							$cmds{$no}{stderr}.=scalar <CERR>; 
 						} else {
-               		$cmds{$no}{output}.=scalar <COUT>; 
+							$cmds{$no}{output}.=scalar <COUT>; 
 						}
-        				$sel->remove($fh) if eof($fh);
-    				}
+						$sel->remove($fh) if eof($fh);
+					}
 				}
 				close(COUT);
 				close(CERR);

@@ -1,6 +1,7 @@
 
 ===== Changelog =====
 
+	* moved drop_privileges before parameter evaluation: needs compile time UID now
 	* drop_privileges if ran as root, default: run as user nagios
 	* old exec with tempfiles is standard until new exec is validated (exec_open3:0)
 	* redesign of exec_command: open3 from IPC module does the trick now ;-)
