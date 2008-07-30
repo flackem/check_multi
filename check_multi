@@ -81,7 +81,6 @@ $tmp_stderr="";
 	runtime => 0.0,
 	nchecks => 0,
 );
-*DEBUG0=\&debug_message;
 
 my %opt=(
 	"execute"	=> [],
@@ -828,6 +827,10 @@ sub report_all {
 #---
 sub report {
 
+	DEBUG1("\n","-" x 80);
+	DEBUG1("Plugin output");
+	DEBUG1("-" x 80);
+	
 	if ($opt{report} & $DETAIL_NAGIOS2) {
 		print "$opt{name} " if $opt{name};
 		print "$rc{label}{$rc{top}}";
@@ -888,28 +891,18 @@ sub report {
 		}
 	}
 
-	#--- print list of commands
-	DEBUG1("\n","-" x 80);
-	DEBUG1("Commands executed:");
-	DEBUG1("-" x 80);
-	foreach $no (sort numerically keys %cmds) {
-		DEBUG1(sprintf "[%2.d] %-8s %s", $no, $cmds{$no}{type}, $cmds{$no}{command});
+	my $maxcmdlen=0;
+	foreach $no (keys %cmds) {
+		$maxcmdlen=length($cmds{$no}{name}) if (length($cmds{$no}{name})>$maxcmdlen);
 	}
 
 	#--- print results
 	DEBUG1("\n","-" x 80);
-	DEBUG1("Command results:           RC Output");
+	DEBUG1(sprintf("No   Name%sRuntime  RC Output", ' ' x ($maxcmdlen-3)));
 	DEBUG1("-" x 80);
 	foreach $no (sort numerically keys %cmds) {
-		DEBUG1(sprintf "[%2.d] %-20s %3d %s", $no, $cmds{$no}{name}, $cmds{$no}{rc}, $cmds{$no}{output});
-	}
-
-	#--- print runtime
-	DEBUG1("\n","-" x 80);
-	DEBUG1("Command runtimes:");
-	DEBUG1("-" x 80);
-	foreach $no (sort numerically keys %cmds) {
-		DEBUG1(sprintf "[%2.d] %-20s %6.4fs", $no, $cmds{$no}{name}, $cmds{$no}{runtime});
+		DEBUG1(sprintf "[%2.d] %-${maxcmdlen}s %6.4fs %3d %s", $no, $cmds{$no}{name}, $cmds{$no}{runtime}, $cmds{$no}{rc}, $cmds{$no}{output});
+		DEBUG2(sprintf "%s%-12s%s", ' ' x ($maxcmdlen+6), $cmds{$no}{type}, $cmds{$no}{command});
 	}
 
 	#--- print state settings and RC evaluation result
@@ -1098,9 +1091,14 @@ sub report_xml {
 }
 
 sub report_perfdata {
-	my $perftmp="";
+	if (!$opt{report} & $DETAIL_HTML) {
+		DEBUG1("\n","-" x 80);
+		DEBUG1("Plugin performance data");
+		DEBUG1("-" x 80);
+	}
 	#--- report performance data?
 	if ($opt{report} & $DETAIL_PERFORMANCE) {
+		my $perftmp="";
 		DEBUG2("report_perfdata (DETAIL_PERFORMANCE): name=" . ($opt{name}) ? $opt{name} : $MYSELF);
 		print "\|";
 		printf "%s::%s::plugins=%d time=%f ", 
