@@ -119,13 +119,6 @@ my %opt=(
 
 sub process_parameters {
 
-	#--- drop privileges to 'run_as_user', if current UID is root
-	if (drop_privileges($opt{set}{run_as_user}) != $OK) {
-		#--- if drop fails, exit with state UNKNOWN
-		DEBUG0("Don't run check_multi as root!");
-		return $UNKNOWN; 
-	}
-
 	if (! GetOptions(
 		"f|filename=s"	=> \@{$opt{filename}},
 		"h|help"	=> \$opt{help},
@@ -313,37 +306,6 @@ sub mytrim {
 	my ($src, $trim)=@_;
 	DEBUG3("mytrim: src:\'$src\' trim:\'$trim\'");
 	return ($src=~/[$trim]*(.*)[$trim]*/) ? $1 : $src;
-}
-
-#---
-#--- gracefully derived from Privileges:Drop ;-)
-#---
-sub drop_privileges {
-	my ($user)=@_;
-	if($< != 0 and $> != 0 and $( =~ /0/ and $) =~ /0/) {
-		return $OK;
-	} else {
-		if (!$user) {
-			DEBUG0("drop_privileges: no user specified");
-			return $UNKNOWN;	
-		}
-        	my ($uid,$gid,$home,$shell)=(getpwnam($user))[2,3,7,8];
-		if ($uid && $gid) {
-        		$)=$(=$gid;
-        		$>=$<=$uid;
-        		$ENV{USER}=$user;
-        		$ENV{LOGNAME}=$user;
-        		$ENV{HOME}=$home;
-        		$ENV{SHELL}=$shell;
-			push @{$rc{error}}, "dropped privileges: running as user $user";
-			return $OK;
-		} else {
-			DEBUG0("drop_privileges: unknown user $user");
-			return $UNKNOWN;
-		}
-	}
-	DEBUG0("drop_privileges: indefinite error");
-	return $UNKNOWN;
 }
 
 #---
@@ -1141,13 +1103,10 @@ sub report_perfdata {
 	if ($opt{report} & $DETAIL_PERFORMANCE) {
 		DEBUG2("report_perfdata (DETAIL_PERFORMANCE): name=" . ($opt{name}) ? $opt{name} : $MYSELF);
 		print "\|";
-		if (!defined($opt{set}{suppress_perfdata}) ||
-		   $opt{set}{suppress_perfdata}!~/\bcheck_multi\b/) {
-			printf "%s::%s::plugins=%d time=%f ", 
-				($opt{name}) ? $opt{name} : $MYSELF, $MYSELF,
-				scalar(keys(%cmds)),
-				time - $rc{starttime};
-		}
+		printf "%s::%s::plugins=%d time=%f ", 
+			($opt{name}) ? $opt{name} : $MYSELF, $MYSELF,
+			scalar(keys(%cmds)),
+			time - $rc{starttime};
 		#--- one line per command, format: tag=output
 		foreach $no (sort numerically keys %cmds) {
 
