@@ -1,0 +1,114 @@
+
+===== Changelog =====
+
+	* improved verbose mode for ASCII output
+	* removed suppress_perfdata for check_multi perfdata, PNP needs this
+	* ok, convinced ;-) removed forced drop_privileges, warning message is sufficient
+	* moved drop_privileges before parameter evaluation: needs compile time UID now
+	* drop_privileges if ran as root, default: run as user nagios
+	* old exec with tempfiles is standard until new exec is validated (exec_open3:0)
+	* redesign of exec_command: open3 from IPC module does the trick now ;-)
+	* more indentation for HTML view - indent_label var created
+	* fixed handling of splitted multiline performance data (thx to Lorenz Bucher)
+	* added '#' comments functionality within lines (not complete comment lines)
+	* macro handling: non found $MACRO$ will be replaced by ''
+	* fixed substitute_macros
+	* minor fixes for notes_url links: alternation of link and icon, column spanning
+	* added tag_notes_link to implement notes_url as link behind tag in extinfo
+	* added notes_url for child checks and MULTI_TAG var
+	* fixed perfdata parser (thx Gerhard)
+	* added signal handler to catch terminating signals (cleanup,report)
+	* macro_substitution now also in tags (thx Willi)
+	* added error message if no plugin defined at all
+	* fixed plugin state for command file not found to UNKNOWN (thx Rudolf)
+
+**0.17**	16.04.2008
+	* added recursive call detection
+	* collapse option to hide OK output in HTML view
+	* error messages in plugin output instead of long plugin output
+	* indentation of recursive checks in ASCII mode
+	* perl module version check for Getopt::Long
+	* added control variable for use of HTML::Entities
+	* restrict tag characters to A-Za-z0-9_:
+	* add libexec path to PATH var during check_multi runtime
+	* fixed regex in perfdata check routine (thx denschi)
+	* fixed CSS tags for HTML output (thx TheCry)
+	* print command runtime 0 if command is not executed due to timeout
+	* last rc from eval will also be mentioned for state evaluation
+	* added -x / execute option to provide commandline also for commands
+	* added file_extension setting to specify config file extension
+	* fixed perfdata label sanitizing (thx Jens)
+	* added explicit perfdata plugin specification (thx to Joerg Linge)
+	* fixed state substitution (now only for state statements)
+	* fixed check_multi performance data labels
+	* added ASCII output into HTML comments for notification scripts
+	* splitted eval into eeval (echo eval) and eval
+
+**0.16**	19.01.2008
+	* multi label fix backported into stable 0.16
+	* minor cleanups
+	* enhanced performance string error parsing
+	* performance labels delimiters '::' -> '_'
+	* minor fixes(eval error output, HTML::Entities use in eval...)
+	* added $STATE_<tag>$ vars
+	* fixed ::multi_label:: problems with ::tags
+	* new option -s suppress_perfdata=<tag1>,[<tag2>][,...]
+	* discarding incorrect perfdata (in order to save the other)
+	* fixed HTML::entities (thx to Gerhard Lausser)
+	* added set option: --set ENV_VAR=xyz
+	* added continuation lines capability for config files 
+	* some minor debugging changes
+	* added eval [ TAG ] = PERLEXPR
+	* ePN support removed again (too many error conditions)
+	* fixed HTML issues (table specific, thx to Wolfgang Barth)
+	* ePN support
+	* removed --state option (replaced by state evaluation)
+	* replaced -r 64 (command list) and -r 1024 (state eval) by verbose option
+	* added --verbose (level 0-3) option and DEBUG routine
+
+**0.15**	21.11.2007
+	* added 'ignore_missing_cmd_file' option for command overloading
+	* added --set option to add multiple config values
+	* added command overloading mechanism
+	* removed brackets from HTML view
+	* no MULTI label any more, standard is: no label
+	* multiple config files supported: -f <file> -f <file>...
+	* corrected line (<l10) of ePN optout statement
+	* added state evaluation reporting
+	* replaced ranges with state evaluation
+	* fixed bug with recursive concatenated performance labels
+	* added range support (check_multi now can replace check_cluster!)
+	* prepared recursive calls, added dotted line to HTML view
+	* fixed bug with parent timeout smaller than child timeout
+	* fixed error reporting for missing config file
+	* reordered report functions 
+
+**0.14**	21.10.2007
+	* added NAGIOS2 report mode with most important info in one line
+	* extra http report function
+	* setting report standard to 13 (verbose header line, stderr and perfdata)
+	* in order to get proper output on command line
+	* extended html report mode to full table
+	* performance star to the front (thx Joerg)
+	* added PNP link option for extended info
+	* added HTML coloring for extended info
+	* performance data label separator is now '::' to avoid mismatches
+	* added DISPLAY_COMMAND_LIST to show full list of commands in extended_output
+	* if plugin specified with full path, do not use libexec path
+	* added blanks to result lists to provide wrapping in HTML output
+
+**0.13**	16.08.2007
+	* bugfix for handling of extended return code
+	* stderr output now trimmed
+	* bugfix for non existing environment vars
+	* suppress empty check lists '()' in output
+	* cleaned up 0 results in summary
+
+**0.12**	25.07.2007
+	* performance switch replaced by report flag
+	* output of performance data is now default
+	* substitute macros a la $HOSTNAME$
+	* Time::Hires integrated
+
+**0.11**	22.07.2007
+	* first version in SVN
