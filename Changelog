@@ -1,6 +1,8 @@
 
 ===== Changelog =====
 
+
+**0.18**	07.08.2008
 	* improved verbose mode for ASCII output
 	* removed suppress_perfdata for check_multi perfdata, PNP needs this
 	* ok, convinced ;-) removed forced drop_privileges, warning message is sufficient
