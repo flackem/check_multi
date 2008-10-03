@@ -1,6 +1,9 @@
 
 ===== Changelog =====
 
+	* commands extensible during runtime -> call parse_lines within eeval
+	* fixed missing escaping for '#'
+	* improved verbose mode also for HTML output
 
 **0.18**	07.08.2008
 	* improved verbose mode for ASCII output

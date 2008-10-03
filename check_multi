@@ -458,13 +458,13 @@ sub parse_lines {
 
 		#--- check for continuation line with trailing '\'
 		if ($line =~ s/\\\s*$//) { 
-			$line =~ s/#.*//;	# remove comments
+			$line =~ s/[^\\]+#.*//;	# remove comments
 			$line .= shift(@lines); # add next line
 			redo unless ($#lines<=0);
 		}
 		next if ($line=~/^\s*$/);	# skip empty lines
 		next if ($line=~/^\s*#/);	# skip comments
-		$line =~ s/#.*//;		# remove comments
+		$line =~ s/[^\\]+#.*//;		# remove comments
 	
 		#--- format: 'command [ tag[::plugin] ] = plugin command line'
 		#--- format: 'eval    [ tag[::plugin] ] = expression'
@@ -1036,6 +1036,87 @@ sub report_html {
 			#$output=~s/\>\+\</\>\-\</;
 		#}	
 	#}
+	#--- print state evaluation if verbose flag set
+        if ($opt{verbose} >= 1) {
+		if ($$ENV{"NAGIOS_CHECK_MULTI_PPID"} != $$) {
+			$output.="<A onClick='Toggle(this)' style='line-height:0.1em;color:#4444FF;font-size:1.5em'>+</A>";
+			$output.="<DIV style='display:none'>";
+		}
+		my @colors=("silver","lightgrey");
+		my $flipflop=0;
+		$output.="<br><table><tr style='text-align:left' bgcolor='" . $colors[$flipflop] . "'><th>No</th><th>Name</th><th>Runtime</th><th>RC</th><th>Output</th></tr>";
+		foreach $no (sort numerically keys %cmds) {
+			$flipflop=!$flipflop;
+			$output.=sprintf "<tr bgcolor='" . $colors[$flipflop] . "'><td>%d</td><td>%s</td><td>%7.5f</td><td>%d</td><td>%s</td></tr>", $no, $cmds{$no}{name}, $cmds{$no}{runtime}, $cmds{$no}{rc}, $cmds{$no}{output};
+			$output.=sprintf "<tr bgcolor='" . $colors[$flipflop] . "'><td></td><td></td><td>%s</td><td></td><td>%s</td></tr>", $cmds{$no}{type}, $cmds{$no}{command};
+		}
+		$output.="</table></div>";
+
+		#--- print state settings and RC evaluation result
+		if ($$ENV{"NAGIOS_CHECK_MULTI_PPID"} != $$) {
+			$output.="<A onClick='Toggle(this)' style='line-height:0.1em;color:#4444FF;font-size:1.5em'>+</A>";
+			$output.="<DIV style='display:none'>";
+		}
+		$flipflop=0;
+		$output.="<br><table><tr style='text-align:left' bgcolor='" . $colors[$flipflop] . "'><th>State</th><th>Expression</th><th>Evaluates to</th></tr>";
+		foreach my $s (sort numerically keys %{$rc{s2r}}) {
+			$flipflop=!$flipflop;
+			$output.=sprintf "<tr bgcolor='" . $colors[$flipflop] . "'><td>%s</td><td>%s</td><td>%s</td></tr>", $rc{label}{$rc{s2r}{$s}}, $rc{expr}{$rc{s2r}{$s}}, ($rc{match}{$rc{s2r}{$s}}) ? "TRUE" : "FALSE";
+		}
+		$flipflop=!$flipflop;
+		$output.="<tr bgcolor='" . $colors[$flipflop] . "'><td></td><td style='text-align:right'>Overall state</td><td style='font-weight:bold'>$rc{label}{$rc{top}}</td></tr>";
+		$output.="</table></div>";
+	}
+	if ($opt{verbose} >=1) {
+
+		if ($$ENV{"NAGIOS_CHECK_MULTI_PPID"} != $$) {
+			$output.="<A onClick='Toggle(this)' style='line-height:0.1em;color:#4444FF;font-size:1.5em'>+</A>";
+			$output.="<DIV style='display:none'>";
+		}
+		my @colors=("silver","lightgrey");
+		my $flipflop=0;
+		foreach $no (sort numerically keys %cmds) {
+			$output.="<br><h4>$no - $cmds{$no}{name}</h4>";
+			$output.="<table><tr style='text-align:left' bgcolor='" . $colors[$flipflop] . "'><th></th><th>Attribute</th><th>Value</th></tr>";
+			my %vars=(
+				1 => {
+					att => "\$no",	
+					val => $no, 
+				},
+				2 => {
+					att => "tag",	
+					val => $cmds{$no}{name},	 
+				},
+				3 => {
+					att => "\$STATE_$cmds{$no}{name}\$",
+					val => $cmds{$no}{rc},
+				},
+				4 => {
+					att => "\$$cmds{$no}{name}\$",
+					val => $cmds{$no}{output},	
+				},
+				5 => {
+					att => "type",			
+					val => $cmds{$no}{type},	
+				},
+				6 => {
+					att => "command",		
+					val => $cmds{$no}{command},	 
+				},
+				7 => {
+					att => "runtime",		
+					val => $cmds{$no}{runtime},	 
+				},
+			);
+
+			foreach my $i (sort keys %vars) {
+				$flipflop=!$flipflop;
+				$output.=sprintf "<tr bgcolor='" . $colors[$flipflop] . "'><td>%d</td><td>%s</td><td>%s</td></tr>", $i, $vars{$i}{att}, $vars{$i}{val};
+			}
+			$output.="</table>";
+		}
+		$output.="</div>";
+	}
 	
 	#--- last not least: output ;-)
 	print $output;
@@ -1259,7 +1340,8 @@ $rc{starttime}=time;
 $rc{endtime}=$rc{starttime} + $opt{TIMEOUT};
 
 #--- loop over commands in order of config file
-foreach $no (sort numerically keys %cmds) {
+$no=1;
+while ($no <= scalar(keys %cmds)) {
 	
 	#--- if total timeout is going to be exceeded, cancel next commands
 	if (time + $opt{timeout} > $rc{endtime}) {
@@ -1273,6 +1355,8 @@ foreach $no (sort numerically keys %cmds) {
 		
 	#--- execute command
 	&exec_command($no);
+
+	$no++;
 }
 
 #--- prepare output
