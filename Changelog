@@ -1,6 +1,7 @@
 
 ===== Changelog =====
 
+	* added URL to usage for documentation
 	* commands extensible during runtime -> call parse_lines within eeval
 	* fixed missing escaping for '#'
 	* improved verbose mode also for HTML output

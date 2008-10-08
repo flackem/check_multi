@@ -235,6 +235,8 @@ $MYSELF [-h | --help]
 $MYSELF [-v | --verbose]
 $MYSELF [-V | --version]
 
+[ more infos on http://my-plugin.de/check_multi ]
+
 SHORTEOF
 }
 
