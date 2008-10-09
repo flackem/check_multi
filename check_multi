@@ -20,7 +20,7 @@
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #
 #
-# $Id: check_multi 150 2008-07-30 10:42:34Z flackem $
+# $Id$
 #
 use strict;
 use Getopt::Long qw(:config no_ignore_case bundling);
@@ -38,7 +38,7 @@ $DETAIL_NOTES_LINK
 #--- vars ----------------------------------------------------------------------
 #-------------------------------------------------------------------------------
 $MYSELF="check_multi";
-$VERSION='$Revision: 150 $ $Date: 2008-07-30 12:42:34 +0200 (Wed, 30 Jul 2008) $ $Author: flackem $';
+$VERSION='$Revision$ $Date$ $Author$';
 #
 #--- RC defines
 $OK=0;
