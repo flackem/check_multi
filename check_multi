@@ -101,6 +101,7 @@ my %opt=(
 		indent_label	=> 1,
 		exec_open3	=> 0,
 		run_as_user	=> "nagios",
+		tmp_dir		=> "/tmp/check_multi",
 	},
 	"timeout"	=> 10,
 	"TIMEOUT"	=> 60,
@@ -222,6 +223,11 @@ sub process_parameters {
 	}
 	foreach my $option (sort keys(%{$opt{set}})) {
 		DEBUG3("process_parameters: \$opt{set}{$option}=$opt{set}{$option}") if (defined($opt{set}{$option}));
+	}
+	mkdir "$opt{set}{tmp_dir}" if (! -d "$opt{set}{tmp_dir}"); 
+	if (! -w "$opt{set}{tmp_dir}") {
+		print "Error: cannot write to tmp directory $opt{set}{tmp_dir}\n";
+		exit $UNKNOWN;
 	}
 	return $OK;
 }
@@ -566,8 +572,8 @@ sub exec_command {
 			if (!$opt{set}{exec_open3}) {
 
 				#--- prepare tmpfiles for stdout and stderr
-				$tmp_stdout=&get_tmpfile("/tmp", "${MYSELF}_stdout_$$");
-				$tmp_stderr=&get_tmpfile("/tmp", "${MYSELF}_stderr_$$");
+				$tmp_stdout=&get_tmpfile("$opt{set}{tmp_dir}", "${MYSELF}_stdout_$$");
+				$tmp_stderr=&get_tmpfile("$opt{set}{tmp_dir}", "${MYSELF}_stderr_$$");
 	
 				#--- execute command and store stdout/stderr/return code
 				`$cmds{$no}{command} 1>$tmp_stdout 2>$tmp_stderr`;
