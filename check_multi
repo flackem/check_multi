@@ -282,7 +282,6 @@ Options:
    suppress_perfdata=<tag1>[,<tag2>][,...] (don't provide perfdata)
    target=<target> - frame target for action_url and notes_url
 -l, --libexec
-pt{set}{gid}
    path to plugins, default: $opt{libexec}
 -h, --help
    print detailed help screen
@@ -540,6 +539,25 @@ sub parse_lines {
 			} else {
 				DEBUG2("parse_lines: cmdline precedence over state expression. Using \$opt{$name}: $opt{$name}");
 			}
+		#--- format: 'output = (EXPR)
+		} elsif ($line=~/\s*output\s*\[\s*(\S+)\s*\]\s*=\s*(.*)\s*/i) {
+			$name=$1;
+			$expr=$2;
+			my $found=0;
+			if ($name eq "MULTI") { 
+				$rc{fmtstr}=$expr;
+				$found=1;
+			}
+			for ($i=1; $found==0 && $i<=scalar(keys(%cmds));$i++) {
+				if ($cmds{$i}{name} eq $name) {
+					$cmds{$i}{fmtstr}=$expr;
+					$found=1;
+				}
+			}
+			if (!$found) {
+				add_error("parse_lines: invalid tag name specified in line $lineno: $name");
+				next;
+			}
 		} else {
 			add_error("parse_lines: invalid format in line $lineno: $line");
 			next;
@@ -783,7 +801,9 @@ sub result_rating {
 	}
 	
 	foreach my $s (sort numerically keys %{$rc{s2r}}) {
-		#print "Performing $rc{label}{$s}\n";
+		$ENV{"MULTI_$rc{label}{$s}_COUNT"}=$rc{count}{$s};
+		$ENV{"MULTI_$rc{label}{$s}_LIST"}=join(',',@{$rc{list}{$s}});
+		# print "Performing $rc{label}{$s} $ENV{\"MULTI_$rc{label}{$s}_LIST\"}\n";
 		
 		my $state=$rc{s2r}{$s};
 		

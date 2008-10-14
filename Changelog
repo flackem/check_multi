@@ -1,6 +1,7 @@
 
 ===== Changelog =====
 
+	* first steps to flexible output definition
 	* added tmp_dir for temporary files
 	* added URL to usage for documentation
 	* commands extensible during runtime -> call parse_lines within eeval
