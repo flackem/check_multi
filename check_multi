@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# nagios: -epn
+# nagios: +epn
 #
 # check_multi - nagios plugin
 #
@@ -22,7 +22,8 @@
 #
 # $Id$
 #
-use strict;
+# EPN capability only without strictness :-/
+#use strict; 
 use Getopt::Long qw(:config no_ignore_case bundling);
 BEGIN { eval("use Time::HiRes qw(time)") }
 use lib "/usr/local/nagios/libexec";
@@ -1068,11 +1069,11 @@ sub report_html {
         if ($opt{verbose} >= 1) {
 		if ($$ENV{"NAGIOS_CHECK_MULTI_PPID"} != $$) {
 			$output.="<A onClick='Toggle(this)' style='line-height:0.1em;color:#4444FF;font-size:1.5em'>+</A>";
-			$output.="<DIV style='display:none'>";
+			$output.="<DIV style='display:none'><h4>Child check overview</h4>";
 		}
 		my @colors=("silver","lightgrey");
 		my $flipflop=0;
-		$output.="<br><table><tr style='text-align:left' bgcolor='" . $colors[$flipflop] . "'><th>No</th><th>Name</th><th>Runtime</th><th>RC</th><th>Output</th></tr>";
+		$output.="<table><tr style='text-align:left' bgcolor='" . $colors[$flipflop] . "'><th>No</th><th>Name</th><th>Runtime</th><th>RC</th><th>Output</th></tr>";
 		foreach $no (sort numerically keys %cmds) {
 			$flipflop=!$flipflop;
 			$output.=sprintf "<tr bgcolor='" . $colors[$flipflop] . "'><td>%d</td><td>%s</td><td>%7.5f</td><td>%d</td><td>%s</td></tr>", $no, $cmds{$no}{name}, $cmds{$no}{runtime}, $cmds{$no}{rc}, $cmds{$no}{output};
@@ -1083,10 +1084,10 @@ sub report_html {
 		#--- print state settings and RC evaluation result
 		if ($$ENV{"NAGIOS_CHECK_MULTI_PPID"} != $$) {
 			$output.="<A onClick='Toggle(this)' style='line-height:0.1em;color:#4444FF;font-size:1.5em'>+</A>";
-			$output.="<DIV style='display:none'>";
+			$output.="<DIV style='display:none'><h4>State evaluation</h4>";
 		}
 		$flipflop=0;
-		$output.="<br><table><tr style='text-align:left' bgcolor='" . $colors[$flipflop] . "'><th>State</th><th>Expression</th><th>Evaluates to</th></tr>";
+		$output.="<table><tr style='text-align:left' bgcolor='" . $colors[$flipflop] . "'><th>State</th><th>Expression</th><th>Evaluates to</th></tr>";
 		foreach my $s (sort numerically keys %{$rc{s2r}}) {
 			$flipflop=!$flipflop;
 			$output.=sprintf "<tr bgcolor='" . $colors[$flipflop] . "'><td>%s</td><td>%s</td><td>%s</td></tr>", $rc{label}{$rc{s2r}{$s}}, $rc{expr}{$rc{s2r}{$s}}, ($rc{match}{$rc{s2r}{$s}}) ? "TRUE" : "FALSE";
@@ -1099,12 +1100,12 @@ sub report_html {
 
 		if ($$ENV{"NAGIOS_CHECK_MULTI_PPID"} != $$) {
 			$output.="<A onClick='Toggle(this)' style='line-height:0.1em;color:#4444FF;font-size:1.5em'>+</A>";
-			$output.="<DIV style='display:none'>";
+			$output.="<DIV style='display:none'><h4>Child check details</h4>";
 		}
 		my @colors=("silver","lightgrey");
 		my $flipflop=0;
 		foreach $no (sort numerically keys %cmds) {
-			$output.="<br><h4>$no - $cmds{$no}{name}</h4>";
+			$output.="<h5>$no - $cmds{$no}{name}</h5>";
 			$output.="<table><tr style='text-align:left' bgcolor='" . $colors[$flipflop] . "'><th></th><th>Attribute</th><th>Value</th></tr>";
 			my %vars=(
 				1 => {
