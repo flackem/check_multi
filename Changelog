@@ -1,6 +1,7 @@
 
 ===== Changelog =====
 
+	* at last: EPN capability (without 'use strict')
 	* first steps to flexible output definition
 	* added tmp_dir for temporary files
 	* added URL to usage for documentation
