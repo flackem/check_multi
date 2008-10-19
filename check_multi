@@ -214,7 +214,7 @@ sub process_parameters {
 		return $UNKNOWN;
 	}
 	foreach my $option (sort keys(%{$opt{set}})) {
-		$ENV{"NAGIOS_".uc($option)}=$opt{set}{$option};
+		$ENV{"NAGIOS_".$option}=$opt{set}{$option};
 	}
 	if (!defined($ENV{"NAGIOS_CHECK_MULTI_PPID"})) {
 		$ENV{"NAGIOS_CHECK_MULTI_PPID"}=$$;
@@ -282,6 +282,7 @@ Options:
    notes_url=<URL> - see Nagios notes_url
    suppress_perfdata=<tag1>[,<tag2>][,...] (don't provide perfdata)
    target=<target> - frame target for action_url and notes_url
+   tmp_dir=<directory> - path for temporary files
 -l, --libexec
    path to plugins, default: $opt{libexec}
 -h, --help
@@ -559,6 +560,7 @@ sub parse_lines {
 				add_error("parse_lines: invalid tag name specified in line $lineno: $name");
 				next;
 			}
+		#--- not yet matched? -> invalid format
 		} else {
 			add_error("parse_lines: invalid format in line $lineno: $line");
 			next;
