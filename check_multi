@@ -233,6 +233,14 @@ sub process_parameters {
 		print "Error: cannot write to tmp directory $opt{set}{tmp_dir}\n";
 		return $UNKNOWN;
 	}
+	if (@ARGV) {
+		print "Error: orphaned parameters found on command line:";
+		for ($i=1; $#ARGV>-1; $i++) {
+			print " ARG$i:",shift(@ARGV);
+		}
+		print "\n";
+		return $UNKNOWN;
+	}
 	return $OK;
 }
 
