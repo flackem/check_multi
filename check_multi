@@ -226,9 +226,12 @@ sub process_parameters {
 		DEBUG3("process_parameters: \$opt{set}{$option}=$opt{set}{$option}") if (defined($opt{set}{$option}));
 	}
 	mkdir "$opt{set}{tmp_dir}" if (! -d "$opt{set}{tmp_dir}"); 
-	if (! -w "$opt{set}{tmp_dir}") {
+	if (! -d "$opt{set}{tmp_dir}") {
+		print "Error: could not create tmp directory $opt{set}{tmp_dir}\n";
+		return $UNKNOWN;
+	} elsif (! -w "$opt{set}{tmp_dir}") {
 		print "Error: cannot write to tmp directory $opt{set}{tmp_dir}\n";
-		exit $UNKNOWN;
+		return $UNKNOWN;
 	}
 	return $OK;
 }

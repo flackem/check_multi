@@ -1,6 +1,7 @@
 
 ===== Changelog =====
 
+	* proper error handling for creation of tmp directory
 	* fixed treatment of macros (-s-option): upper case -> case sensitive
 	* at last: EPN capability (without 'use strict')
 	* first steps to flexible output definition
