@@ -103,6 +103,7 @@ my %opt=(
 		exec_open3	=> 0,
 		run_as_user	=> "nagios",
 		tmp_dir		=> "/tmp/check_multi",
+		xml_elements	=> "name,rc,output,stderr,plugin,command,performance,runtime",
 	},
 	"timeout"	=> 10,
 	"TIMEOUT"	=> 60,
@@ -478,13 +479,11 @@ sub parse_lines {
 
 		#--- check for continuation line with trailing '\'
 		if ($line =~ s/\\\s*$//) { 
-			$line =~ s/[^\\]+#.*//;	# remove comments
 			$line .= shift(@lines); # add next line
 			redo unless ($#lines<=0);
 		}
 		next if ($line=~/^\s*$/);	# skip empty lines
 		next if ($line=~/^\s*#/);	# skip comments
-		$line =~ s/[^\\]+#.*//;		# remove comments
 	
 		#--- format: 'command [ tag[::plugin] ] = plugin command line'
 		#--- format: 'eval    [ tag[::plugin] ] = expression'
@@ -1204,8 +1203,12 @@ sub report_xml {
 	foreach $no (sort numerically keys %cmds) {
 		$xmlstr.="\t<CHILD>\n";
 		$xmlstr.="\t\t<no>$no</no>\n";
-		foreach my $token ("name","rc","output","stderr","plugin","command","performance","runtime") {
-			$xmlstr.=sprintf "\t\t<%s>%s</%s>\n",$token,$cmds{$no}{$token},$token if defined($cmds{$no}{$token});
+		foreach my $token (split(/,/,$opt{set}{xml_elements})) {
+			if (defined($cmds{$no}{$token})) {
+				$xmlstr.=sprintf "\t\t<%s>%s</%s>\n",$token,$cmds{$no}{$token},$token;
+			} else {
+				add_error("report_xml: XML element $token not found");
+			}
 		}
 		$xmlstr.="\t</CHILD>\n";
 	}

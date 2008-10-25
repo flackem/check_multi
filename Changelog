@@ -1,6 +1,8 @@
 
 ===== Changelog =====
 
+	* set xml_elements=<list> allows customization of XML output
+	* removed '# comments within lines
 	* orphaned parameters check for command line
 	* proper error handling for creation of tmp directory
 	* fixed treatment of macros (-s-option): upper case -> case sensitive
