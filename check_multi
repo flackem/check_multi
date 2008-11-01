@@ -32,7 +32,7 @@ $MYSELF %cmds $returncode %rc $no $VERSION $tmp_stdout $tmp_stderr
 $OK $WARNING $CRITICAL $UNKNOWN
 $DETAIL_LIST $DETAIL_LIST_FULL $DETAIL_HTML $DETAIL_STDERR $DETAIL_PERFORMANCE
 $DETAIL_PERFORMANCE_CLASSIC $DETAIL_STATUS $DETAIL_PERFORMANCE_LINK $DETAIL_XML $DETAIL_NAGIOS2
-$DETAIL_NOTES_LINK
+$DETAIL_NOTES_LINK $DETAIL_SERVICE_DEFINITION
 *DEBUG1 *DEBUG2 *DEBUG3
 );
 #-------------------------------------------------------------------------------
@@ -59,6 +59,7 @@ $DETAIL_PERFORMANCE_LINK=128;
 $DETAIL_XML=256;
 $DETAIL_NAGIOS2=512;
 $DETAIL_NOTES_LINK=1024;
+$DETAIL_SERVICE_DEFINITION=2048;
 #
 #--- vars
 $no=0;
@@ -104,6 +105,17 @@ my %opt=(
 		run_as_user	=> "nagios",
 		tmp_dir		=> "/tmp/check_multi",
 		xml_elements	=> "name,rc,output,stderr,plugin,command,performance,runtime",
+#		service_definition => <<EO_SERVICE_DEFINITION
+#define service {
+#	service_description	\$${no}_NAME\$
+#	host_name		\$HOSTNAME\$
+#	passive_checks_enabled	1
+#	active_checks_enabled	0
+#	check_command		check_dummy!0 "passive check"
+#	use			local-service
+#
+#),
+		service_definition_template => "/tmp/service_definition.tpl",
 	},
 	"timeout"	=> 10,
 	"TIMEOUT"	=> 60,
@@ -592,7 +604,8 @@ sub exec_command {
 
 	#--- measure command runtime;
 	my $cmd_start=time;
-	$ENV{"MULTI_TAG"}=$cmds{$no}{name};
+	$ENV{"MULTI_${no}_NAME"}=$cmds{$no}{name};
+	#print "MULTI_${no}_NAME:" . $ENV{"MULTI_${no}_NAME"} . "\n";
 
 	if ($cmds{$no}{type} eq "command") {
 
@@ -609,6 +622,7 @@ sub exec_command {
 				#--- execute command and store stdout/stderr/return code
 				`$cmds{$no}{command} 1>$tmp_stdout 2>$tmp_stderr`;
 				$cmds{$no}{rc}=$? >> 8;
+				$ENV{"MULTI_${no}_RC"}=$cmds{$no}{rc};
 	
 				#--- store stdout/stderr and cleanup tmpfiles
 				$cmds{$no}{output}=readfile($tmp_stdout);
@@ -616,6 +630,8 @@ sub exec_command {
 				$cmds{$no}{stderr}=readfile($tmp_stderr);
 				DEBUG2("exec_command: raw stderr >$cmds{$no}{stderr}<");
 				unlink $tmp_stdout, $tmp_stderr;
+				$cmds{$no}{output}=~s/\r//g;
+				$cmds{$no}{stderr}=~s/\r//g;
 				chomp $cmds{$no}{output};	
 				chomp $cmds{$no}{stderr};
 
@@ -838,6 +854,18 @@ sub result_rating {
 #--- start different report routines
 #---
 sub report_all {
+
+
+	#--- do some debugging first ;-)
+	DEBUG3("MULTI Environment (sorted):\n" . `env | grep '^MULTI' | sort | sed 's/^/   /g'`);
+	DEBUG3("NAGIOS Environment (sorted):\n" . `env | grep '^NAGIOS' | sort | sed 's/^/   /g'`);
+
+	#--- print service definition
+	if ($opt{report} & $DETAIL_SERVICE_DEFINITION) {
+		&report_service_definition;
+		return; # 	no normal output here
+	}
+
 	#--- classical report
 	if (! ($opt{report} & $DETAIL_HTML) &&
 	    ! ($opt{report} & $DETAIL_XML)) {
@@ -851,6 +879,7 @@ sub report_all {
 	if ($opt{report} & $DETAIL_XML) {
 		&report_xml;
 	}
+	
 	
 	#--- at last: perfdata
 	&report_perfdata;
@@ -1347,6 +1376,41 @@ sub error_in_perfdata {
 	}
 	DEBUG3("error_in_perfdata: no errors found");	
 	return undef;
+}
+
+sub report_service_definition {
+	my @tpl="";
+	if (! -f "$opt{set}{service_definition_template}") {
+		add_error("service definition template file \'$opt{set}{service_definition}\' not found");
+		return 1;
+	} elsif (!open(DEF, $opt{set}{service_definition_template})) {
+			add_error("Cannot open $opt{set}{service_definition_template}:$?");
+			return 2;
+	} else {
+		@tpl=<DEF>;
+		close DEF;
+	}
+#        foreach my $no (sort numerically keys %cmds) {
+#		my $line="$opt{set}{service_description}";
+#	print ">>>opt{set}{service_description}:$opt{set}{service_description}\n";
+#		print ">>>line1:$line\n";
+#		$line=substitute_macros($line);
+#		print ">>>line2:$line\n";
+#		print $line;
+#	}
+#	return;
+        foreach my $no (sort numerically keys %cmds) {
+		next if ($cmds{$no}{type} eq "eval");
+		my @svc=@tpl;
+		foreach my $line (@svc) {
+			#print ">>>line1:$line\n";
+			$line=~s/\$no/$no/g;
+			#print ">>>line2:$line\n";
+			$line=substitute_macros($line);
+			#print ">>>line3:$line\n";
+			print $line;
+		}
+        }
 }
 
 #-------------------------------------------------------------------------------

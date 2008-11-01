@@ -1,6 +1,8 @@
 
 ===== Changelog =====
 
+	* removed CR from wintel output and stderr (thx Sascha)
+	* add report option DETAIL_SERVICE_DEFINITION for multi_feed_passive
 	* set xml_elements=<list> allows customization of XML output
 	* removed '# comments within lines
 	* orphaned parameters check for command line
