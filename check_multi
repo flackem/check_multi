@@ -93,29 +93,20 @@ my %opt=(
 	"set"		=> {
 		action_url	=> "",
 		collapse	=> 1,
+		exec_open3	=> 0,
 		file_extension	=> "cmd",
 		ignore_missing_cmd_file => 0,
+		illegal_chars	=> "\r",
 		indent		=> " ",
+		indent_label	=> 1,
 		no_checks_rc	=> $UNKNOWN,
 		notes_url	=> "",
-		target		=> "_self",
-		tag_notes_link	=> 0,
-		indent_label	=> 1,
-		exec_open3	=> 0,
 		run_as_user	=> "nagios",
+		service_definition_template => "/tmp/service_definition.tpl",
+		tag_notes_link	=> 0,
+		target		=> "_self",
 		tmp_dir		=> "/tmp/check_multi",
 		xml_elements	=> "name,rc,output,stderr,plugin,command,performance,runtime",
-#		service_definition => <<EO_SERVICE_DEFINITION
-#define service {
-#	service_description	\$${no}_NAME\$
-#	host_name		\$HOSTNAME\$
-#	passive_checks_enabled	1
-#	active_checks_enabled	0
-#	check_command		check_dummy!0 "passive check"
-#	use			local-service
-#
-#),
-		service_definition_template => "/tmp/service_definition.tpl",
 	},
 	"timeout"	=> 10,
 	"TIMEOUT"	=> 60,
@@ -630,8 +621,8 @@ sub exec_command {
 				$cmds{$no}{stderr}=readfile($tmp_stderr);
 				DEBUG2("exec_command: raw stderr >$cmds{$no}{stderr}<");
 				unlink $tmp_stdout, $tmp_stderr;
-				$cmds{$no}{output}=~s/\r//g;
-				$cmds{$no}{stderr}=~s/\r//g;
+				$cmds{$no}{output}=~s/[$opt{set}{illegal_chars}]*//g;
+				$cmds{$no}{stderr}=~s/[$opt{set}{illegal_chars}]*//g;
 				chomp $cmds{$no}{output};	
 				chomp $cmds{$no}{stderr};
 
@@ -1108,7 +1099,7 @@ sub report_html {
 	#}
 	#--- print state evaluation if verbose flag set
         if ($opt{verbose} >= 1) {
-		if ($$ENV{"NAGIOS_CHECK_MULTI_PPID"} != $$) {
+		if ($ENV{"NAGIOS_CHECK_MULTI_PPID"} != $$) {
 			$output.="<A onClick='Toggle(this)' style='line-height:0.1em;color:#4444FF;font-size:1.5em'>+</A>";
 			$output.="<DIV style='display:none'><h4>Child check overview</h4>";
 		}
@@ -1123,7 +1114,7 @@ sub report_html {
 		$output.="</table></div>";
 
 		#--- print state settings and RC evaluation result
-		if ($$ENV{"NAGIOS_CHECK_MULTI_PPID"} != $$) {
+		if ($ENV{"NAGIOS_CHECK_MULTI_PPID"} != $$) {
 			$output.="<A onClick='Toggle(this)' style='line-height:0.1em;color:#4444FF;font-size:1.5em'>+</A>";
 			$output.="<DIV style='display:none'><h4>State evaluation</h4>";
 		}
@@ -1139,7 +1130,7 @@ sub report_html {
 	}
 	if ($opt{verbose} >=1) {
 
-		if ($$ENV{"NAGIOS_CHECK_MULTI_PPID"} != $$) {
+		if ($ENV{"NAGIOS_CHECK_MULTI_PPID"} != $$) {
 			$output.="<A onClick='Toggle(this)' style='line-height:0.1em;color:#4444FF;font-size:1.5em'>+</A>";
 			$output.="<DIV style='display:none'><h4>Child check details</h4>";
 		}
@@ -1381,7 +1372,7 @@ sub error_in_perfdata {
 sub report_service_definition {
 	my @tpl="";
 	if (! -f "$opt{set}{service_definition_template}") {
-		add_error("service definition template file \'$opt{set}{service_definition}\' not found");
+		add_error("service definition template file \'$opt{set}{service_definition_template}\' not found");
 		return 1;
 	} elsif (!open(DEF, $opt{set}{service_definition_template})) {
 			add_error("Cannot open $opt{set}{service_definition_template}:$?");
@@ -1399,18 +1390,19 @@ sub report_service_definition {
 #		print $line;
 #	}
 #	return;
+	my $output="";
         foreach my $no (sort numerically keys %cmds) {
 		next if ($cmds{$no}{type} eq "eval");
 		my @svc=@tpl;
 		foreach my $line (@svc) {
-			#print ">>>line1:$line\n";
-			$line=~s/\$no/$no/g;
-			#print ">>>line2:$line\n";
+			DEBUG3("report_service_definition: before substitution: $line");
+			$line=~s/THIS/$no/g;
 			$line=substitute_macros($line);
-			#print ">>>line3:$line\n";
-			print $line;
+			DEBUG3("report_service_definition: after substitution: $line");
+			$output.=$line;
 		}
         }
+	print $output;
 }
 
 #-------------------------------------------------------------------------------
