@@ -590,6 +590,9 @@ sub exec_command {
 	#--- execute command with alarm timer to catch timeouts
 	$SIG{'ALRM'} = sub { die "timeout" };
 
+	#--- start with proper RC
+	$?=0;
+
 	#--- at runtime: substitute $MACRO$ macros and states
 	$cmds{$no}{command}=substitute_macros($cmds{$no}{command});
 
