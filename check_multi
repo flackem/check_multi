@@ -23,12 +23,13 @@
 # $Id$
 #
 # EPN capability only without strictness :-/
-#use strict; 
+use strict; 
 use Getopt::Long qw(:config no_ignore_case bundling);
+use Data::Dumper;
 BEGIN { eval("use Time::HiRes qw(time)") }
 use lib "/usr/local/nagios/libexec";
 use vars qw(
-$MYSELF %cmds $returncode %rc $no $VERSION $tmp_stdout $tmp_stderr
+$MYSELF %cmds $returncode %def %rc $no $VERSION $tmp_stdout $tmp_stderr $xml
 $OK $WARNING $CRITICAL $UNKNOWN
 $DETAIL_LIST $DETAIL_LIST_FULL $DETAIL_HTML $DETAIL_STDERR $DETAIL_PERFORMANCE
 $DETAIL_PERFORMANCE_CLASSIC $DETAIL_STATUS $DETAIL_PERFORMANCE_LINK $DETAIL_XML $DETAIL_NAGIOS2
@@ -63,33 +64,18 @@ $DETAIL_SERVICE_DEFINITION=2048;
 #
 #--- vars
 $no=0;
-%cmds=();
 $returncode=0;
 $tmp_stdout="";
 $tmp_stderr="";
-%rc=(
-	label	=> { $OK => "OK", $WARNING => "WARNING", $CRITICAL => "CRITICAL", $UNKNOWN => "UNKNOWN", },
-	code	=> { "OK" => $OK, "WARNING" => $WARNING, "CRITICAL" => $CRITICAL, "UNKNOWN" => $UNKNOWN, },
-	s2r	=> { 0 => $OK, 2 => $WARNING, 3 => $CRITICAL, 1 => $UNKNOWN, },
-	r2s	=> { $OK => 0, $WARNING => 2, $CRITICAL => 3, $UNKNOWN => 1, },
-	count	=> { $OK => 0, $WARNING => 0, $CRITICAL => 0, $UNKNOWN => 0, },
-	list	=> { $OK => [],$WARNING => [],$CRITICAL => [],$UNKNOWN => [], },
-	expr	=> { $OK => "1", $WARNING => "COUNT(WARNING)>0", $CRITICAL => "COUNT(CRITICAL)>0", $UNKNOWN => "COUNT(UNKNOWN)>0" },
-	match	=> { $OK => 0, $WARNING => 0, $CRITICAL => 0, $UNKNOWN => 0, },
-	top	=> $OK,
-	error	=> [ ],
-	starttime => 0.0,
-	endtime => 0.0,
-	runtime => 0.0,
-	nchecks => 0,
+%def=(
+	label	=> { $OK  => "OK", $WARNING  => "WARNING", $CRITICAL  => "CRITICAL", $UNKNOWN  => "UNKNOWN", },
+	code	=> { "OK" => $OK,  "WARNING" => $WARNING,  "CRITICAL" => $CRITICAL,  "UNKNOWN" => $UNKNOWN,  },
+	s2r	=> { 0    => $OK,  2         => $WARNING,  3          => $CRITICAL,  1         => $UNKNOWN,  },
+	r2s	=> { $OK  => 0,    $WARNING  => 2,         $CRITICAL  => 3,          $UNKNOWN  => 1,         },
 );
-
 my %opt=(
 	"execute"	=> [],
 	"filename"	=> [],
-	"libexec"	=> "/usr/local/nagios/libexec",
-	"name"		=> "",
-	"report"	=> 13,
 	"set"		=> {
 		action_url	=> "",
 		collapse	=> 1,
@@ -99,24 +85,49 @@ my %opt=(
 		illegal_chars	=> "\r",
 		indent		=> " ",
 		indent_label	=> 1,
+		libexec		=> "/usr/local/nagios/libexec",
+		name		=> "",
+		report		=> 13,
 		no_checks_rc	=> $UNKNOWN,
 		notes_url	=> "",
+		persistent	=> 1,
 		run_as_user	=> "nagios",
 		service_definition_template => "/tmp/service_definition.tpl",
 		tag_notes_link	=> 0,
 		target		=> "_self",
+		test		=> 0,
+		timeout		=> 10,
+		TIMEOUT		=> 60,
+		verbose		=> 0,
 		tmp_dir		=> "/tmp/check_multi",
-		xml_elements	=> "name,rc,output,stderr,plugin,command,performance,runtime",
+		tmp_dir_permissions => 01777,
+		xml_elements	=> "name,rc,output,error,plugin,command,performance,runtime",
 	},
-	"timeout"	=> 10,
-	"TIMEOUT"	=> 60,
-	"verbose"	=> 0,
 
 	"ok"		=> undef,
 	"warning"	=> undef,
 	"critical"	=> undef,
 	"unknown"	=> undef,
 );
+my %cmds=(
+	"0" => {
+		name	=> "",
+		error	=> [ ],		# stderr and other errors
+		starttime => 0.0,	# start timestamp
+		timeouttime => 0.0,	# timeout timestamp
+		endtime => 0.0,		# end timestamp
+		runtime => 0.0,		# runtime in seconds
+		nchecks => 0,		# number of child checks
+	}
+);
+my %rc=(
+	count	=> { $OK => 0, $WARNING => 0, $CRITICAL => 0, $UNKNOWN => 0, },
+	list	=> { $OK => [],$WARNING => [],$CRITICAL => [],$UNKNOWN => [], },
+	expr	=> { $OK => "1", $WARNING => "COUNT(WARNING)>0", $CRITICAL => "COUNT(CRITICAL)>0", $UNKNOWN => "COUNT(UNKNOWN)>0" },
+	match	=> { $OK => 0, $WARNING => 0, $CRITICAL => 0, $UNKNOWN => 0, },
+	top	=> $OK,
+);
+
 	
 #-------------------------------------------------------------------------------
 #--- subs ----------------------------------------------------------------------
@@ -124,16 +135,22 @@ my %opt=(
 
 sub process_parameters {
 
+	#--- check version of modules
+	if ($Getopt::Long::VERSION < 2.27) {
+		print "Error: module Getopt::Long version $Getopt::Long::VERSION is too old, minimum version is 2.27\n";
+		return $UNKNOWN;
+	}
+
 	if (! GetOptions(
 		"f|filename=s"	=> \@{$opt{filename}},
 		"h|help"	=> \$opt{help},
-		"l|libexec=s"	=> \$opt{libexec},
-		"n|name=s"	=> \$opt{name},
-		"r|report:i"	=> \$opt{report},
+		"l|libexec=s"	=> \$opt{set}{libexec},
+		"n|name=s"	=> \$opt{set}{name},
+		"r|report:i"	=> \$opt{set}{report},
 		"s|set=s"	=> \%{$opt{set}},
-		"t|timeout=i"	=> \$opt{timeout},
-		"T|TIMEOUT=i"	=> \$opt{TIMEOUT},
-		"v|verbose:+"	=> \$opt{verbose},
+		"t|timeout=i"	=> \$opt{set}{timeout},
+		"T|TIMEOUT=i"	=> \$opt{set}{TIMEOUT},
+		"v|verbose:+"	=> \$opt{set}{verbose},
 		"V|version"	=> \$opt{version},
 		"x|execute=s"	=> \@{$opt{execute}},
 		"o|O|ok=s"	=> \$opt{ok},
@@ -144,9 +161,9 @@ sub process_parameters {
 		short_usage();
 		return $UNKNOWN;
 	}
-	*DEBUG1=($opt{verbose}>=1) ? \&debug_message : sub {};
-	*DEBUG2=($opt{verbose}>=2) ? \&debug_message : sub {};
-	*DEBUG3=($opt{verbose}>=3) ? \&debug_message : sub {};
+	*DEBUG1=($opt{set}{verbose}>=1) ? \&debug_message : sub {};
+	*DEBUG2=($opt{set}{verbose}>=2) ? \&debug_message : sub {};
+	*DEBUG3=($opt{set}{verbose}>=3) ? \&debug_message : sub {};
 
 	if ($opt{version}) {
 		print "$MYSELF: v$VERSION\n";
@@ -167,19 +184,19 @@ sub process_parameters {
 			splice(@{$opt{filename}},$i,1,glob "$opt{filename}[$i]/*$opt{set}->{file_extension}") if (-d $opt{filename}[$i]);
 		}
 	}
-	if ($opt{report} & $DETAIL_PERFORMANCE_LINK && !$opt{name}) {
-		$opt{name}=$MYSELF;
+	if ($opt{set}{report} & $DETAIL_PERFORMANCE_LINK && !$opt{set}{name}) {
+		$opt{set}{name}=$MYSELF;
 		DEBUG2("process_parameters: performance report option set and no name defined: taking $MYSELF as name");
 	}
-	if ($opt{report} & $DETAIL_NOTES_LINK && !$opt{set}{notes_url}) {
+	if ($opt{set}{report} & $DETAIL_NOTES_LINK && !$opt{set}{notes_url}) {
 		$opt{set}{notes_url}=$ENV{NAGIOS_SERVICENOTESURL};
 		DEBUG2("process_parameters: notes report option set - taking Nagios SERVICENOTESURL $ENV{NAGIOS_SERVICENOTESURL}");
 	}
 	#--- if no module HTML::Entities available - set var
-	if ($opt{report} & $DETAIL_HTML) {
-		$opt{use_html_entities} = 1;
+	if ($opt{set}{report} & $DETAIL_HTML) {
+		$opt{set}{use_html_entities} = 1;
 		unless (eval "require HTML::Entities;1") {
-			$opt{use_html_entities} = 0;
+			$opt{set}{use_html_entities} = 0;
 			DEBUG2("process_parameters: HTML::Entities not available");
 		}
 	}
@@ -197,9 +214,17 @@ sub process_parameters {
 		}
 		DEBUG2("process_parameters: IPC::Open3 and IO::Select modules loaded");
 	}
+	#--- if no module XML::Simple available - set var
+	if ($opt{set}{persistent}) {
+		$opt{set}{use_xml_simple} = 1;
+		unless (eval "require XML::Simple;1") {
+			$opt{set}{use_xml_simple} = 0;
+			DEBUG1("process_parameters: XML::Simple not available:$@");
+		}
+	}
 	#--- set libexec-dir at the beginning of PATH var
-	if ($opt{libexec}) {
-		$ENV{PATH}="$opt{libexec}:$ENV{PATH}";
+	if ($opt{set}{libexec}) {
+		$ENV{PATH}="$opt{set}{libexec}:$ENV{PATH}";
 	}
 	if ($opt{ok}) {
 		$rc{expr}{$OK}=$opt{ok};
@@ -213,15 +238,15 @@ sub process_parameters {
 	if ($opt{unknown}) {
 		$rc{expr}{$UNKNOWN}=$opt{unknown};
 	}
-	if ($opt{timeout} && $opt{TIMEOUT} && $opt{timeout} > $opt{TIMEOUT}) {
-		print "$MYSELF: error - child timeout $opt{timeout}s must not be greater than parent timeout $opt{TIMEOUT}s\n";
+	if ($opt{set}{timeout} && $opt{set}{TIMEOUT} && $opt{set}{timeout} > $opt{set}{TIMEOUT}) {
+		print "$MYSELF: error - child timeout $opt{set}{timeout}s must not be greater than parent timeout $opt{set}{TIMEOUT}s\n";
 		return $UNKNOWN;
 	}
 	foreach my $option (sort keys(%{$opt{set}})) {
-		$ENV{"NAGIOS_".$option}=$opt{set}{$option};
+		$ENV{"MULTI_".$option}=$opt{set}{$option};
 	}
-	if (!defined($ENV{"NAGIOS_CHECK_MULTI_PPID"})) {
-		$ENV{"NAGIOS_CHECK_MULTI_PPID"}=$$;
+	if (!defined($ENV{"MULTI_PPID"})) {
+		$ENV{"MULTI_PPID"}=$$;
 	}
 	foreach my $option (sort keys(%opt)) {
 		DEBUG3("process_parameters: \$opt{$option}=$opt{$option}") if (defined($opt{$option}));
@@ -229,17 +254,21 @@ sub process_parameters {
 	foreach my $option (sort keys(%{$opt{set}})) {
 		DEBUG3("process_parameters: \$opt{set}{$option}=$opt{set}{$option}") if (defined($opt{set}{$option}));
 	}
-	mkdir "$opt{set}{tmp_dir}" if (! -d "$opt{set}{tmp_dir}"); 
+	#mkdir "$opt{set}{tmp_dir}", $opt{set}{tmp_dir_permissions} if (! -d "$opt{set}{tmp_dir}"); 
 	if (! -d "$opt{set}{tmp_dir}") {
-		print "Error: could not create tmp directory $opt{set}{tmp_dir}\n";
+		mkdir "$opt{set}{tmp_dir}";
+		#chmod oct($opt{set}{tmp_dir_permissions}), "$opt{set}{tmp_dir}";
+	}
+	if (! -d "$opt{set}{tmp_dir}") {
+		print "Error: could not create tmp directory $opt{set}{tmp_dir} as user " . getpwuid($<) . "\n";
 		return $UNKNOWN;
 	} elsif (! -w "$opt{set}{tmp_dir}") {
-		print "Error: cannot write to tmp directory $opt{set}{tmp_dir}\n";
+		print "Error: cannot write to tmp directory $opt{set}{tmp_dir} as user " . getpwuid($<) . "\n";
 		return $UNKNOWN;
 	}
 	if (@ARGV) {
 		print "Error: orphaned parameters found on command line:";
-		for ($i=1; $#ARGV>-1; $i++) {
+		for (my $i=1; $#ARGV>-1; $i++) {
 			print " ARG$i:",shift(@ARGV);
 		}
 		print "\n";
@@ -271,14 +300,14 @@ Options:
    if filename is a directory, all '.cmd' files will be taken
    (file format follows nrpe style: command[tag]=plugin command line)
 -n, --name
-   multi plugin name (shown in output), default: $opt{name}
+   multi plugin name (shown in output), default: $opt{set}{name}
 -t, --timeout
-   timeout for one command, default: $opt{timeout}
+   timeout for one command, default: $opt{set}{timeout}
 -T, --TIMEOUT
-   TIMEOUT for all commands, default: $opt{TIMEOUT}
+   TIMEOUT for all commands, default: $opt{set}{TIMEOUT}
 -r, --report <level>
    specify level of details in output (level is binary coded, just sum up all options)
-   default: $opt{report}
+   default: $opt{set}{report}
         1: mention service names in plugin_output, e.g.
            "24 plugins checked, 1 critical (http), 0 warning, 0 unknown, 23 ok"
         2: add HTML coloring of output for extinfo
@@ -299,7 +328,7 @@ Options:
    target=<target> - frame target for action_url and notes_url
    tmp_dir=<directory> - path for temporary files
 -l, --libexec
-   path to plugins, default: $opt{libexec}
+   path to plugins, default: $opt{set}{libexec}
 -h, --help
    print detailed help screen
 -v, --verbose
@@ -336,15 +365,16 @@ sub mytrim {
 #---
 sub substitute_macros {
 	my ($input)=@_;
+	DEBUG3("substitute_macros: checking $input");
 	while ((my $var)=($input=~/\$([A-Za-z0-9_^\$]+)\$/)) {
-		#--- 1. check for NAGIOS var
-		if (defined($ENV{"NAGIOS_${var}"})) {
-			DEBUG3("substitute_macros: replacing env var NAGIOS_${var} with $ENV{\"NAGIOS_${var}\"}");
-			$input=~s/\$$var\$/$ENV{"NAGIOS_${var}"}/g;
-		#--- 2. check for MULTI var
-		} elsif (defined($ENV{"MULTI_${var}"})) {
+		#--- 1. check for MULTI var
+		if (defined($ENV{"MULTI_${var}"})) {
 			DEBUG3("substitute_macros: replacing env var MULTI_${var} with $ENV{\"MULTI_${var}\"}");
 			$input=~s/\$$var\$/$ENV{"MULTI_${var}"}/g;
+		#--- 2. check for NAGIOS var
+		} elsif (defined($ENV{"NAGIOS_${var}"})) {
+			DEBUG3("substitute_macros: replacing env var NAGIOS_${var} with $ENV{\"NAGIOS_${var}\"}");
+			$input=~s/\$$var\$/$ENV{"NAGIOS_${var}"}/g;
 		#--- 3. nothing to substitute
 		} else {
 			$input=~s/\$$var\$//g;
@@ -396,7 +426,7 @@ sub signal_handler {
 #--- add error(s) to global error list
 #---
 sub add_error {
-	push @{$rc{error}}, @_;
+	push @{$cmds{0}{error}}, @_;
 	DEBUG2("add_error: added error message \'@_\'");
 }
 
@@ -434,6 +464,17 @@ sub readfile {
 	my ($filename)=@_;
 	open(FILE,$filename) || add_error("readfile: error opening $filename:$!") && return "";
 	my @lines=<FILE>;
+	close(FILE);
+	return join("", @lines);
+}
+
+#---
+#--- writes file and return its contents
+#---
+sub writefile {
+	my ($filename,@lines)=@_;
+	open(FILE,"$filename") || add_error("writefile: error opening $filename:$!") && return "";
+	print FILE @lines;
 	close(FILE);
 	return join("", @lines);
 }
@@ -511,9 +552,11 @@ sub parse_lines {
 
 			#--- overloading: find plugin with same name
 			if ($type eq "command" || $type=~/eval$/) {
-				for ($i=1; $i<=scalar(keys(%cmds));$i++) {
+				#MF printf STDERR "before %d\n", scalar(keys(%cmds));
+				for ($i=1; $i<scalar(keys(%cmds));$i++) {
 					last if ($cmds{$i}{name} eq $name);
 				}
+				#MF printf STDERR "after %d\n", scalar(keys(%cmds));
 				if ($cmds{$i}{command}) {
 					DEBUG2("parse_lines: overloaded $name with $type \'$cmd\'");
 				} else {
@@ -528,7 +571,7 @@ sub parse_lines {
 			$cmds{$i}{name}=$name;
 			$cmds{$i}{rc}=$UNKNOWN;
 			$cmds{$i}{output}="";
-			$cmds{$i}{stderr}="";
+			$cmds{$i}{error}="";
 			$cmds{$i}{runtime}=0;
 			if ($opt{set}{suppress_perfdata} && 
 			    $opt{set}{suppress_perfdata}=~/\b$name\b/i) {
@@ -543,14 +586,14 @@ sub parse_lines {
 		} elsif ($line=~/\s*state\s*\[\s*(\S+)\s*\]\s*=\s*(.*)\s*/i) {
 			$name=uc($1);
 			$expr=$2;
-			if (!defined($rc{code}{$name})) {
+			if (!defined($def{code}{$name})) {
 				add_error("parse_lines: invalid state code specified in line $lineno: $name");
 				next;
 			}
 			# store state expression only if NOT set via commandline
 			if (!defined($opt{lc($name)})) {
-				DEBUG2("parse_lines: added state{$rc{code}{$name}} expression: $expr");
-				$rc{expr}{$rc{code}{$name}}=$expr; 
+				DEBUG2("parse_lines: added state{$def{code}{$name}} expression: $expr");
+				$rc{expr}{$def{code}{$name}}=$expr; 
 			} else {
 				DEBUG2("parse_lines: cmdline precedence over state expression. Using \$opt{$name}: $opt{$name}");
 			}
@@ -559,11 +602,7 @@ sub parse_lines {
 			$name=$1;
 			$expr=$2;
 			my $found=0;
-			if ($name eq "MULTI") { 
-				$rc{fmtstr}=$expr;
-				$found=1;
-			}
-			for ($i=1; $found==0 && $i<=scalar(keys(%cmds));$i++) {
+			for ($i=0; $found==0 && $i<=scalar(keys(%cmds));$i++) {
 				if ($cmds{$i}{name} eq $name) {
 					$cmds{$i}{fmtstr}=$expr;
 					$found=1;
@@ -599,12 +638,11 @@ sub exec_command {
 	#--- measure command runtime;
 	my $cmd_start=time;
 	$ENV{"MULTI_${no}_NAME"}=$cmds{$no}{name};
-	#print "MULTI_${no}_NAME:" . $ENV{"MULTI_${no}_NAME"} . "\n";
 
 	if ($cmds{$no}{type} eq "command") {
 
 		eval {
-			alarm($opt{timeout});
+			alarm($opt{set}{timeout});
 	
 			#--- classic exec with temporary files
 			if (!$opt{set}{exec_open3}) {
@@ -621,13 +659,11 @@ sub exec_command {
 				#--- store stdout/stderr and cleanup tmpfiles
 				$cmds{$no}{output}=readfile($tmp_stdout);
 				DEBUG2("exec_command: raw output >$cmds{$no}{output}<");
-				$cmds{$no}{stderr}=readfile($tmp_stderr);
-				DEBUG2("exec_command: raw stderr >$cmds{$no}{stderr}<");
+				$cmds{$no}{error}=readfile($tmp_stderr);
+				DEBUG2("exec_command: raw stderr >$cmds{$no}{error}<");
 				unlink $tmp_stdout, $tmp_stderr;
-				$cmds{$no}{output}=~s/[$opt{set}{illegal_chars}]*//g;
-				$cmds{$no}{stderr}=~s/[$opt{set}{illegal_chars}]*//g;
-				chomp $cmds{$no}{output};	
-				chomp $cmds{$no}{stderr};
+				$cmds{$no}{output}=~s/[$opt{set}{illegal_chars}]*//g; chomp $cmds{$no}{output};	
+				$cmds{$no}{error}=~s/[$opt{set}{illegal_chars}]*//g; chomp $cmds{$no}{error};
 
 			#--- new open3 exec (to be tested carefully before getting standard ;-))
 			} else {
@@ -643,7 +679,7 @@ sub exec_command {
 				while (my @ready = $sel->can_read) {
 					foreach my $fh (@ready) {
 						if (fileno($fh) == fileno(CERR)) {
-							$cmds{$no}{stderr}.=scalar <CERR>; 
+							$cmds{$no}{error}.=scalar <CERR>; 
 						} else {
 							$cmds{$no}{output}.=scalar <COUT>; 
 						}
@@ -653,20 +689,20 @@ sub exec_command {
 				close(COUT);
 				close(CERR);
 				DEBUG2("exec_command: open3 raw output >$cmds{$no}{output}<");
-				DEBUG2("exec_command: open3 raw stderr >$cmds{$no}{stderr}<");
+				DEBUG2("exec_command: open3 raw stderr >$cmds{$no}{error}<");
 				chomp $cmds{$no}{output};	
-				chomp $cmds{$no}{stderr};
+				chomp $cmds{$no}{error};
 			}	
 			#--- unknown return code? change it explicitly to UNKNOWN
-			if (! defined($rc{r2s}{$cmds{$no}{rc}})) {
-				$cmds{$no}{stderr}.=" RC was $cmds{$no}{rc}!";
+			if (! defined($def{r2s}{$cmds{$no}{rc}})) {
+				$cmds{$no}{error}.=" RC was $cmds{$no}{rc}!";
 				$cmds{$no}{rc}=$UNKNOWN;
 			}
 			
 			#--- remove white chars from output
-			$cmds{$no}{stderr}=mytrim($cmds{$no}{stderr},"\\n\\s");
-			$cmds{$no}{stdout}=HTML::Entities::encode_entities($cmds{$no}{stdout}) if ($opt{use_html_entities} && $cmds{$no}{stdout});
-			$cmds{$no}{stderr}=HTML::Entities::encode_entities($cmds{$no}{stderr}) if ($opt{use_html_entities} && $cmds{$no}{stderr});
+			$cmds{$no}{error}=mytrim($cmds{$no}{error},"\\n\\s");
+			$cmds{$no}{stdout}=HTML::Entities::encode_entities($cmds{$no}{stdout}) if ($opt{set}{use_html_entities} && $cmds{$no}{stdout});
+			$cmds{$no}{error}=HTML::Entities::encode_entities($cmds{$no}{error}) if ($opt{set}{use_html_entities} && $cmds{$no}{error});
 	
 			#--- split performance data from standard output
 			if ($cmds{$no}{output}=~/\|/) {
@@ -692,7 +728,7 @@ sub exec_command {
 				}
 
 				#--- check performance data and suppress if found errors
-				if (($opt{report} & $DETAIL_PERFORMANCE) && $cmds{$no}{process_perfdata}) {
+				if (($opt{set}{report} & $DETAIL_PERFORMANCE) && $cmds{$no}{process_perfdata}) {
 					if (my $errstr=error_in_perfdata($cmds{$no}{performance})) {
 						add_error("perfdata discarded for $errstr");
 						$cmds{$no}{performance}=undef;
@@ -714,21 +750,21 @@ sub exec_command {
 			$cmds{$no}{rc}=$WARNING;
 		} else {
 			chomp($cmds{$no}{output});
-			$ENV{"NAGIOS_".$cmds{$no}{name}}="$cmds{$no}{output}";
+			$ENV{"MULTI_".$cmds{$no}{name}}="$cmds{$no}{output}";
 			#--- split performance data from standard output
 			if ($cmds{$no}{output}=~/\|/) {
 				($cmds{$no}{output},$cmds{$no}{performance})=split(/\|/,$cmds{$no}{output});
 				$cmds{$no}{performance}=mytrim($cmds{$no}{performance},"\\s");
 
 				#--- check performance data and suppress if found errors
-				if (($opt{report} & $DETAIL_PERFORMANCE) && $cmds{$no}{process_perfdata}) {
+				if (($opt{set}{report} & $DETAIL_PERFORMANCE) && $cmds{$no}{process_perfdata}) {
 					if (my $errstr=error_in_perfdata($cmds{$no}{performance})) {
 						add_error("perfdata discarded for $errstr");
 						$cmds{$no}{performance}=undef;
 					}
 				}
 			}
-			DEBUG2("exec_command: environment var NAGIOS_$cmds{$no}{name}=$cmds{$no}{output}");
+			DEBUG2("exec_command: environment var MULTI_$cmds{$no}{name}=$cmds{$no}{output}");
 		}
 		$cmds{$no}{runtime}=time-$cmd_start;
 		return $cmds{$no}{rc};
@@ -739,10 +775,10 @@ sub exec_command {
 	if ($@) {
 		#--- timeout encountered: store status
 		if ($@ =~ /timeout/) {
-			$cmds{$no}{output}="UNKNOWN - $cmds{$no}{plugin} cancelled after timeout ($opt{timeout}s)";
+			$cmds{$no}{output}="UNKNOWN - $cmds{$no}{plugin} cancelled after timeout ($opt{set}{timeout}s)";
 			$cmds{$no}{rc}=$UNKNOWN;
 			$cmds{$no}{output}.=readfile($tmp_stdout);
-			$cmds{$no}{stderr}.=readfile($tmp_stderr);
+			$cmds{$no}{error}.=readfile($tmp_stderr);
 		#--- catchall for unknown errors
 		} else {
 			alarm(0);
@@ -751,10 +787,10 @@ sub exec_command {
 		}
 		unlink $tmp_stdout, $tmp_stderr;
 	} else {
-		$ENV{"NAGIOS_".$cmds{$no}{name}}="$cmds{$no}{output}";
-		DEBUG2("exec_command: environment var NAGIOS_$cmds{$no}{name}=$cmds{$no}{output}");
-		$ENV{"NAGIOS_STATE_".$cmds{$no}{name}}="$cmds{$no}{rc}";
-		DEBUG2("exec_command: environment var NAGIOS_STATE_$cmds{$no}{name}=$cmds{$no}{rc}");
+		$ENV{"MULTI_".$cmds{$no}{name}}="$cmds{$no}{output}";
+		DEBUG2("exec_command: environment var MULTI_$cmds{$no}{name}=$cmds{$no}{output}");
+		$ENV{"MULTI_STATE_".$cmds{$no}{name}}="$cmds{$no}{rc}";
+		DEBUG2("exec_command: environment var MULTI_STATE_$cmds{$no}{name}=$cmds{$no}{rc}");
 	}
 	return $cmds{$no}{rc};
 }
@@ -800,7 +836,7 @@ sub substitute_states {
 	$input=~s/\b(UNKNOWN)\b/$UNKNOWN/ig;
 
 	#--- 3. replace all vars with RC
-	foreach my $no (sort keys(%cmds)) {
+	for ($no=1;$no<keys(%cmds);$no++) {
 		$input=~s/\b($cmds{$no}{name})\b/$cmds{$no}{rc}/ig;
 	}
 	#--- 4. replace IGNORE
@@ -814,32 +850,29 @@ sub substitute_states {
 sub result_rating {
 
 	#--- measure runtime without reporting ;-)
-	$rc{runtime}=time - $rc{starttime};
-	$rc{nchecks}=scalar(keys(%cmds));
+	$cmds{0}{runtime}=time - $cmds{0}{starttime};
+	$cmds{0}{nchecks}=scalar(keys(%cmds))-1;
 
 	#--- count return codes
-	foreach $no (sort numerically keys %cmds) {
+	for ($no=1;$no<keys(%cmds);$no++) {
 		$rc{count}{$cmds{$no}{rc}}++;	# count return codes
 		push @{$rc{list}{$cmds{$no}{rc}}},$cmds{$no}{name}; # add plugin to list
 	}
 	
-	foreach my $s (sort numerically keys %{$rc{s2r}}) {
-		$ENV{"MULTI_$rc{label}{$s}_COUNT"}=$rc{count}{$s};
-		$ENV{"MULTI_$rc{label}{$s}_LIST"}=join(',',@{$rc{list}{$s}});
-		# print "Performing $rc{label}{$s} $ENV{\"MULTI_$rc{label}{$s}_LIST\"}\n";
+	foreach my $s (sort numerically keys %{$def{s2r}}) {
+		$ENV{"MULTI_$def{label}{$s}_COUNT"}=$rc{count}{$s};
+		$ENV{"MULTI_$def{label}{$s}_LIST"}=join(',',@{$rc{list}{$s}});
 		
-		my $state=$rc{s2r}{$s};
+		my $state=$def{s2r}{$s};
 		
 		my ($result,$message)=eval_result($rc{expr}{$state});
-		#print "result:$result ref(result):".ref($result)." message:$message\n";
 		if (! defined($result) || $result eq "") {
-			#print "NO: $message\n";
+			; # do nothing
 		} elsif ($result < 0) {
 			add_error("result_rating: parsing error ($message)");
 		} else {
 			$rc{match}{$state}=1;
 			$rc{top}=$state;
-			#print "YES: $rc{label}{$state} matches, $message TOP:$rc{top}\n";
 		}
 	}
 }
@@ -849,28 +882,47 @@ sub result_rating {
 #---
 sub report_all {
 
-
 	#--- do some debugging first ;-)
 	DEBUG3("MULTI Environment (sorted):\n" . `env | grep '^MULTI' | sort | sed 's/^/   /g'`);
 	DEBUG3("NAGIOS Environment (sorted):\n" . `env | grep '^NAGIOS' | sort | sed 's/^/   /g'`);
 
+	#--- construction site for persistence
+	if ($opt{set}{test}) {
+		$Data::Dumper::Indent = 1;
+		print Dumper(\%cmds);
+
+		writefile(">/tmp/tescht$$.xml", XML::Simple::XMLout(
+			\%cmds,
+			KeyAttr=>"no",
+			NoAttr=>1,
+			RootName=>"cmds",
+		));
+		writefile(">>/tmp/tescht$$.xml", XML::Simple::XMLout(
+			\%rc,
+			KeyAttr=>"no",
+			NoAttr=>1,
+			KeepRoot=>1,
+			RootName=>"rc",
+		));
+	}
+
 	#--- print service definition
-	if ($opt{report} & $DETAIL_SERVICE_DEFINITION) {
+	if ($opt{set}{report} & $DETAIL_SERVICE_DEFINITION) {
 		&report_service_definition;
 		return; # 	no normal output here
 	}
 
 	#--- classical report
-	if (! ($opt{report} & $DETAIL_HTML) &&
-	    ! ($opt{report} & $DETAIL_XML)) {
+	if (! ($opt{set}{report} & $DETAIL_HTML) &&
+	    ! ($opt{set}{report} & $DETAIL_XML)) {
 		&report;
 	}
 	#--- report HTML output
-	if ($opt{report} & $DETAIL_HTML) {
+	if ($opt{set}{report} & $DETAIL_HTML) {
 		&report_html;
 	} 
 	#--- report XML output 
-	if ($opt{report} & $DETAIL_XML) {
+	if ($opt{set}{report} & $DETAIL_XML) {
 		&report_xml;
 	}
 	
@@ -879,9 +931,9 @@ sub report_all {
 	&report_perfdata;
 	
 	#--- final '\n' - dedicated to Wolfgang Barth ;-)
-	if (	!($opt{report} & $DETAIL_NAGIOS2) && 
-		!($opt{report} & $DETAIL_HTML) &&
-		!($opt{report} & $DETAIL_XML)) {
+	if (	!($opt{set}{report} & $DETAIL_NAGIOS2) && 
+		!($opt{set}{report} & $DETAIL_HTML) &&
+		!($opt{set}{report} & $DETAIL_XML)) {
 		print "\n";
 	}
 }
@@ -895,21 +947,21 @@ sub report {
 	DEBUG1("Plugin output");
 	DEBUG1("-" x 80);
 	
-	if ($opt{report} & $DETAIL_NAGIOS2) {
-		print "$opt{name} " if $opt{name};
-		print "$rc{label}{$rc{top}}";
+	if ($opt{set}{report} & $DETAIL_NAGIOS2) {
+		print "$opt{set}{name} " if $opt{set}{name};
+		print "$def{label}{$rc{top}}";
 	} else {
 		#--- print header line (1): name, state, number of plugins
-		print "$opt{name} " if $opt{name};
-		print "$rc{label}{$rc{top}} - " . keys(%cmds) . " plugins checked, ";
+		print "$opt{set}{name} " if $opt{set}{name};
+		print "$def{label}{$rc{top}} - " . keys(%cmds) . " plugins checked, ";
 	
 		#--- print header line (2): summary for particular states 
-		if ($opt{report} & $DETAIL_LIST_FULL) {
+		if ($opt{set}{report} & $DETAIL_LIST_FULL) {
 			print	"$rc{count}{$CRITICAL} critical" . ((@{$rc{list}{$CRITICAL}}) ? " (" . join(', ',@{$rc{list}{$CRITICAL}}) . ')' : "") . ", " .
 				"$rc{count}{$WARNING} warning"   . ((@{$rc{list}{$WARNING}})  ? " (" . join(', ',@{$rc{list}{$WARNING}})  . ')' : "") . ", " .
 				"$rc{count}{$UNKNOWN} unknown"   . ((@{$rc{list}{$UNKNOWN}})  ? " (" . join(', ',@{$rc{list}{$UNKNOWN}})  . ')' : "") . ", " .
 				"$rc{count}{$OK} ok";
-		} elsif ($opt{report} & $DETAIL_LIST) {
+		} elsif ($opt{set}{report} & $DETAIL_LIST) {
 			my @r=();
 			push @r, "$rc{count}{$CRITICAL} critical (" . join(', ',@{$rc{list}{$CRITICAL}}) . ")" if (@{$rc{list}{$CRITICAL}});
 			push @r, "$rc{count}{$WARNING} warning ("   . join(', ',@{$rc{list}{$WARNING}})  . ")" if (@{$rc{list}{$WARNING}});
@@ -924,39 +976,39 @@ sub report {
 		}
 	}
 	#--- print general errors if any occured
-	print " [" . join(", ",@{$rc{error}}) . "]" if (defined($rc{error}[0]));
+	print " [" . join(", ",@{$cmds{0}{error}}) . "]" if (defined($cmds{0}{error}[0]));
 	
 	#--- loop over commands: report particular results for long plugin output
-	foreach $no (sort numerically keys %cmds) {
+	for ($no=1;$no<keys(%cmds);$no++) {
 
 		#--- skip eval
 		next if ($cmds{$no}{type} eq "eval");
 
 		#--- if NAGIOS2 output: skip $OK results
-		if ($opt{report} & $DETAIL_NAGIOS2) {
+		if ($opt{set}{report} & $DETAIL_NAGIOS2) {
 			next if ($cmds{$no}{rc} == $OK);
 			$cmds{$no}{output}=~s/\n//g;
-			$cmds{$no}{stderr}=~s/\n//g;
+			$cmds{$no}{error}=~s/\n//g;
 			printf ", %s %s%s",
 				$cmds{$no}{name},
 				$cmds{$no}{output},
-				(defined($cmds{$no}{stderr}) && $cmds{$no}{stderr} ne "" && ($opt{report} & $DETAIL_STDERR)) ?
-			 	" [ STDERR: " . $cmds{$no}{stderr} . ']' : "";
+				(defined($cmds{$no}{error}) && $cmds{$no}{error} ne "" && ($opt{set}{report} & $DETAIL_STDERR)) ?
+			 	" [ STDERR: " . $cmds{$no}{error} . ']' : "";
 		} else {
 			$cmds{$no}{output}=~s/\n/\n$opt{set}{indent}/g;
 			printf "%s[%2.d] %s %s%s%s",
-				($opt{report} & $DETAIL_NAGIOS2) ? ", " : "\n",
+				($opt{set}{report} & $DETAIL_NAGIOS2) ? ", " : "\n",
 				$no,
 				$cmds{$no}{name},
-				($opt{report} & $DETAIL_STATUS) ? "$rc{label}{$cmds{$no}{rc}} " : "",
+				($opt{set}{report} & $DETAIL_STATUS) ? "$def{label}{$cmds{$no}{rc}} " : "",
 				($cmds{$no}{output}=~/\<!--(.*?)--\>/sg) ? $1 : $cmds{$no}{output},
-				(defined($cmds{$no}{stderr}) && $cmds{$no}{stderr} ne "" && ($opt{report} & $DETAIL_STDERR)) ?
-			 	" [ STDERR: " . $cmds{$no}{stderr} . ']' : "";
+				(defined($cmds{$no}{error}) && $cmds{$no}{error} ne "" && ($opt{set}{report} & $DETAIL_STDERR)) ?
+			 	" [ STDERR: " . $cmds{$no}{error} . ']' : "";
 		}
 	}
 
 	my $maxcmdlen=0;
-	foreach $no (keys %cmds) {
+	for ($no=1;$no<keys(%cmds);$no++) {
 		$maxcmdlen=length($cmds{$no}{name}) if (length($cmds{$no}{name})>$maxcmdlen);
 	}
 
@@ -964,7 +1016,7 @@ sub report {
 	DEBUG1("\n","-" x 80);
 	DEBUG1(sprintf("No   Name%sRuntime  RC Output", ' ' x ($maxcmdlen-3)));
 	DEBUG1("-" x 80);
-	foreach $no (sort numerically keys %cmds) {
+	for ($no=1;$no<keys(%cmds);$no++) {
 		DEBUG1(sprintf "[%2.d] %-${maxcmdlen}s %6.4fs %3d %s", $no, $cmds{$no}{name}, $cmds{$no}{runtime}, $cmds{$no}{rc}, $cmds{$no}{output});
 		DEBUG2(sprintf "%s%-12s%s", ' ' x ($maxcmdlen+6), $cmds{$no}{type}, $cmds{$no}{command});
 	}
@@ -973,11 +1025,11 @@ sub report {
 	DEBUG1("\n","-" x 80);
 	DEBUG1(sprintf "%-8s %-55s %s", "State","Expression","Evaluates to");
 	DEBUG1("-" x 80);
-	foreach my $s (sort numerically keys %{$rc{s2r}}) {
-		DEBUG1(sprintf "%-8s %-55s %s", $rc{label}{$rc{s2r}{$s}}, $rc{expr}{$rc{s2r}{$s}}, ($rc{match}{$rc{s2r}{$s}}) ? "TRUE" : "FALSE");
+	foreach my $s (sort numerically keys %{$def{s2r}}) {
+		DEBUG1(sprintf "%-8s %-55s %s", $def{label}{$def{s2r}{$s}}, $rc{expr}{$def{s2r}{$s}}, ($rc{match}{$def{s2r}{$s}}) ? "TRUE" : "FALSE");
 	}
 	DEBUG1("-" x 80);
-	DEBUG1(sprintf "%8s %55s %s", "", "Overall state =>", $rc{label}{$rc{top}});
+	DEBUG1(sprintf "%8s %55s %s", "", "Overall state =>", $def{label}{$rc{top}});
 	DEBUG1("-" x 80);
 }
 
@@ -985,16 +1037,16 @@ sub report_html {
 	my $output="";
 	
 	#--- print header line (1): name, state, number of plugins
-	$output.="$opt{name} " if $opt{name};
-	$output.="$rc{label}{$rc{top}} - " . keys(%cmds) . " plugins checked, ";
+	$output.="$opt{set}{name} " if $opt{set}{name};
+	$output.="$def{label}{$rc{top}} - " . keys(%cmds) . " plugins checked, ";
 
 	#--- print header line (2): summary for particular states 
-	if ($opt{report} & $DETAIL_LIST_FULL) {
+	if ($opt{set}{report} & $DETAIL_LIST_FULL) {
 		$output.="$rc{count}{$CRITICAL} critical" . ((@{$rc{list}{$CRITICAL}}) ? " (" . join(', ',@{$rc{list}{$CRITICAL}}) . ')' : "") . ", " .
 			"$rc{count}{$WARNING} warning"   . ((@{$rc{list}{$WARNING}})  ? " (" . join(', ',@{$rc{list}{$WARNING}})  . ')' : "") . ", " .
 			"$rc{count}{$UNKNOWN} unknown"   . ((@{$rc{list}{$UNKNOWN}})  ? " (" . join(', ',@{$rc{list}{$UNKNOWN}})  . ')' : "") . ", " .
 			"$rc{count}{$OK} ok";
-	} elsif ($opt{report} & $DETAIL_LIST) {
+	} elsif ($opt{set}{report} & $DETAIL_LIST) {
 		my @r=();
 		push @r, "$rc{count}{$CRITICAL} critical (" . join(', ',@{$rc{list}{$CRITICAL}}) . ")" if (@{$rc{list}{$CRITICAL}});
 		push @r, "$rc{count}{$WARNING} warning ("   . join(', ',@{$rc{list}{$WARNING}})  . ")" if (@{$rc{list}{$WARNING}});
@@ -1009,14 +1061,14 @@ sub report_html {
 	}
 
 	#--- print general errors if any occured
-	$output.=" [" . join(", ",@{$rc{error}}) . "]" if (defined($rc{error}[0]));
+	$output.=" [" . join(", ",@{$cmds{0}{error}}) . "]" if (defined($cmds{0}{error}[0]));
 	$output.="\n";
 
 
 	#--- loop over commands: report particular results for long plugin output
 	if ($opt{set}{collapse} == 1) {
 		$output.='<SCRIPT LANGUAGE="JavaScript"> function Toggle(node) { if (node.nextSibling.style.display == \'none\') { if (node.childNodes.length > 0) { node.childNodes.item(0).replaceData(0,1,"-"); } node.nextSibling.style.display = \'block\'; } else { if (node.childNodes.length > 0) { node.childNodes.item(0).replaceData(0,1,"+"); } node.nextSibling.style.display = \'none\'; } } </SCRIPT>';
-		if ($rc{top} == $OK && $ENV{"NAGIOS_CHECK_MULTI_PPID"} != $$) {
+		if ($rc{top} == $OK && $ENV{"MULTI_PPID"} != $$) {
 			$output.="<A onClick='Toggle(this)' style='line-height:0.1em;color:#4444FF;font-size:1.5em'>+</A>";
 			$output.="<DIV style='display:none'>";
 		} else {
@@ -1026,8 +1078,8 @@ sub report_html {
 	}
 
 	$output.="<table style='border-left-width:1px; border-left-style:dotted; border-right-width:0px;' id=multi_table>";
-	foreach $no (sort numerically keys %cmds) {
 
+	for ($no=1;$no<keys(%cmds);$no++) {
 		#--- skip eval
 		next if ($cmds{$no}{type} eq "eval");
 
@@ -1036,12 +1088,12 @@ sub report_html {
 
 		$output.="<tr valign='top'>";
 		$output.=sprintf "<td nowrap>%s&nbsp;%2.d&nbsp;%s</td>", 
-			($opt{report} & $DETAIL_HTML) ? "<DIV CLASS=\'service$rc{label}{$cmds{$no}{rc}}\' style='font-size:7pt'>" : "",
+			($opt{set}{report} & $DETAIL_HTML) ? "<DIV CLASS=\'service$def{label}{$cmds{$no}{rc}}\' style='font-size:7pt'>" : "",
 			$no,
-			($opt{report} & $DETAIL_HTML) ? "</DIV>" : "";
+			($opt{set}{report} & $DETAIL_HTML) ? "</DIV>" : "";
 		#--- Action url
-		if (	($opt{report} & $DETAIL_PERFORMANCE) &&
-			($opt{report} & $DETAIL_PERFORMANCE_LINK) && 
+		if (	($opt{set}{report} & $DETAIL_PERFORMANCE) &&
+			($opt{set}{report} & $DETAIL_PERFORMANCE_LINK) && 
 			defined($cmds{$no}{performance}) &&
 			$cmds{$no}{process_perfdata}) {
 
@@ -1054,7 +1106,7 @@ sub report_html {
 			$output.="<td></td>";
 		}
 		#--- Notes url
-		if (	($opt{report} & $DETAIL_NOTES_LINK) &&
+		if (	($opt{set}{report} & $DETAIL_NOTES_LINK) &&
 			defined($opt{set}{notes_url}) &&
 			!$opt{set}{tag_notes_link}) {
 			my $notes_url=substitute_macros($opt{set}{notes_url});
@@ -1079,37 +1131,27 @@ sub report_html {
 					? "$1</td></tr><tr><td colspan='4'></td><td colspan='1' CLASS='dataVal'>$2"
 					: "$1</td></tr><tr><td></td><td colspan='5' CLASS='dataVal'>$2")
 				: $cmds{$no}{output};
-		if (	defined($cmds{$no}{stderr}) && 
-			$cmds{$no}{stderr} ne "" && 
-			($opt{report} & $DETAIL_STDERR)) {
+		if (	defined($cmds{$no}{error}) && 
+			$cmds{$no}{error} ne "" && 
+			($opt{set}{report} & $DETAIL_STDERR)) {
 
-			$output.=" [ STDERR: " . $cmds{$no}{stderr} . "]";
+			$output.=" [ STDERR: " . join(' ',$cmds{$no}{error}) . "]";
 		}
 		$output.="</tr>";
 	}
 	$output.="</table>";
 	$output.="</div>" if ($opt{set}{collapse} == 1);
 
-	#--- run only if in top check_multi (if called recursively)
-	#if ($ENV{"NAGIOS_CHECK_MULTI_PPID"} == $$) {
-		#my $count_block=($output=~s/display:none/display:none/g);
-		#DEBUG1("count_block:$count_block NAGIOS_CHECK_MULTI_PPID:$ENV{NAGIOS_CHECK_MULTI_PPID} PID:$$");
-		##--- replace none with block if only one level
-	 	#if ($count_block >= 1) {
-			#$output=~s/display\:none/display\:block/;
-			#$output=~s/\>\+\</\>\-\</;
-		#}	
-	#}
 	#--- print state evaluation if verbose flag set
-        if ($opt{verbose} >= 1) {
-		if ($ENV{"NAGIOS_CHECK_MULTI_PPID"} != $$) {
+        if ($opt{set}{verbose} >= 1) {
+		if ($ENV{"MULTI_PPID"} != $$) {
 			$output.="<A onClick='Toggle(this)' style='line-height:0.1em;color:#4444FF;font-size:1.5em'>+</A>";
 			$output.="<DIV style='display:none'><h4>Child check overview</h4>";
 		}
 		my @colors=("silver","lightgrey");
 		my $flipflop=0;
 		$output.="<table><tr style='text-align:left' bgcolor='" . $colors[$flipflop] . "'><th>No</th><th>Name</th><th>Runtime</th><th>RC</th><th>Output</th></tr>";
-		foreach $no (sort numerically keys %cmds) {
+		for ($no=1;$no<keys(%cmds);$no++) {
 			$flipflop=!$flipflop;
 			$output.=sprintf "<tr bgcolor='" . $colors[$flipflop] . "'><td>%d</td><td>%s</td><td>%7.5f</td><td>%d</td><td>%s</td></tr>", $no, $cmds{$no}{name}, $cmds{$no}{runtime}, $cmds{$no}{rc}, $cmds{$no}{output};
 			$output.=sprintf "<tr bgcolor='" . $colors[$flipflop] . "'><td></td><td></td><td>%s</td><td></td><td>%s</td></tr>", $cmds{$no}{type}, $cmds{$no}{command};
@@ -1117,29 +1159,29 @@ sub report_html {
 		$output.="</table></div>";
 
 		#--- print state settings and RC evaluation result
-		if ($ENV{"NAGIOS_CHECK_MULTI_PPID"} != $$) {
+		if ($ENV{"MULTI_PPID"} != $$) {
 			$output.="<A onClick='Toggle(this)' style='line-height:0.1em;color:#4444FF;font-size:1.5em'>+</A>";
 			$output.="<DIV style='display:none'><h4>State evaluation</h4>";
 		}
 		$flipflop=0;
 		$output.="<table><tr style='text-align:left' bgcolor='" . $colors[$flipflop] . "'><th>State</th><th>Expression</th><th>Evaluates to</th></tr>";
-		foreach my $s (sort numerically keys %{$rc{s2r}}) {
+		foreach my $s (sort numerically keys %{$def{s2r}}) {
 			$flipflop=!$flipflop;
-			$output.=sprintf "<tr bgcolor='" . $colors[$flipflop] . "'><td>%s</td><td>%s</td><td>%s</td></tr>", $rc{label}{$rc{s2r}{$s}}, $rc{expr}{$rc{s2r}{$s}}, ($rc{match}{$rc{s2r}{$s}}) ? "TRUE" : "FALSE";
+			$output.=sprintf "<tr bgcolor='" . $colors[$flipflop] . "'><td>%s</td><td>%s</td><td>%s</td></tr>", $def{label}{$def{s2r}{$s}}, $rc{expr}{$def{s2r}{$s}}, ($rc{match}{$def{s2r}{$s}}) ? "TRUE" : "FALSE";
 		}
 		$flipflop=!$flipflop;
-		$output.="<tr bgcolor='" . $colors[$flipflop] . "'><td></td><td style='text-align:right'>Overall state</td><td style='font-weight:bold'>$rc{label}{$rc{top}}</td></tr>";
+		$output.="<tr bgcolor='" . $colors[$flipflop] . "'><td></td><td style='text-align:right'>Overall state</td><td style='font-weight:bold'>$def{label}{$rc{top}}</td></tr>";
 		$output.="</table></div>";
 	}
-	if ($opt{verbose} >=1) {
+	if ($opt{set}{verbose} >=1) {
 
-		if ($ENV{"NAGIOS_CHECK_MULTI_PPID"} != $$) {
+		if ($ENV{"MULTI_PPID"} != $$) {
 			$output.="<A onClick='Toggle(this)' style='line-height:0.1em;color:#4444FF;font-size:1.5em'>+</A>";
 			$output.="<DIV style='display:none'><h4>Child check details</h4>";
 		}
 		my @colors=("silver","lightgrey");
 		my $flipflop=0;
-		foreach $no (sort numerically keys %cmds) {
+		for ($no=1;$no<keys(%cmds);$no++) {
 			$output.="<h5>$no - $cmds{$no}{name}</h5>";
 			$output.="<table><tr style='text-align:left' bgcolor='" . $colors[$flipflop] . "'><th></th><th>Attribute</th><th>Value</th></tr>";
 			my %vars=(
@@ -1187,27 +1229,23 @@ sub report_html {
 }
 
 sub report_xml {
-	#--- XML data and HTML option together only creates crap in your browser ;-)
-	#if ($opt{report} & $DETAIL_HTML) {
-	#	add_error("HTML and XML output are mutually exclusive ;-), skipping XML");
-	#}
 
 	my $xmlstr="<div id=\"check_multi_xml\" style='display:none'>";
 	#$xmlstr.="<meta http-equiv=\"Content-Style-Type\" content=\"application/xml\">\n";
 	$xmlstr.="<?xml version=\"1.0\"?>\n";
 	$xmlstr.="<?xml-stylesheet type=\"text/xsl\" href=\"extinfo.xsl\"?>\n";
 	$xmlstr.="<PARENT>\n";
-	$xmlstr.="\t<name>$opt{name}</name>\n";
-	$xmlstr.="\t<plugins>$rc{nchecks}</plugins>\n";
-	$xmlstr.="\t<time>$rc{runtime}</time>\n";
+	$xmlstr.="\t<name>$cmds{0}{name}</name>\n";
+	$xmlstr.="\t<plugins>$cmds{0}{nchecks}</plugins>\n";
+	$xmlstr.="\t<time>$cmds{0}{runtime}</time>\n";
 	$xmlstr.="\t<output>";
 	#--- print header line (2): summary for particular states 
-	if ($opt{report} & $DETAIL_LIST_FULL) {
+	if ($opt{set}{report} & $DETAIL_LIST_FULL) {
 		$xmlstr.="$rc{count}{$CRITICAL} critical" . ((@{$rc{list}{$CRITICAL}}) ? " (" . join(', ',@{$rc{list}{$CRITICAL}}) . ')' : "") . ", " .
 			"$rc{count}{$WARNING} warning"   . ((@{$rc{list}{$WARNING}})  ? " (" . join(', ',@{$rc{list}{$WARNING}})  . ')' : "") . ", " .
 			"$rc{count}{$UNKNOWN} unknown"   . ((@{$rc{list}{$UNKNOWN}})  ? " (" . join(', ',@{$rc{list}{$UNKNOWN}})  . ')' : "") . ", " .
 			"$rc{count}{$OK} ok";
-	} elsif ($opt{report} & $DETAIL_LIST) {
+	} elsif ($opt{set}{report} & $DETAIL_LIST) {
 		my @r=();
 		push @r, "$rc{count}{$CRITICAL} critical (" . join(', ',@{$rc{list}{$CRITICAL}}) . ")" if (@{$rc{list}{$CRITICAL}});
 		push @r, "$rc{count}{$WARNING} warning ("   . join(', ',@{$rc{list}{$WARNING}})  . ")" if (@{$rc{list}{$WARNING}});
@@ -1221,9 +1259,9 @@ sub report_xml {
 			"$rc{count}{$OK} ok";
 	}
 	$xmlstr.="</output>\n";
-	$xmlstr.="\t<error>" . join(", ",@{$rc{error}}) . "</error>\n" if (defined($rc{error}[0]));
+	$xmlstr.="\t<error>" . join(", ",@{$cmds{0}{error}}) . "</error>\n" if (defined($cmds{0}{error}[0]));
 
-	foreach $no (sort numerically keys %cmds) {
+	for ($no=1;$no<keys(%cmds);$no++) {
 		$xmlstr.="\t<CHILD>\n";
 		$xmlstr.="\t\t<no>$no</no>\n";
 		foreach my $token (split(/,/,$opt{set}{xml_elements})) {
@@ -1240,22 +1278,22 @@ sub report_xml {
 }
 
 sub report_perfdata {
-	if (!$opt{report} & $DETAIL_HTML) {
+	if (!$opt{set}{report} & $DETAIL_HTML) {
 		DEBUG1("\n","-" x 80);
 		DEBUG1("Plugin performance data");
 		DEBUG1("-" x 80);
 	}
 	#--- report performance data?
-	if ($opt{report} & $DETAIL_PERFORMANCE) {
+	if ($opt{set}{report} & $DETAIL_PERFORMANCE) {
 		my $perftmp="";
-		DEBUG2("report_perfdata (DETAIL_PERFORMANCE): name=" . ($opt{name}) ? $opt{name} : $MYSELF);
+		DEBUG2("report_perfdata (DETAIL_PERFORMANCE): name=" . ($opt{set}{name}) ? $opt{set}{name} : $MYSELF);
 		print "\|";
 		printf "%s::%s::plugins=%d time=%f ", 
-			($opt{name}) ? $opt{name} : $MYSELF, $MYSELF,
+			($opt{set}{name}) ? $opt{set}{name} : $MYSELF, $MYSELF,
 			scalar(keys(%cmds)),
-			time - $rc{starttime};
+			time - $cmds{0}{starttime};
 		#--- one line per command, format: tag=output
-		foreach $no (sort numerically keys %cmds) {
+		for ($no=1;$no<keys(%cmds);$no++) {
 
 			#--- suppress_perfdata set? ignore perfdata
 			next if (! $cmds{$no}{process_perfdata});
@@ -1298,11 +1336,11 @@ sub report_perfdata {
 				print $cmds{$no}{performance};
 			}
 		}
-	} elsif ($opt{report} & $DETAIL_PERFORMANCE_CLASSIC) {
+	} elsif ($opt{set}{report} & $DETAIL_PERFORMANCE_CLASSIC) {
 		print "\|";
 
 		#--- one line per command, format: tag=output
-		foreach $no (sort numerically keys %cmds) {
+		for ($no=1;$no<keys(%cmds);$no++) {
 
 			#--- suppress_perfdata set? ignore perfdata
 			next if (! $cmds{$no}{process_perfdata});
@@ -1412,12 +1450,6 @@ sub report_service_definition {
 #--- main ----------------------------------------------------------------------
 #-------------------------------------------------------------------------------
 
-#--- check version of modules
-if ($Getopt::Long::VERSION < 2.27) {
-	print "Error: module Getopt::Long version $Getopt::Long::VERSION is too old, minimum version is 2.27\n";
-	exit $UNKNOWN;
-}
-
 #--- take care against signals
 install_signal_handler(\install_signal_handler, "INT", "TERM", "QUIT", "HUP");
 
@@ -1440,16 +1472,16 @@ if (!%cmds) {
 }
 
 #--- initialize timer for overall timeout
-$rc{starttime}=time;
-$rc{endtime}=$rc{starttime} + $opt{TIMEOUT};
+$cmds{0}{starttime}=time;
+$cmds{0}{timeouttime}=$cmds{0}{starttime} + $opt{set}{TIMEOUT};
 
 #--- loop over commands in order of config file
 $no=1;
-while ($no <= scalar(keys %cmds)) {
+while ($no < scalar(keys %cmds)) {
 	
 	#--- if total timeout is going to be exceeded, cancel next commands
-	if (time + $opt{timeout} > $rc{endtime}) {
-		$cmds{$no}{output}="UNKNOWN - execution cancelled after global timeout ($opt{TIMEOUT}s)";
+	if (time + $opt{set}{timeout} > $cmds{0}{timeouttime}) {
+		$cmds{$no}{output}="UNKNOWN - execution cancelled after global timeout ($opt{set}{TIMEOUT}s)";
 		$cmds{$no}{rc}=$UNKNOWN;
 		$cmds{$no}{runtime}=0;
 		$rc{count}{$UNKNOWN}++;

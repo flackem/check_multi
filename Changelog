@@ -1,6 +1,10 @@
 
 ===== Changelog =====
 
+	* first preparation for data persistence
+	* check_multi environment vars begin now all with MULTI_
+	* data structure update: all settings now in $opt{set}
+	* data structure update: parent data now in $cmds{0}
 	* fixed initial RC (thx Henry)
 	* minor fix in HTML verbose output
 	* removed CR from wintel output and stderr (thx Sascha)
