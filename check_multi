@@ -23,9 +23,8 @@
 # $Id$
 #
 # EPN capability only without strictness :-/
-use strict; 
+#use strict; 
 use Getopt::Long qw(:config no_ignore_case bundling);
-use Data::Dumper;
 BEGIN { eval("use Time::HiRes qw(time)") }
 use lib "/usr/local/nagios/libexec";
 use vars qw(
@@ -888,7 +887,7 @@ sub report_all {
 
 	#--- construction site for persistence
 	if ($opt{set}{test}) {
-		$Data::Dumper::Indent = 1;
+		use Data::Dumper;
 		print Dumper(\%cmds);
 
 		writefile(">/tmp/tescht$$.xml", XML::Simple::XMLout(
