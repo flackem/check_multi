@@ -958,7 +958,7 @@ sub report {
 	} else {
 		#--- print header line (1): name, state, number of plugins
 		print "$opt{set}{name} " if $opt{set}{name};
-		print "$def{label}{$rc{top}} - " . keys(%cmds) . " plugins checked, ";
+		print "$def{label}{$rc{top}} - $cmds{0}{nchecks} plugins checked, ";
 	
 		#--- print header line (2): summary for particular states 
 		if ($opt{set}{report} & $DETAIL_LIST_FULL) {
@@ -1043,7 +1043,7 @@ sub report_html {
 	
 	#--- print header line (1): name, state, number of plugins
 	$output.="$opt{set}{name} " if $opt{set}{name};
-	$output.="$def{label}{$rc{top}} - " . keys(%cmds) . " plugins checked, ";
+	$output.="$def{label}{$rc{top}} - $cmds{0}{nchecks} plugins checked, ";
 
 	#--- print header line (2): summary for particular states 
 	if ($opt{set}{report} & $DETAIL_LIST_FULL) {

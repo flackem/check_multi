@@ -1,6 +1,7 @@
 
 ===== Changelog =====
 
+	* fixed plugin counting (now reflects parent plugin)
 	* fixed eeval treatment of invalid RCs (like command)
 	* first preparation for data persistence
 	* check_multi environment vars begin now all with MULTI_
