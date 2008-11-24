@@ -1,6 +1,7 @@
 
 ===== Changelog =====
 
+	* fixed eeval treatment of invalid RCs (like command)
 	* first preparation for data persistence
 	* check_multi environment vars begin now all with MULTI_
 	* data structure update: all settings now in $opt{set}

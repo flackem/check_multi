@@ -741,6 +741,12 @@ sub exec_command {
 		$cmds{$no}{output}=eval($cmds{$no}{command});
 		if ($cmds{$no}{type} eq "eeval") {
 			$cmds{$no}{rc}=$?>>8;
+
+         #--- unknown return code? change it explicitly to UNKNOWN
+         if (! defined($def{r2s}{$cmds{$no}{rc}})) {
+            $cmds{$no}{error}.=" RC was $cmds{$no}{rc}!";
+            $cmds{$no}{rc}=$UNKNOWN;
+         }
 		} elsif ($cmds{$no}{type} eq "eval") {
 			$cmds{$no}{rc}=$OK;
 		}
