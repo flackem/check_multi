@@ -540,7 +540,7 @@ sub parse_lines {
 
 			#--- invalid characters found?
 			$name=substitute_macros($name);
-			if ($name!~/^[\w:]+$/) {
+			if ($name!~/^[\w:-]+$/) {
 				if ($name=~/\$([^\$]+)\$/) {
 					add_error("parse_lines: tag $name invalid - macro \$$1\$ not found");
 				} else {
