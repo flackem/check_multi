@@ -1,0 +1,100 @@
+#!/bin/sh
+#
+# Service notification script
+#
+# Copyright (c) 2007-8 Matthias Flacke (matthias.flacke at gmx.de)
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+#
+MYSELF=`basename $0`
+#--- save stdout / stderr
+exec 1>>"/tmp/$MYSELF-stdout.$$"
+exec 2>>"/tmp/$MYSELF-stderr.$$"
+#
+#--- adoptions here ;) --------------------------------------------------------------
+NAME="[Nagios]"; export NAME                # sender NAME in mail
+NAGIOS_URL="http://localhost/nagios"        # URL where Nagios can be found
+NAGIOSDIR="/usr/local/nagios"               # physical path of Nagios installation
+MAILBIN="$NAGIOSDIR/libexec/mailx"          # path to MIME capable mail client
+#
+#--- no adoptions necessary from here -----------------------------------------------
+#
+#--- 1. create HTML file
+cat <<HTMLEOF > "/tmp/mailx.$NAGIOS_HOSTNAME.$NAGIOS_SERVICEDESC.html"
+<html>
+<head>
+<title>Extended Information</title>
+<LINK REL='stylesheet' TYPE='text/css' HREF='$NAGIOS_URL/stylesheets/common.css'>
+<LINK REL='stylesheet' TYPE='text/css' HREF='$NAGIOS_URL/stylesheets/extinfo.css'>
+</head>
+<body CLASS='extinfo'>
+$NAGIOS_LONGSERVICEOUTPUT
+</body>
+</html>
+HTMLEOF
+if [ "x$NAGIOS_LONGSERVICEOUTPUT" != "x" ]; then
+        MAIL_ATTACHMENT_HTML="/tmp/mailx.$NAGIOS_HOSTNAME.$NAGIOS_SERVICEDESC.html"
+        MAIL_ATTACHMENT_HTML_CALL="-a \"$MAIL_ATTACHMENT_HTML\""
+fi
+#
+#--- 2. create ASCII file
+cat <<EOF > "/tmp/mailx.$NAGIOS_HOSTNAME.$NAGIOS_SERVICEDESC.txt"
+
+Nagios service notification
+$NAGIOS_NOTIFICATIONTYPE $NAGIOS_SERVICEDESC $NAGIOS_SERVICESTATE
+$NAGIOS_LONGDATETIME
+
+--- Host information ---
+Short Name             $NAGIOS_HOSTNAME
+FQDN                   $NAGIOS_HOSTALIAS
+IP address             $NAGIOS_HOSTADDRESS
+
+--- Service information ---
+Name                   $NAGIOS_SERVICEDESC
+State                  $NAGIOS_SERVICESTATE
+State type             $NAGIOS_SERVICESTATETYPE
+Output                 $NAGIOS_SERVICEOUTPUT
+Plugin                 $NAGIOS_SERVICECHECKCOMMAND
+Execution time(s)      $NAGIOS_SERVICEEXECUTIONTIME
+
+--- Service URLs ---
+Service details        $NAGIOS_URL/cgi-bin/extinfo.cgi?type=2&host=$NAGIOS_HOSTNAME&service=$NAGIOS_SERVICEDESC
+Service alert history  $NAGIOS_URL/cgi-bin/history.cgi?host=$NAGIOS_HOSTNAME&service=$NAGIOS_SERVICEDESC
+Service availability   $NAGIOS_URL/cgi-bin/avail.cgi?host=$NAGIOS_HOSTNAME&&service=$NAGIOS_SERVICEDESC&show_log_entries
+
+--- Host URLs ---
+Host details           $NAGIOS_URL/cgi-bin/extinfo.cgi?type=1&host=$NAGIOS_HOSTNAME
+Host services          $NAGIOS_URL/cgi-bin/status.cgi?host=$NAGIOS_HOSTNAME
+Host alert history     $NAGIOS_URL/cgi-bin/history.cgi?host=$NAGIOS_HOSTNAME
+Host availability      $NAGIOS_URL/cgi-bin/avail.cgi?host=$NAGIOS_HOSTNAME&show_log_entries
+
+--- Contact information ---
+Name                   $NAGIOS_CONTACTNAME
+Alias                  $NAGIOS_CONTACTALIAS
+Mail address           $NAGIOS_CONTACTEMAIL
+Notification type      $NAGIOS_NOTIFICATIONTYPE
+EOF
+
+#
+#--- 3. put everything together into MIME mail and send it
+MAIL_ATTACHMENT_TXT="/tmp/mailx.$NAGIOS_HOSTNAME.$NAGIOS_SERVICEDESC.txt"
+echo "$NAGIOS_SERVICEOUTPUT" | $MAILBIN $MAIL_ATTACHMENT_HTML_CALL -a "$MAIL_ATTACHMENT_TXT" -s "$NAGIOS_NOTIFICATIONTYPE: Service $NAGIOS_HOSTNAME/$NAGIOS_SERVICEDESC is $NAGIOS_SERVICESTATE" $NAGIOS_CONTACTEMAIL; RC=$?
+#
+#--- 4. cleanup if everything ok, error files will remain
+if [ $RC -eq 0 ]; then
+        rm -f "$MAIL_ATTACHMENT_TXT" "$MAIL_ATTACHMENT_HTML"
+        rm -f /tmp/${MYSELF}-*$$
+fi
+echo "`date` $NAGIOS_HOSTNAME.$NAGIOS_SERVICEDESC $NAGIOS_NOTIFICATIONTYPE: Service $NAGIOS_HOSTNAME/$NAGIOS_SERVICEDESC is $NAGIOS_SERVICESTATE to $NAGIOS_CONTACTEMAIL: RC $RC" >> /$NAGIOSDIR/var/$MYSELF.log

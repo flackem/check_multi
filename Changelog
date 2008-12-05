@@ -1,6 +1,7 @@
 
 ===== Changelog =====
 
+	* replaced old contrib notification template with new notify_service_html
 	* fixed plugin counting (now reflects parent plugin)
 	* fixed eeval treatment of invalid RCs (like command)
 	* first preparation for data persistence
