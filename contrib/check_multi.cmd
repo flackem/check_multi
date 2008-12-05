@@ -3,14 +3,12 @@
 #
 # sample config file for check_multi plugin
 #
-# (c) Matthias Flacke, 2007
+# (c) Matthias Flacke, 2007-8
 #
 #--- some local checks on the nagios system
 #
 #--- network
 command[ network_icmp ]		= check_icmp -H localhost -w 500,5% -c 1000,10%
-command[ network_interfaces ]	= check_ifstatus -H localhost
-command[ network_rsync ]	= check_tcp -H localhost -p 873 -e RSYNCD
 
 #--- processes
 command[ procs_total ]		= check_procs
@@ -44,8 +42,8 @@ command[ nagios_tac ]		= check_http -H localhost -u "http://localhost/nagios/cgi
 
 #--- some external checks (need internet connection)
 command[ nagios_icmp ]		= check_icmp -H www.nagios.org -w 500,5% -c 1000,10%
-command[ nagios.org_dns ]	= check_dns -H www.nagios.org
-command[ nagios.org_http ]	= check_http -H www.nagios.org
+command[ nagios_org_dns ]	= check_dns -H www.nagios.org
+command[ nagios_org_http ]	= check_http -H www.nagios.org
 
 #--- some dummy plugin calls just to show the different states
 command[ dummy_ok ]		= check_dummy 0 "should be OK state"

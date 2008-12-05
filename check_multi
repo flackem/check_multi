@@ -729,7 +729,7 @@ sub exec_command {
 				#--- check performance data and suppress if found errors
 				if (($opt{set}{report} & $DETAIL_PERFORMANCE) && $cmds{$no}{process_perfdata}) {
 					if (my $errstr=error_in_perfdata($cmds{$no}{performance})) {
-						add_error("perfdata discarded for $errstr");
+						add_error("$cmds{$no}{name} perfdata discarded for $errstr");
 						$cmds{$no}{performance}=undef;
 					}
 				}
@@ -764,7 +764,7 @@ sub exec_command {
 				#--- check performance data and suppress if found errors
 				if (($opt{set}{report} & $DETAIL_PERFORMANCE) && $cmds{$no}{process_perfdata}) {
 					if (my $errstr=error_in_perfdata($cmds{$no}{performance})) {
-						add_error("perfdata discarded for $errstr");
+						add_error("$cmds{$no}{name} perfdata discarded for $errstr");
 						$cmds{$no}{performance}=undef;
 					}
 				}
@@ -1352,7 +1352,7 @@ sub report_perfdata {
 
 			if (defined($cmds{$no}{performance})) {
 				if (my $errstr=error_in_perfdata($cmds{$no}{performance})) {
-					add_error("perfdata discarded for $errstr");
+					add_error("$cmds{$no}{name} perfdata discarded for $errstr");
 				} else {
 					print "$cmds{$no}{performance} ";
 				}
