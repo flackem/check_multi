@@ -1072,7 +1072,7 @@ sub report_html {
 
 	#--- loop over commands: report particular results for long plugin output
 	if ($opt{set}{collapse} == 1) {
-		$output.='<SCRIPT LANGUAGE="JavaScript"> function Toggle(node) { if (node.nextSibling.style.display == \'none\') { if (node.childNodes.length > 0) { node.childNodes.item(0).replaceData(0,1,"-"); } node.nextSibling.style.display = \'block\'; } else { if (node.childNodes.length > 0) { node.childNodes.item(0).replaceData(0,1,"+"); } node.nextSibling.style.display = \'none\'; } } </SCRIPT>';
+		$output.="<SCRIPT LANGUAGE='JavaScript'> function Toggle(node) { if (node.nextSibling.style.display == 'none') { if (node.childNodes.length > 0) { node.childNodes.item(0).replaceData(0,1,'-'); } node.nextSibling.style.display = 'block'; } else { if (node.childNodes.length > 0) { node.childNodes.item(0).replaceData(0,1,'+'); } node.nextSibling.style.display = 'none'; } } </SCRIPT>";
 		if ($rc{top} == $OK && $ENV{"MULTI_PPID"} != $$) {
 			$output.="<A onClick='Toggle(this)' style='line-height:0.1em;color:#4444FF;font-size:1.5em'>+</A>";
 			$output.="<DIV style='display:none'>";
