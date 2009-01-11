@@ -1,6 +1,8 @@
 
 ===== Changelog =====
 
+	* better timeout handling: kill process group leader instead of die avoids hang of program
+	* removed newline cleanup for output
 	* replaced old contrib notification template with new notify_service_html
 	* fixed plugin counting (now reflects parent plugin)
 	* fixed eeval treatment of invalid RCs (like command)

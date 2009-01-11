@@ -626,7 +626,7 @@ sub exec_command {
 	my ($no)=@_;
 
 	#--- execute command with alarm timer to catch timeouts
-	$SIG{'ALRM'} = sub { die "timeout" };
+	$SIG{'ALRM'} = sub { add_error("timeout encountered after $opt{set}{timeout} seconds"); kill -15,$$; sleep 3; kill -9,$$ };
 
 	#--- start with proper RC
 	$?=0;
@@ -699,7 +699,8 @@ sub exec_command {
 			}
 			
 			#--- remove white chars from output
-			$cmds{$no}{error}=mytrim($cmds{$no}{error},"\\n\\s");
+			#$cmds{$no}{error}=~s/[\s]+/ /g;
+			#DEBUG2("exec_command: raw stderr >$cmds{$no}{error}<");
 			$cmds{$no}{stdout}=HTML::Entities::encode_entities($cmds{$no}{stdout}) if ($opt{set}{use_html_entities} && $cmds{$no}{stdout});
 			$cmds{$no}{error}=HTML::Entities::encode_entities($cmds{$no}{error}) if ($opt{set}{use_html_entities} && $cmds{$no}{error});
 	
@@ -738,6 +739,7 @@ sub exec_command {
 			alarm(0);
 		};
 	} elsif ($cmds{$no}{type} eq "eval" || $cmds{$no}{type} eq "eeval") {
+		alarm($opt{set}{timeout});
 		$cmds{$no}{output}=eval($cmds{$no}{command});
 		if ($cmds{$no}{type} eq "eeval") {
 			$cmds{$no}{rc}=$?>>8;
@@ -772,6 +774,7 @@ sub exec_command {
 			DEBUG2("exec_command: environment var MULTI_$cmds{$no}{name}=$cmds{$no}{output}");
 		}
 		$cmds{$no}{runtime}=time-$cmd_start;
+		alarm(0);
 		return $cmds{$no}{rc};
 	}
 	$cmds{$no}{runtime}=time-$cmd_start;
