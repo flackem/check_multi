@@ -1,6 +1,7 @@
 
 ===== Changelog =====
 
+	* fixed main loop error handling (prevent repetition)
 	* better timeout handling: kill process group leader instead of die avoids hang of program
 	* removed newline cleanup for output
 	* replaced old contrib notification template with new notify_service_html

@@ -1494,6 +1494,7 @@ while ($no < scalar(keys %cmds)) {
 		$cmds{$no}{runtime}=0;
 		$rc{count}{$UNKNOWN}++;
 		push @{$rc{list}{$UNKNOWN}},$cmds{$no}{name};
+		$no++;
 		next;
 	}
 		
