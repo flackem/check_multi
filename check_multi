@@ -625,9 +625,6 @@ sub parse_lines {
 sub exec_command {
 	my ($no)=@_;
 
-	#--- execute command with alarm timer to catch timeouts
-	$SIG{'ALRM'} = sub { add_error("timeout encountered after $opt{set}{timeout} seconds"); kill -15,$$; sleep 3; kill -9,$$ };
-
 	#--- start with proper RC
 	$?=0;
 
@@ -651,7 +648,22 @@ sub exec_command {
 				$tmp_stderr=&get_tmpfile("$opt{set}{tmp_dir}", "${MYSELF}_stderr_$$");
 	
 				#--- execute command and store stdout/stderr/return code
-				`$cmds{$no}{command} 1>$tmp_stdout 2>$tmp_stderr`;
+				if (!defined(my $child=fork())) {
+    					die "cannot fork: $!";
+				} elsif ($child==0) {
+					exec("$cmds{$no}{command} 1>$tmp_stdout 2>$tmp_stderr");
+				} else { 
+					$SIG{'ALRM'} = sub { 
+						add_error("$cmds{$no}{name}: timeout after $opt{set}{timeout}s"); 
+						kill -15,$child; 
+						sleep 1; 
+						$child=waitpid($child,0); 
+						kill -9,$child if ($child); 
+					};
+					alarm($opt{set}{timeout});
+					waitpid($child,0);
+					alarm(0);
+				}
 				$cmds{$no}{rc}=$? >> 8;
 				$ENV{"MULTI_${no}_RC"}=$cmds{$no}{rc};
 	
@@ -743,12 +755,11 @@ sub exec_command {
 		$cmds{$no}{output}=eval($cmds{$no}{command});
 		if ($cmds{$no}{type} eq "eeval") {
 			$cmds{$no}{rc}=$?>>8;
-
-         #--- unknown return code? change it explicitly to UNKNOWN
-         if (! defined($def{r2s}{$cmds{$no}{rc}})) {
-            $cmds{$no}{error}.=" RC was $cmds{$no}{rc}!";
-            $cmds{$no}{rc}=$UNKNOWN;
-         }
+         		#--- unknown return code? change it explicitly to UNKNOWN
+         		if (! defined($def{r2s}{$cmds{$no}{rc}})) {
+            			$cmds{$no}{error}.=" RC was $cmds{$no}{rc}!";
+            			$cmds{$no}{rc}=$UNKNOWN;
+         		}
 		} elsif ($cmds{$no}{type} eq "eval") {
 			$cmds{$no}{rc}=$OK;
 		}
@@ -1489,17 +1500,13 @@ while ($no < scalar(keys %cmds)) {
 	
 	#--- if total timeout is going to be exceeded, cancel next commands
 	if (time + $opt{set}{timeout} > $cmds{0}{timeouttime}) {
-		$cmds{$no}{output}="UNKNOWN - execution cancelled after global timeout ($opt{set}{TIMEOUT}s)";
+		$cmds{$no}{output}="UNKNOWN - execution cancelled due to global timeout ($opt{set}{TIMEOUT}s)";
 		$cmds{$no}{rc}=$UNKNOWN;
 		$cmds{$no}{runtime}=0;
-		$rc{count}{$UNKNOWN}++;
-		push @{$rc{list}{$UNKNOWN}},$cmds{$no}{name};
-		$no++;
-		next;
+	} else {
+		#--- execute command
+		&exec_command($no);
 	}
-		
-	#--- execute command
-	&exec_command($no);
 
 	$no++;
 }
