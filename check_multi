@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# nagios: +epn
+# nagios: -epn
 #
 # check_multi - nagios plugin
 #
@@ -901,22 +901,27 @@ sub result_rating {
 #---
 sub report_all {
 
-	#--- do some debugging first ;-)
+	#--- some debugging first
 	DEBUG3("MULTI Environment (sorted):\n" . `env | grep '^MULTI' | sort | sed 's/^/   /g'`);
 	DEBUG3("NAGIOS Environment (sorted):\n" . `env | grep '^NAGIOS' | sort | sed 's/^/   /g'`);
 
 	#--- construction site for persistence
-	if ($opt{set}{test}) {
-		use Data::Dumper;
-		print Dumper(\%cmds);
+	if ($opt{set}{test} && $opt{set}{persistent}) {
+                unless (eval "use Data::Dumper;1") {
+                        $opt{set}{test}=0;
+                        DEBUG2("report_all: Data::Dumper not available");
+                } else {
+                	DEBUG2("report_all: Data::Dumper module loaded");
+			DEBUG2("report_all:" . Dumper(\%cmds));
+		}
 
-		writefile(">/tmp/tescht$$.xml", XML::Simple::XMLout(
+		writefile(">$opt{set}{tmp_dir}/test$$.xml", XML::Simple::XMLout(
 			\%cmds,
 			KeyAttr=>"no",
 			NoAttr=>1,
 			RootName=>"cmds",
 		));
-		writefile(">>/tmp/tescht$$.xml", XML::Simple::XMLout(
+		writefile(">>$opt{set}{tmp_dir}/test$$.xml", XML::Simple::XMLout(
 			\%rc,
 			KeyAttr=>"no",
 			NoAttr=>1,
