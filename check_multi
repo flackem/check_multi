@@ -518,6 +518,8 @@ sub parse_lines {
 	$lineno=0;	# count sourcefile lines
 	while ($line=shift(@lines)) {
 		chomp($line);
+		#--- remove unwanted characters from input line
+		$line=~s/$opt{set}{illegal_chars}//g;
 		$lineno++;		
 
 		#--- check for continuation line with trailing '\'

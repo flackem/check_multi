@@ -1,6 +1,7 @@
 
 ===== Changelog =====
 
+	* illegal_chars removal also for input (command lines)
 	* added fork for execution of child checks (allows better timeout handling)
 	* fixed main loop error handling (prevent repetition)
 	* better timeout handling: kill process group leader instead of die avoids hang of program
