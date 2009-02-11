@@ -659,8 +659,7 @@ sub exec_command {
 						add_error("$cmds{$no}{name}: timeout after $opt{set}{timeout}s"); 
 						kill -15,$child; 
 						sleep 1; 
-						$child=waitpid($child,0); 
-						kill -9,$child if ($child); 
+						kill -9,$child; 
 					};
 					alarm($opt{set}{timeout});
 					waitpid($child,0);
