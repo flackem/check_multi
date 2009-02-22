@@ -76,30 +76,54 @@ my %opt=(
 	"execute"	=> [],
 	"filename"	=> [],
 	"set"		=> {
+		# nagios action url, not used at the moment
 		action_url	=> "",
+		# should check_multi collapse child check_multi checks per default?
 		collapse	=> 1,
+		# use open3 method to exec child checks
 		exec_open3	=> 0,
+		# standard extension of check_multi command files, 
+		# to be searched in directories
 		file_extension	=> "cmd",
+		# if set, return UNKNOWN if command file is not found
 		ignore_missing_cmd_file => 0,
+		# characters to cleanup from command files
 		illegal_chars	=> "\r",
+		# indentation character(s)
 		indent		=> " ",
+		# child checks indented?
 		indent_label	=> 1,
+		# plugin directory to be added to check_multi search path
 		libexec		=> "/usr/local/nagios/libexec",
+		# label to be shown in output: <name> OK, ...
 		name		=> "",
-		report		=> 13,
+		# what RC should be returned if no checks are defined
 		no_checks_rc	=> $UNKNOWN,
+		# see tag_notes_link: URL to be added
 		notes_url	=> "",
+		# create persistent data
 		persistent	=> 0,
-		run_as_user	=> "nagios",
+		# report option, binary coded as sum of detail options
+		report		=> 13,
+		#
 		service_definition_template => "/tmp/service_definition.tpl",
+		# documentation URL to be added to child check tags
 		tag_notes_link	=> 0,
+		# frame target for action_url and notes_url
 		target		=> "_self",
+		# internal development and test mode 
 		test		=> 0,
+		# child check timeout (small t)
 		timeout		=> 10,
+		# global check_multi timeout (BIG T)
 		TIMEOUT		=> 60,
-		verbose		=> 0,
+		# directory where check_multi stores its temporary output files
 		tmp_dir		=> "/tmp/check_multi",
-		tmp_dir_permissions => 01777,
+		# octal permissions of tmp_dir
+		tmp_dir_permissions => "01777",
+		# verbosity, from 1 (less verbose) to 3 (much verbose)
+		verbose		=> 0,
+		# elements to be added to XML structure
 		xml_elements	=> "name,rc,output,error,plugin,command,performance,runtime",
 	},
 
@@ -256,7 +280,7 @@ sub process_parameters {
 	#mkdir "$opt{set}{tmp_dir}", $opt{set}{tmp_dir_permissions} if (! -d "$opt{set}{tmp_dir}"); 
 	if (! -d "$opt{set}{tmp_dir}") {
 		mkdir "$opt{set}{tmp_dir}";
-		#chmod oct($opt{set}{tmp_dir_permissions}), "$opt{set}{tmp_dir}";
+		chmod oct("$opt{set}{tmp_dir_permissions}"), "$opt{set}{tmp_dir}";
 	}
 	if (! -d "$opt{set}{tmp_dir}") {
 		print "Error: could not create tmp directory $opt{set}{tmp_dir} as user " . getpwuid($<) . "\n";
