@@ -3,7 +3,7 @@
 #
 # check_multi - nagios plugin
 #
-# Copyright (c) 2007-8 Matthias Flacke (matthias.flacke at gmx.de)
+# Copyright (c) 2007-2009 Matthias Flacke (matthias.flacke at gmx.de)
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -22,13 +22,12 @@
 #
 # $Id$
 #
-# EPN capability only without strictness :-/
-#use strict; 
+use strict; 
 use Getopt::Long qw(:config no_ignore_case bundling);
 BEGIN { eval("use Time::HiRes qw(time)") }
 use lib "/usr/local/nagios/libexec";
 use vars qw(
-$MYSELF %cmds $returncode %def %rc $no $VERSION $tmp_stdout $tmp_stderr $xml
+$MYSELF %cmds $returncode %def %rc $no $VERSION $tmp_stdout $tmp_stderr $xml $check_multi
 $OK $WARNING $CRITICAL $UNKNOWN
 $DETAIL_LIST $DETAIL_LIST_FULL $DETAIL_HTML $DETAIL_STDERR $DETAIL_PERFORMANCE
 $DETAIL_PERFORMANCE_CLASSIC $DETAIL_STATUS $DETAIL_PERFORMANCE_LINK $DETAIL_XML $DETAIL_NAGIOS2
@@ -150,6 +149,12 @@ my %rc=(
 	match	=> [ 0, 0, 0, 0, ],
 	top	=> $OK,
 );
+my $check_multi={
+	cmds	=> \@cmds,
+	rc	=> \%rc,
+	opt	=> \%opt
+};
+
 
 	
 #-------------------------------------------------------------------------------
@@ -281,22 +286,31 @@ sub process_parameters {
 				$cmds[0]{key}="$ENV{MULTI_HOSTNAME}-$ENV{MULTI_SERVICEDESC}";
 			} elsif ($ENV{NAGIOS_HOSTNAME} && $ENV{NAGIOS_SERVICEDESC}) {
 				$cmds[0]{key}="$ENV{NAGIOS_HOSTNAME}-$ENV{NAGIOS_SERVICEDESC}";
-        		#--- or, if not available, from filenames + commands
 			} else {
 				print "process_parameters: need HOSTNAME and SERVICEDESC for persistent mode.\nPlease specify -s HOSTNAME=<hostname> -s SERVICEDESC=<service description>\n";
 				return $UNKNOWN;
 			}
+			#--- replace whitechar with underscore
 			$cmds[0]{key}=~s/\s+/_/g;
                         DEBUG2("process_parameters: command key: $cmds[0]{key}");
+			#--- read persistent data 
+			my $in;
 			if (-f "$opt{set}{tmp_dir}/${MYSELF}_$cmds[0]{key}.xml") {
                         	DEBUG2("process_parameters: reading file $opt{set}{tmp_dir}/${MYSELF}_$cmds[0]{key}.xml");
-                        	#my $in=XML::Simple::XMLin("$opt{set}{tmp_dir}/${MYSELF}_$cmds[0]{key}.xml",ForceArray => 1,KeyAttr => [ ]);
+                        	$in=XML::Simple::XMLin("$opt{set}{tmp_dir}/${MYSELF}_$cmds[0]{key}.xml",KeyAttr => [ ]);
 			} else {
 				DEBUG1("process_parameters: persistency file $opt{set}{tmp_dir}/${MYSELF}_$cmds[0]{key}.xml not found.");
 			}
-                        #use Data::Dumper;
-                        #print Dumper($in);
-                }
+                	unless (eval "use Data::Dumper;1") {
+                        	$opt{set}{test}=0;
+                        	DEBUG2("process_parameters: Data::Dumper not available");
+                	} else {
+                        	DEBUG2("process_parameters: Data::Dumper module loaded");
+                        	#DEBUG2("report_all:" . Dumper(\@cmds));
+                        	DEBUG2("process_parameters: loaded persistent data:");
+                        	DEBUG2(Dumper($in));
+                	}
+		}
         }
 	if (! -d "$opt{set}{tmp_dir}") {
 		mkdir "$opt{set}{tmp_dir}";
@@ -957,23 +971,18 @@ sub report_all {
                         DEBUG2("report_all: Data::Dumper not available");
                 } else {
                 	DEBUG2("report_all: Data::Dumper module loaded");
-			DEBUG2("report_all:" . Dumper(\@cmds));
+			DEBUG2("report_all:" . Dumper($check_multi));
 		}
 
-		writefile(">$opt{set}{tmp_dir}/${MYSELF}_$cmds[0]{key}.xml", XML::Simple::XMLout(
-			\@cmds,
-			KeyAttr=>"no",
-			NoAttr=>1,
-			KeepRoot=>0,
-			RootName=>"cmds",
-		));
-		writefile(">>$opt{set}{tmp_dir}/${MYSELF}_$cmds[0]{key}.xml", XML::Simple::XMLout(
-			\%rc,
-			KeyAttr=>"no",
-			NoAttr=>1,
-			KeepRoot=>1,
-			RootName=>"rc",
-		));
+		writefile(
+			">$opt{set}{tmp_dir}/${MYSELF}_$cmds[0]{key}.xml", 
+			XML::Simple::XMLout(
+				$check_multi,
+				NoAttr=>1,
+				KeepRoot=>1,
+				RootName=>"$MYSELF",
+			)
+		);
 	}
 
 	#--- print service definition
