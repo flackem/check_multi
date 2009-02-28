@@ -597,6 +597,7 @@ sub parse_lines {
 			$pplugin=$3;
 			$cmd=$4;
 			$plugin=($type eq "command") ? (split(/\s+/,"$cmd"))[0] : "eval";
+			$plugin=~s/.*\///g; # basename(plugin) (thx Gerhard)
 
 			#--- invalid characters found?
 			$name=substitute_macros($name);

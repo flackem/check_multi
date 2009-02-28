@@ -1,5 +1,6 @@
 
 ===== Changelog =====
+	* basename(plugin) - removed /path/from/<pluginname> for proper perfdata, thx. Gerhard
 
 **0.19**	11.02.2009
 	* illegal_chars removal also for input (command lines)
