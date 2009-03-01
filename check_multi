@@ -1370,7 +1370,7 @@ sub report_perfdata {
 		print "\|";
 		printf "%s::%s::plugins=%d time=%f ", 
 			($opt{set}{name}) ? $opt{set}{name} : $MYSELF, $MYSELF,
-			$#cmds+1,
+			$#cmds,
 			time - $cmds[0]{starttime};
 		#--- one line per command, format: tag=output
 		for ($no=1;$no<=$#cmds;$no++) {
