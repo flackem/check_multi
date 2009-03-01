@@ -24,7 +24,9 @@
 #
 use strict; 
 use Getopt::Long qw(:config no_ignore_case bundling);
-BEGIN { eval("use Time::HiRes qw(time)") }
+BEGIN { eval("require Time::HiRes qw(time)") }
+use FindBin;
+use lib "$FindBin::Bin";
 use lib "/usr/local/nagios/libexec";
 use vars qw(
 $MYSELF %cmds $returncode %def %rc $no $VERSION $tmp_stdout $tmp_stderr $xml $check_multi
@@ -93,7 +95,7 @@ my %opt=(
 		# child checks indented?
 		indent_label	=> 1,
 		# plugin directory to be added to check_multi search path
-		libexec		=> "/usr/local/nagios/libexec",
+		libexec		=> "$FindBin::Bin",
 		# label to be shown in output: <name> OK, ...
 		name		=> "",
 		# what RC should be returned if no checks are defined

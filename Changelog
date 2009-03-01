@@ -1,5 +1,6 @@
 
 ===== Changelog =====
+	* added FindBin and changed default libexec path to $FindBin::Bin, thx. Wolfgang
 	* basename(plugin) - removed /path/from/<pluginname> for proper perfdata, thx. Gerhard
 
 **0.19**	11.02.2009
