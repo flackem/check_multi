@@ -1390,6 +1390,7 @@ sub report_perfdata {
 					if ($cmds[$no]{performance}=~/^\s*\'([^']*)\'=(\S+)(.*)/) {
 						$perftmp="\'$cmds[$no]{name}::${plugin}::$1\'=$2$3 ";
 					} else {
+						$cmds[$no]{performance}=~s/\s*(.*)/$1/;
 						$perftmp="$cmds[$no]{name}::${plugin}::$cmds[$no]{performance} ";
 					}
 				}
