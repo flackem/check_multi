@@ -19,6 +19,11 @@
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #
 MYSELF=`basename $0`
+#
+#--- for debugging: uncomment the following line
+#--- then look into /tmp for *stdout.<pid> and *stderr.<pid>
+# set -x
+#
 #--- save stdout / stderr
 exec 1>>"/tmp/$MYSELF-stdout.$$"
 exec 2>>"/tmp/$MYSELF-stderr.$$"
