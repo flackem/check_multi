@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# Service notification script
+# HTML service notification script
 #
 # Copyright (c) 2007-8 Matthias Flacke (matthias.flacke at gmx.de)
 #
@@ -17,6 +17,22 @@
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+#
+# -----------------------------------------------------------------------------------
+# !!! Read this first !!!
+#
+# - You need a special mailx version for this script which allows 
+#   to send MIME attachments. (e.g. http://heirloom.sourceforge.net/mailx.html)
+# 
+# - This script makes extensive use of Nagios environment variables
+#   They have to be enabled in nagios.cfg: enable_environment_macros=1
+# 
+# - The notification command is therefore very simple for this script:
+#   define command{
+#      command_name    notify-service-by-email
+#      command_line    /path/to/notify_service_html
+#   }
+# ----------------------------------------------------------------------------------
 #
 MYSELF=`basename $0`
 #
