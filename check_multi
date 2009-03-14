@@ -108,6 +108,8 @@ my %opt=(
 		report		=> 13,
 		#
 		service_definition_template => "/tmp/service_definition.tpl",
+		# style of plus/minus char
+		style_plus_minus => "line-height:0.1em;color:#4444FF;font-size:1.5em",
 		# documentation URL to be added to child check tags
 		tag_notes_link	=> 0,
 		# frame target for action_url and notes_url
@@ -1149,12 +1151,12 @@ sub report_html {
 
 	#--- loop over commands: report particular results for long plugin output
 	if ($opt{set}{collapse} == 1) {
-		$output.="<SCRIPT LANGUAGE='JavaScript'> function Toggle(node) { if (node.nextSibling.style.display == 'none') { if (node.childNodes.length > 0) { node.childNodes.item(0).replaceData(0,1,'-'); } node.nextSibling.style.display = 'block'; } else { if (node.childNodes.length > 0) { node.childNodes.item(0).replaceData(0,1,'+'); } node.nextSibling.style.display = 'none'; } } </SCRIPT>";
+		$output.="<SCRIPT LANGUAGE='JavaScript'> function Toggle(node) { if (node.nextSibling.style.display == 'none') { if (node.childNodes.length > 0) { node.childNodes.item(0).replaceData(0,1,String.fromCharCode(8211)); } node.nextSibling.style.display = 'block'; } else { if (node.childNodes.length > 0) { node.childNodes.item(0).replaceData(0,1,'+'); } node.nextSibling.style.display = 'none'; } } </SCRIPT>";
 		if ($rc{top} == $OK && $ENV{"MULTI_PPID"} != $$) {
-			$output.="<A onClick='Toggle(this)' style='line-height:0.1em;color:#4444FF;font-size:1.5em'>+</A>";
+			$output.="<A onClick='Toggle(this)' style='".$opt{set}{style_plus_minus}."'>+</A>";
 			$output.="<DIV style='display:none'>";
 		} else {
-			$output.="<A onClick='Toggle(this)' style='line-height:0.1em;color:#4444FF;font-size:1.5em'>-</A>";
+			$output.="<A onClick='Toggle(this)' style='".$opt{set}{style_plus_minus}."'>&ndash;</A>";
 			$output.="<DIV style='display:block'>";
 		}
 	}
@@ -1227,7 +1229,7 @@ sub report_html {
 	#--- print state evaluation if verbose flag set
         if ($opt{set}{verbose} >= 1) {
 		if ($ENV{"MULTI_PPID"} != $$) {
-			$output.="<A onClick='Toggle(this)' style='line-height:0.1em;color:#4444FF;font-size:1.5em'>+</A>";
+			$output.="<A onClick='Toggle(this)' style='".$opt{set}{style_plus_minus}."'>+</A>";
 			$output.="<DIV style='display:none'><h4>Child check overview</h4>";
 		}
 		my @colors=("silver","lightgrey");
@@ -1242,7 +1244,7 @@ sub report_html {
 
 		#--- print state settings and RC evaluation result
 		if ($ENV{"MULTI_PPID"} != $$) {
-			$output.="<A onClick='Toggle(this)' style='line-height:0.1em;color:#4444FF;font-size:1.5em'>+</A>";
+			$output.="<A onClick='Toggle(this)' style='".$opt{set}{style_plus_minus}."'>+</A>";
 			$output.="<DIV style='display:none'><h4>State evaluation</h4>";
 		}
 		$flipflop=0;
@@ -1258,7 +1260,7 @@ sub report_html {
 	if ($opt{set}{verbose} >=1) {
 
 		if ($ENV{"MULTI_PPID"} != $$) {
-			$output.="<A onClick='Toggle(this)' style='line-height:0.1em;color:#4444FF;font-size:1.5em'>+</A>";
+			$output.="<A onClick='Toggle(this)' style='".$opt{set}{style_plus_minus}."'>+</A>";
 			$output.="<DIV style='display:none'><h4>Child check details</h4>";
 		}
 		my @colors=("silver","lightgrey");
