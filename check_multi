@@ -81,6 +81,8 @@ my %opt=(
 		action_url	=> "",
 		# should check_multi collapse child check_multi checks per default?
 		collapse	=> 1,
+		# etc dir for local configuration files
+		etc		=> "etc",
 		# use open3 method to exec child checks
 		exec_open3	=> 0,
 		# standard extension of check_multi command files, 
@@ -206,14 +208,68 @@ sub process_parameters {
 		long_usage();
 		return $UNKNOWN;
 	}
+	if (! -d "$opt{set}{tmp_dir}") {
+		mkdir "$opt{set}{tmp_dir}";
+		chmod oct("$opt{set}{tmp_dir_permissions}"), "$opt{set}{tmp_dir}";
+	}
+	if (! -d "$opt{set}{tmp_dir}") {
+		print "Error: could not create tmp directory $opt{set}{tmp_dir} as user " . getpwuid($<) . "\n";
+		return $UNKNOWN;
+	} elsif (! -w "$opt{set}{tmp_dir}") {
+		print "Error: cannot write to tmp directory $opt{set}{tmp_dir} as user " . getpwuid($<) . "\n";
+		return $UNKNOWN;
+	}
 	if (! $opt{filename}[0] && ! $opt{execute}[0]) {
 		print "$MYSELF error: no config file(s) or command parameters specified\n";
 		short_usage();
 		return $UNKNOWN;
 	} else {
-		#--- check if filenames are directories and replace with '*cmd' files
+		#--- if URL specified as filename: see if LWP::Simple is available
+		if (grep {/http|ftp/} @{$opt{filename}}) {
+			unless (eval "require LWP::Simple;1") {
+				print "$MYSELF error: http/ftp config file(s) specified, but no LWP::Simple module is available\n";
+				return $UNKNOWN;
+			} else {
+				$opt{set}{use_lwp_simple}=1;
+				DEBUG2("process_parameters: LWP::Simple loaded");
+			}
+		}
+		#--- loop over filename / URL / directory array
 		for (my $i=0;$i<@{$opt{filename}}; $i++) {
-			splice(@{$opt{filename}},$i,1,glob "$opt{filename}[$i]/*$opt{set}->{file_extension}") if (-d $opt{filename}[$i]);
+			#--- 
+			if ($opt{filename}[$i]=~/\/\// && $opt{set}{use_lwp_simple}) {
+				DEBUG2("http/ftp URL specified: $opt{filename}[$i]");
+        			my ($host,$path,$file)=("","","");
+        			if ($opt{filename}[$i]=~/.*\/\/([^\/]+)([\/]*.*)/) {
+                			$host=$1; $path=$2;
+                			if ($path=~/(.*)\/(.*$opt{set}{file_extension})/) {
+                        			$path=$1; $file=$2;
+                			}
+                			chop($path) if ($path && $path=~/\S+\/$/);
+					if ($path eq "" || $file eq "") {
+						print "$MYSELF error: empth path or filename specified in URL $opt{filename}[$i]\n";
+						return $UNKNOWN;
+					}
+					DEBUG2("URL:$opt{filename}[$i] hostname:$host path:$path file:$file");
+        			}
+				
+				#--- create directory to store config files
+				`mkdir -p "$opt{set}{tmp_dir}/$opt{set}{etc}/$host/$path"` if (! -d "$opt{set}{tmp_dir}/$opt{set}{etc}/$host/$path");
+				my $RC=LWP::Simple::mirror($opt{filename}[$i],"$opt{set}{tmp_dir}/$opt{set}{etc}/$host/$path/$file");
+				if (LWP::Simple::is_success($RC) || $RC == 304) {
+					DEBUG2("Mirroring $opt{filename}[$i] to $opt{set}{tmp_dir}/$opt{set}{etc}/$host/$path/$file OK: RC $RC");
+					$opt{filename}[$i]="$opt{set}{tmp_dir}/$opt{set}{etc}/$host/$path/$file";
+				} else {
+					DEBUG2("Error: mirroring $opt{filename}[$i] to $opt{set}{tmp_dir}/$opt{set}{etc}/$host/$path/$file failed: $RC");
+				}
+			#--- check if filenames are directories and replace with '*cmd' files
+			} elsif (-d $opt{filename}[$i]) {
+				splice(@{$opt{filename}},$i,1,glob "$opt{filename}[$i]/*$opt{set}->{file_extension}");
+			} else {
+				if (! -f $opt{filename}[$i] || ! -r $opt{filename}[$i]) {
+					DEBUG2("Error: filename $opt{filename}[$i] not existing or not readable");
+				}
+			}
 		}
 	}
 	if ($opt{set}{report} & $DETAIL_PERFORMANCE_LINK && !$opt{set}{name}) {
@@ -316,17 +372,6 @@ sub process_parameters {
                 	}
 		}
         }
-	if (! -d "$opt{set}{tmp_dir}") {
-		mkdir "$opt{set}{tmp_dir}";
-		chmod oct("$opt{set}{tmp_dir_permissions}"), "$opt{set}{tmp_dir}";
-	}
-	if (! -d "$opt{set}{tmp_dir}") {
-		print "Error: could not create tmp directory $opt{set}{tmp_dir} as user " . getpwuid($<) . "\n";
-		return $UNKNOWN;
-	} elsif (! -w "$opt{set}{tmp_dir}") {
-		print "Error: cannot write to tmp directory $opt{set}{tmp_dir} as user " . getpwuid($<) . "\n";
-		return $UNKNOWN;
-	}
 	if (@ARGV) {
 		print "Error: orphaned parameters found on command line:";
 		for (my $i=1; $#ARGV>-1; $i++) {
