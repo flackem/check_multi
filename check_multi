@@ -837,7 +837,8 @@ sub exec_command {
 					DEBUG3("exec_command(5): rest:>$rest<");
 					if ($rest=~/(.*)\|(.*)/s) {
 						$cmds[$no]{output}.="\n$1";
-						$cmds[$no]{performance}.=" " . join(' ', split(/\n/,$2));
+						$cmds[$no]{performance}.=" " if ($cmds[$no]{performance});
+						$cmds[$no]{performance}.=join(' ', split(/\n/,$2));
 					} else {
 						$cmds[$no]{output}.="\n$rest";
 					}
