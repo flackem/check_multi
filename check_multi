@@ -629,14 +629,15 @@ sub parse_lines {
 		$line=~s/$opt{set}{illegal_chars}//g;
 		$lineno++;		
 
+		#--- skip empty lines and comments
+		next if ($line=~/^\s*$/);
+		next if ($line=~/^\s*#/);
+	
 		#--- check for continuation line with trailing '\'
 		if ($line =~ s/\\\s*$//) { 
 			$line .= shift(@lines); # add next line
 			redo unless ($#lines<=0);
 		}
-		next if ($line=~/^\s*$/);	# skip empty lines
-		next if ($line=~/^\s*#/);	# skip comments
-	
 		#--- format: 'command [ tag[::plugin] ] = plugin command line'
 		#--- format: 'eval    [ tag[::plugin] ] = expression'
 		#--- format: 'eeval   [ tag[::plugin] ] = expression'
