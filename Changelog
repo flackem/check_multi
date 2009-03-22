@@ -1,5 +1,6 @@
 
 ===== Changelog =====
+	* added option to provide multi output also in status cgi view, thx Sascha
 	* added LWP for reading config file remotely (http://hostname/path/to/configfile)
 	* added FindBin and changed default libexec path to $FindBin::Bin, thx. Wolfgang
 	* basename(plugin) - removed /path/from/<pluginname> for proper perfdata, thx. Gerhard

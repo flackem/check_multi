@@ -72,6 +72,8 @@ $tmp_stderr="";
 	code	=> { "OK" => $OK,  "WARNING" => $WARNING,  "CRITICAL" => $CRITICAL,  "UNKNOWN" => $UNKNOWN,  },
 	s2r	=> { 0    => $OK,  2         => $WARNING,  3          => $CRITICAL,  1         => $UNKNOWN,  },
 	r2s	=> { $OK  => 0,    $WARNING  => 2,         $CRITICAL  => 3,          $UNKNOWN  => 1,         },
+	color	=> { $OK => "#33FF00", $WARNING => "#FFFF00", $CRITICAL => "#F83838", $UNKNOWN => "#FF9900", },
+	bgcolor	=> { $OK => "#33FF00", $WARNING => "#FEFFC1", $CRITICAL => "#FFBBBB", $UNKNOWN => "#FFDA9F", },
 );
 my %opt=(
 	"execute"	=> [],
@@ -111,7 +113,7 @@ my %opt=(
 		#
 		service_definition_template => "/tmp/service_definition.tpl",
 		# style of plus/minus char
-		style_plus_minus => "line-height:0.1em;color:#4444FF;font-size:1.5em",
+		style_plus_minus => "style='color:#4444FF;line-height:0.1em;font-size:1.5em;cursor:crosshair'",
 		# documentation URL to be added to child check tags
 		tag_notes_link	=> 0,
 		# frame target for action_url and notes_url
@@ -1164,6 +1166,9 @@ sub report {
 	DEBUG1("-" x 80);
 }
 
+#---
+#--- report results stored in %cmds (HTML report)
+#---
 sub report_html {
 	my $output="";
 	
@@ -1193,23 +1198,24 @@ sub report_html {
 
 	#--- print general errors if any occured
 	$output.=" [" . join(", ",@{$cmds[0]{error}}) . "]" if (defined($cmds[0]{error}[0]));
-	$output.="\n";
+	$output.=($opt{set}{extinfo_in_status})?"<br />":"\n";
 
 
-	#--- loop over commands: report particular results for long plugin output
-	if ($opt{set}{collapse} == 1) {
-		$output.="<SCRIPT LANGUAGE='JavaScript'> function Toggle(node) { if (node.nextSibling.style.display == 'none') { if (node.childNodes.length > 0) { node.childNodes.item(0).replaceData(0,1,String.fromCharCode(8211)); } node.nextSibling.style.display = 'block'; } else { if (node.childNodes.length > 0) { node.childNodes.item(0).replaceData(0,1,'+'); } node.nextSibling.style.display = 'none'; } } </SCRIPT>";
+	#--- collapse of contents with javascript
+	#--- conditions: 1. option is set and 2. multi output is *not* in status view
+	if ($opt{set}{collapse} == 1 && ! $opt{set}{extinfo_in_status}) {
+		$output.="<SCRIPT LANGUAGE='JavaScript'> function Toggle(node) { if (node.nextSibling.style.display == 'none') { if (node.childNodes.length > 0) { node.childNodes.item(0).replaceData(0,1,String.fromCharCode(8211)) } node.nextSibling.style.display = 'block' } else { if (node.childNodes.length > 0) { node.childNodes.item(0).replaceData(0,1,'+') } node.nextSibling.style.display = 'none' } } </SCRIPT>";
 		if ($rc{top} == $OK && $ENV{"MULTI_PPID"} != $$) {
-			$output.="<A onClick='Toggle(this)' style='".$opt{set}{style_plus_minus}."'>+</A>";
+			$output.="<A onClick='Toggle(this)' ".$opt{set}{style_plus_minus}.">+</A>";
 			$output.="<DIV style='display:none'>";
 		} else {
-			$output.="<A onClick='Toggle(this)' style='".$opt{set}{style_plus_minus}."'>&ndash;</A>";
+			$output.="<A onClick='Toggle(this)' ".$opt{set}{style_plus_minus}.">&ndash;</A>";
 			$output.="<DIV style='display:block'>";
 		}
 	}
 
-	$output.="<table style='border-left-width:1px; border-left-style:dotted; border-right-width:0px;' id=multi_table>";
-
+	#--- loop over commands: report particular results for long plugin output
+	$output.="<div><table style='border-left-width:1px; border-right-width:0px; border-left-style:dotted' id=multi_table>";
 	for ($no=1;$no<=$#cmds;$no++) {
 		#--- skip eval
 		next if ($cmds[$no]{type} eq "eval");
@@ -1217,11 +1223,9 @@ sub report_html {
 		#--- allow commands to get tag name
 		$ENV{"MULTI_TAG"}=$cmds[$no]{name};
 
-		$output.="<tr valign='top'>";
-		$output.=sprintf "<td nowrap>%s&nbsp;%2.d&nbsp;%s</td>", 
-			($opt{set}{report} & $DETAIL_HTML) ? "<DIV CLASS=\'service$def{label}{$cmds[$no]{rc}}\' style='font-size:7pt'>" : "",
-			$no,
-			($opt{set}{report} & $DETAIL_HTML) ? "</DIV>" : "";
+		$output.=sprintf "<tr style='font-size:8pt'><td nowrap><table style='background-color:%s'><tr style='vertical-align:middle'><td style='font-size:6pt'>%2.d</td></tr></table></td>", 
+			$def{color}{$cmds[$no]{rc}},
+			$no;
 		#--- Action url
 		if (	($opt{set}{report} & $DETAIL_PERFORMANCE) &&
 			($opt{set}{report} & $DETAIL_PERFORMANCE_LINK) && 
@@ -1249,29 +1253,29 @@ sub report_html {
 		}
 		#--- and the rest...
 		if (!$opt{set}{tag_notes_link}) {
-			$output.=sprintf "<td CLASS='dataVal'>&nbsp;&nbsp;%s</td>", ($cmds[$no]{name}) ? $cmds[$no]{name} : "";
+			$output.=sprintf "<td>%s</td>", ($cmds[$no]{name}) ? $cmds[$no]{name} : "";
 		} else {
 			my $notes_url=substitute_macros($opt{set}{notes_url});
-			$output.=sprintf "<td CLASS='dataVal'>&nbsp;&nbsp;<A HREF=\'$notes_url\' TARGET=\'$opt{set}{target}\'>%s</A></td>", ($cmds[$no]{name}) ? $cmds[$no]{name} : "";
+			$output.=sprintf "<td><A HREF=\'$notes_url\' TARGET=\'$opt{set}{target}\'>%s</A></td>", ($cmds[$no]{name}) ? $cmds[$no]{name} : "";
 		}
 		DEBUG2("report_html output:$cmds[$no]{output}");
 		DEBUG3("HTML check_multi recursive levels: " . scalar ($cmds[$no]{output}=~s/multi_table/multi_table/g));
-		$output.=sprintf "<td CLASS='dataVal'>%s</td>", 
+		$output.=sprintf "<td>%s</td>", 
 				($cmds[$no]{output}=~/^([^\n]+)\n(.*)/is) 
 				? (($opt{set}{indent_label}) 
-					? "$1</td></tr><tr><td colspan='4'></td><td colspan='1' CLASS='dataVal'>$2"
-					: "$1</td></tr><tr><td></td><td colspan='5' CLASS='dataVal'>$2")
+					? "$1</td></tr><tr><td colspan='4'></td><td colspan='1'>$2"
+					: "$1</td></tr><tr><td></td><td colspan='5'>$2")
 				: $cmds[$no]{output};
 		if (	defined($cmds[$no]{error}) && 
 			$cmds[$no]{error} ne "" && 
 			($opt{set}{report} & $DETAIL_STDERR)) {
 
-			$output.=" [ STDERR: " . join(' ',$cmds[$no]{error}) . "]";
+			$output.=" [ STDERR: " . join('<br>',$cmds[$no]{error}) . "]";
 		}
 		$output.="</tr>";
 	}
-	$output.="</table>";
-	$output.="</div>" if ($opt{set}{collapse} == 1);
+	$output.="</table></div>";
+	$output.="</div>" if ($opt{set}{collapse} == 1 && ! $opt{set}{extinfo_in_status});
 
 	#--- print state evaluation if verbose flag set
         if ($opt{set}{verbose} >= 1) {
