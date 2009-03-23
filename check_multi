@@ -1270,7 +1270,7 @@ sub report_html {
 		$output.=sprintf "<td>%s</td>", 
 				($cmds[$no]{output}=~/^([^\n]+)\n(.*)/is) 
 				? (($opt{set}{indent_label}) 
-					? "$1</td></tr><tr><td colspan='4'></td><td colspan='1'>$2"
+					? "$1</td></tr><tr style='font-size:8pt'><td colspan='4'></td><td colspan='1'>$2"
 					: "$1</td></tr><tr><td></td><td colspan='5'>$2")
 				: $cmds[$no]{output};
 		if (	defined($cmds[$no]{error}) && 
