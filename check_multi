@@ -87,6 +87,8 @@ my %opt=(
 		etc		=> "etc",
 		# use open3 method to exec child checks
 		exec_open3	=> 0,
+		# show child checks also in status view (only in HTML mode)
+		extinfo_in_status => 0,
 		# standard extension of check_multi command files, 
 		# to be searched in directories
 		file_extension	=> "cmd",
@@ -429,10 +431,15 @@ Options:
       512: Nagios 2 compatibility: one summary line of output only
      1024: show notes_url
 -s, --set <option>=<value>
+   <KEY>=<VALUE> - set multi variable \$<KEY>\$ to <VALUE>
    action_url=<URL> - see Nagios action_url
-   ignore_missing_cmd_file=(0|1) (don't complain if config file missing)	
+   extinfo_in_status=(0|1) - show child checks also in Nagios status view (HTML)
+   file_extension=<ext> - standard file extension for config files
+   ignore_missing_cmd_file=(0|1) - don't complain if config file missing
+   indent_label=(0|1) - indentation width is label (HTML)
+   no_checks_rc=<RC> - which RC should be returned if no checks are defined, default:$opt{set}{no_checks_rc}
    notes_url=<URL> - see Nagios notes_url
-   suppress_perfdata=<tag1>[,<tag2>][,...] (don't provide perfdata)
+   suppress_perfdata=<tag1>[,<tag2>][,...] - don't provide perfdata for check tag1,tag2...
    target=<target> - frame target for action_url and notes_url
    tmp_dir=<directory> - path for temporary files
 -l, --libexec
