@@ -24,7 +24,7 @@
 #
 use strict; 
 use Getopt::Long qw(:config no_ignore_case bundling);
-BEGIN { eval("require Time::HiRes qw(time)") }
+BEGIN { eval("use Time::HiRes qw(time)") }
 use FindBin;
 use lib "$FindBin::Bin";
 use lib "/usr/local/nagios/libexec";
@@ -81,6 +81,8 @@ my %opt=(
 	"set"		=> {
 		# nagios action url, not used at the moment
 		action_url	=> "",
+		# update config file (if HTTP/FTP/etc) once a day (in seconds)
+		cmdfile_update_interval	=> 24*60*60,
 		# should check_multi collapse child check_multi checks per default?
 		collapse	=> 1,
 		# etc dir for local configuration files
@@ -240,9 +242,16 @@ sub process_parameters {
 		}
 		#--- loop over filename / URL / directory array
 		for (my $i=0;$i<@{$opt{filename}}; $i++) {
-			#--- 
-			if ($opt{filename}[$i]=~/\/\// && $opt{set}{use_lwp_simple}) {
+			#--- filename URL found
+			if ($opt{filename}[$i]=~/\/\//) {
 				DEBUG2("http/ftp URL specified: $opt{filename}[$i]");
+
+				#--- LWP module NOT loaded?
+ 				if (!$opt{set}{use_lwp_simple}) {
+					add_error("LWP::Simple module not available, could not get command file $opt{filename}[$i]");
+					next;
+				}
+				#--- split path components of URL
         			my ($host,$path,$file)=("","","");
         			if ($opt{filename}[$i]=~/.*\/\/([^\/]+)([\/]*.*)/) {
                 			$host=$1; $path=$2;
@@ -250,25 +259,43 @@ sub process_parameters {
                         			$path=$1; $file=$2;
                 			}
                 			chop($path) if ($path && $path=~/\S+\/$/);
+                			$path=$1 if ($path && $path=~/\/(\S+)$/);
 					if ($path eq "" || $file eq "") {
-						print "$MYSELF error: empth path or filename specified in URL $opt{filename}[$i]\n";
+						print "$MYSELF error: empty path or filename specified in URL $opt{filename}[$i]\n";
 						return $UNKNOWN;
 					}
 					DEBUG2("URL:$opt{filename}[$i] hostname:$host path:$path file:$file");
         			}
 				
-				#--- create directory to store config files
-				`mkdir -p "$opt{set}{tmp_dir}/$opt{set}{etc}/$host/$path"` if (! -d "$opt{set}{tmp_dir}/$opt{set}{etc}/$host/$path");
-				my $RC=LWP::Simple::mirror($opt{filename}[$i],"$opt{set}{tmp_dir}/$opt{set}{etc}/$host/$path/$file");
-				if (LWP::Simple::is_success($RC) || $RC == 304) {
-					DEBUG2("Mirroring $opt{filename}[$i] to $opt{set}{tmp_dir}/$opt{set}{etc}/$host/$path/$file OK: RC $RC");
-					$opt{filename}[$i]="$opt{set}{tmp_dir}/$opt{set}{etc}/$host/$path/$file";
+				#--- create directory to store saved config files
+				my $cmdfile_path="$opt{set}{tmp_dir}/$opt{set}{etc}/$host/$path";
+				`mkdir -p "$cmdfile_path"` if (! -d "$cmdfile_path");
+
+				#--- use ctime to determine if config file should be updated after
+				#--- having reached cmdfile_update_interval
+				my $cmdfile_age=time-(stat("$cmdfile_path/$file"))[10] if (-f "$cmdfile_path/$file");
+				if (!-f "$cmdfile_path/$file" || 
+				    $cmdfile_age>$opt{set}{cmdfile_update_interval}) {
+					DEBUG2("$cmdfile_path/$file age is $cmdfile_age, greater than allowed interval $opt{set}{cmdfile_update_interval}");
+					my $RC=LWP::Simple::mirror($opt{filename}[$i],"$cmdfile_path/$file");
+					if (LWP::Simple::is_success($RC) || $RC == 304) {
+						DEBUG2("Mirroring $opt{filename}[$i] to $cmdfile_path/$file OK: RC $RC");
+						$opt{filename}[$i]="$cmdfile_path/$file";
+						`touch $opt{filename}[$i]`;
+					} else {
+						DEBUG2("Error: mirroring $opt{filename}[$i] to $cmdfile_path/$file failed: $RC");
+					}
 				} else {
-					DEBUG2("Error: mirroring $opt{filename}[$i] to $opt{set}{tmp_dir}/$opt{set}{etc}/$host/$path/$file failed: $RC");
+					DEBUG2("$opt{filename}[$i] is already downloaded $cmdfile_path/$file");
+					$opt{filename}[$i]="$cmdfile_path/$file";
 				}
+
+			#--- standard path found?
 			#--- check if filenames are directories and replace with '*cmd' files
 			} elsif (-d $opt{filename}[$i]) {
 				splice(@{$opt{filename}},$i,1,glob "$opt{filename}[$i]/*$opt{set}->{file_extension}");
+
+			#--- and at last: this is the simple filename
 			} else {
 				if (! -f $opt{filename}[$i] || ! -r $opt{filename}[$i]) {
 					DEBUG2("Error: filename $opt{filename}[$i] not existing or not readable");
