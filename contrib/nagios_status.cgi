@@ -21,21 +21,26 @@
 # $Id$
 #
 # Copy this file into <nagiosdir>/sbin and start the CGI via
-# http://<hostname>/nagios/nagios_status.cgi
+# http://<hostname>/nagios/cgi-bin/nagios_status.cgi (YMMV)
 #
 use strict;
 use CGI qw(:standard -debug escape);
 use CGI::Carp qw(fatalsToBrowser);
 BEGIN { eval("use Time::HiRes qw(time)") }
-my $NAGIOS_HOST=url(-base=>1);
+
 #-----------------------------------------------------------------------------
-#--- adopt these values to your local installation ---------------------------
+#--- adopt this value to your local installation -----------------------------
 #-----------------------------------------------------------------------------
-my $STATUSDAT="/usr/local/nagios/var/status.dat";
-my $URL="$NAGIOS_HOST/nagios/cgi-bin/";
+
+my $STATUSDAT="/usr/local/nagios/var/status.dat"; # location of status.dat
+
 #-----------------------------------------------------------------------------
 #--- nothing to change from here ;-) -----------------------------------------
 #-----------------------------------------------------------------------------
+
+my $MYSELF=url(-relative=>1);
+my ($CGI_BIN)=(url()=~/(.*)\/$MYSELF/);
+my ($NAGIOS_URL)=(url()=~/(.*)\/cgi-bin\/$MYSELF/);
 my $query="";
 my @numops=(">",">=","==","!=","<","<=");
 my @strops=("=~","!~","eq","ne");
@@ -46,7 +51,6 @@ my @bg=("Even","BGWARNING","BGCRITICAL","BGUNKNOWN");
 my @fields=();
 my $ftype="";
 my $opref=[];
-my $myself = self_url;
 
 #-----------------------------------------------------------------------------
 #--- Main --------------------------------------------------------------------
@@ -54,15 +58,15 @@ my $myself = self_url;
 
 #--- print HTML header with nagios stylesheets
 print header(-target=>'main');
-print "<LINK REL='stylesheet' TYPE='text/css' HREF='/nagios/stylesheets/common.css'>";
-print "<LINK REL='stylesheet' TYPE='text/css' HREF='/nagios/stylesheets/status.css'>";
+print "<LINK REL='stylesheet' TYPE='text/css' HREF='$NAGIOS_URL/stylesheets/common.css'>";
+print "<LINK REL='stylesheet' TYPE='text/css' HREF='$NAGIOS_URL/stylesheets/status.css'>";
 print start_html('Nagios Query');
-
 #--- determine field names from status.dat (dependent on host / service)
 @fields=get_fields(param('qtype')?param('qtype'):"service");
 
 #--- determine field type from first record
 $ftype=get_field_type(param('qtype'),param('qfield'));
+# print "Field type: $ftype ";
 if ($ftype eq "NUMERICAL" || $ftype eq "TIMESTAMP") {
 	$opref=\@numops;
 } elsif ($ftype eq "STRING") {
@@ -70,6 +74,7 @@ if ($ftype eq "NUMERICAL" || $ftype eq "TIMESTAMP") {
 } else {
 	$opref=\@allops;
 }
+
 
 #--- print form
 print start_form(-target=>'main'),
@@ -83,6 +88,18 @@ print start_form(-target=>'main'),
     	submit(-name=>'Submit'),
 	hr,
     	end_form;
+
+#--- if debug parameter set, print some values
+if (param('debug')) {
+	print sup;
+	print "NAGIOS_URL:$NAGIOS_URL<p>";
+	print "CGI_BIN:$CGI_BIN<p>";
+	print "query type:",param('qtype'),"<p>";
+	print "query field:",param('qfield'),"<p>";
+	print "query operator:",param('qop'),"<p>";
+	print "query expr:",param('qexpr'),"<p>";
+	print "ftype:$ftype<p>";
+}
 
 #--- launch query
 my $starttime=time;
@@ -119,8 +136,8 @@ foreach my $item (@result) {
 	# http://localhost/nagios/cgi-bin/extinfo.cgi?type=1&host=localhost
 	if ($item->{host_name} ne $previous_host) {
 		print "<TD CLASS='statusEven'>";
-		#print "<A HREF=", $URL, "extinfo.cgi?type=1&host=", $item->{host_name}, ">", $item->{host_name};
-		printf "<A HREF=%sextinfo.cgi?type=1&host=%s>%s", $URL,$item->{host_name},$item->{host_name};
+		#print "<A HREF=", $CGI_BIN, "extinfo.cgi?type=1&host=", $item->{host_name}, ">", $item->{host_name};
+		printf "<A HREF=%sextinfo.cgi?type=1&host=%s>%s", $CGI_BIN,$item->{host_name},$item->{host_name};
 		$previous_host=$item->{host_name};
 	} else {
 		print "<TD>";
@@ -131,7 +148,7 @@ foreach my $item (@result) {
 	# http://localhost/nagios/cgi-bin/extinfo.cgi?type=2&host=localhost&service=Embedded%20Perl%20Check
 	if (param('qtype') eq "service") {
 		print "<TD CLASS='status$bg'>";
-		printf "<A HREF=%sextinfo.cgi?type=2&host=%s&service=%s>%s",$URL,$item->{host_name},
+		printf "<A HREF=%sextinfo.cgi?type=2&host=%s&service=%s>%s",$CGI_BIN,$item->{host_name},
 			escape($item->{service_description}),$item->{service_description};
 		print "</TD>";
 	}
@@ -140,7 +157,11 @@ foreach my $item (@result) {
 	print "<TD CLASS='status$fg'>", $state, "</TD>";
 
 	#--- 4. print query field
-	print "<TD CLASS='status$bg'>", $item->{param('qfield')}, "</TD>" if (param('qfield') ne "plugin_output");
+	if (param('qfield') ne "plugin_output") {
+		printf "<TD CLASS=\'status$bg\' %s>%s</TD>", 
+			($ftype eq "TIMESTAMP") ? sprintf("title=\'%s\'",timestamp($item->{param('qfield')})) : "", 
+			$item->{param('qfield')};
+	}
 
 	#--- 5. print plugin_output anyway
 	print "<TD CLASS='status$bg'>", $item->{plugin_output}, "</TD>";
@@ -151,6 +172,16 @@ foreach my $item (@result) {
 print "</TABLE>";
 print end_html;
 
+#---
+#--- print nagios like timestamp
+#--- 03-28-2009 18:33:29
+#---
+sub timestamp {
+	my ($timestamp)=shift;
+	my @t=localtime($timestamp);
+	return sprintf "%02d-%02d-%04d %02d:%02d:%02d", 
+		$t[4]+1,$t[3],$t[5]+1900,$t[2],$t[1],$t[0];
+}
 #---
 #--- get fields from status.dat
 #---
@@ -178,17 +209,18 @@ sub get_fields {
 #---
 sub get_field_type {
 	my ($type,$field)=@_;
-	#print "looking for field:$field type:$type<br> ";
+	#print " DEBUG: looking for field:$field type:$type<br> ";
 	open(DAT,$STATUSDAT) || die "Cannot open $STATUSDAT:$!";
 	while (<DAT>) {
 		if (/^${type}status \{$/) {
 			while (<DAT>) {
 				last if (/^\t\}$/);
-				if (/\t$field=(\S+)$/) {
+				if (/\t$field=(\S+)$/ && $1 ne "0") {
 					close DAT;
-					#print "field:$field content:$1 ";
-					if ($1=~/^[\d\.]+$/) {
-						if ($1=~/\d{10}/ && $1=~/^12/) {
+					#print " field:$field content:>$1< ";
+					if ($1=~/^([\d\.]+)$/) {
+						if ($1=~/^(\d{10})$/) {
+							# print " TIMESTAMP:>", timestamp(time), "<";
 							return "TIMESTAMP";
 						} else {
 							return "NUMERICAL";
