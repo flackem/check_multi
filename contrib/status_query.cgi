@@ -99,7 +99,7 @@ print start_form(-target=>'main'),
 
 #--- if debug parameter set, print some values
 if (defined(param('debug')) && param('debug')) {
-	my $fields=[
+	my %fields=(
 		"NAGIOS_URL"	=> $NAGIOS_URL,
 		"CGI_BIN"	=> $CGI_BIN,
 		"query type"	=> param('qtype'),
@@ -109,11 +109,13 @@ if (defined(param('debug')) && param('debug')) {
 		"field type"	=> $ftype,
 		"STATUSDAT"	=> $STATUSDAT,
 		"param(statusdat)"=> param('statusdat'),
-	];
-	print sup,table;
-	foreach my $key(keys $fields) {
-		print tr, td($key),td($ffields{$key});
+	);
+	print sup;
+	print "<table>";
+	foreach my $key(keys %fields) {
+		print "<tr><td>$key</td><td>$fields{$key}</td></tr>";
 	}
+	print "</table>";
 }
 
 #--- launch query
@@ -128,7 +130,7 @@ my @result=get_status(param('qtype'),param('qfield'),param('qop'),param('qexpr')
 print sup;
 printf "%d results in %.2fs - ", $#result+1, time-$starttime;
 print "bookmark this URL to save the query: ";
-print "<A HREF=%s>Query %s %s %s %s", 
+printf "<A HREF=%s>Query %s %s %s %s", 
 	url(-path_info=>1,-query=>1),
 	param('qtype'),param('qfield'),param('qop'),param('qexpr');
 
