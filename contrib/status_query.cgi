@@ -21,7 +21,7 @@
 # $Id$
 #
 # Copy this file into <nagiosdir>/sbin and start the CGI via
-# http://<hostname>/nagios/cgi-bin/nagios_status.cgi (YMMV)
+# http://<hostname>/nagios/cgi-bin/status_query.cgi (YMMV)
 #
 use strict;
 use CGI qw(:standard -debug escape);
@@ -75,6 +75,14 @@ if ($ftype eq "NUMERICAL" || $ftype eq "TIMESTAMP") {
 	$opref=\@allops;
 }
 
+#--- if statusdat set, take this as file path
+if (defined(param('statusdat')) && param('statusdat')) {
+	if (-f param('statusdat')) {
+		$STATUSDAT=param('statusdat');
+	} else {
+		print i,"status.dat file " . param('statusdat') . " not found!";
+	}
+}
 
 #--- print form
 print start_form(-target=>'main'),
@@ -90,7 +98,7 @@ print start_form(-target=>'main'),
     	end_form;
 
 #--- if debug parameter set, print some values
-if (param('debug')) {
+if (defined(param('debug')) && param('debug')) {
 	my $fields=[
 		"NAGIOS_URL"	=> $NAGIOS_URL,
 		"CGI_BIN"	=> $CGI_BIN,
@@ -99,6 +107,8 @@ if (param('debug')) {
 		"query operator"=> param('qop'),
 		"query expr"	=> param('qexpr'),
 		"field type"	=> $ftype,
+		"STATUSDAT"	=> $STATUSDAT,
+		"param(statusdat)"=> param('statusdat'),
 	];
 	print sup,table;
 	foreach my $key(keys $fields) {
