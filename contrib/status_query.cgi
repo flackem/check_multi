@@ -100,7 +100,7 @@ my $statusfields={
         last_time_unreachable                    => "TIMESTAMP",
         last_time_up                             => "TIMESTAMP",
         last_update                              => "TIMESTAMP",
-        long_plugin_output                       => "UNKNOWN",
+        long_plugin_output                       => "STRING",
         max_attempts                             => "NUMERICAL",
         modified_attributes                      => "NUMERICAL",
         next_check                               => "TIMESTAMP",
@@ -112,7 +112,7 @@ my $statusfields={
         passive_checks_enabled                   => "NUMERICAL",
         percent_state_change                     => "NUMERICAL",
         performance_data                         => "STRING",
-        plugin_output                            => "NUMERICAL",
+        plugin_output                            => "STRING",
         problem_has_been_acknowledged            => "NUMERICAL",
         process_performance_data                 => "NUMERICAL",
         retry_interval                           => "NUMERICAL",
@@ -299,7 +299,7 @@ for (my $i=0;$i<param('nqueries');$i++) {
 		-name=>"qfield$i",
 		-values=>$fields->[$i],
 		-default=>'plugin_output',
-		-onChange=>'this.form.qexpr'.$i.'.value=\'\';this.form.submit();'
+		-onChange=>'this.form.qexpr'.$i.'.value=\'\';this.form.qop'.$i.'.value=\'\';this.form.submit();'
 	);
 	param('qfield'.$i,"plugin_output") if (param('qfield'.$i) eq "");
 	print "</td>";
@@ -312,6 +312,7 @@ for (my $i=0;$i<param('nqueries');$i++) {
 	print popup_menu(
 		-name=>"qop$i",
 		-values=>$opref[$i],
+		-default=>$ops->{"STRING"},
 		-onChange=>'this.form.qexpr'.$i.'.value=\'\';this.form.submit();'
 	);
 	param('qop'.$i,$ops->{"STRING"}) if (param('qop'.$i) eq "");
@@ -323,7 +324,7 @@ for (my $i=0;$i<param('nqueries');$i++) {
 		-name=>"qexpr$i",
 		-default=>'',
 		-size=>20,
-		-maxlength=>($ftype[$i] eq "TIMESTAMP") ? 10 : ($ftype[$i] eq "NUMERICAL") ? 15 : 40,
+		-maxlength=>($ftype[$i] eq "TIMESTAMP") ? 10 : ($ftype[$i] eq "NUMERICAL") ? 20 : 40,
 	);
 	print "</td>";
 
