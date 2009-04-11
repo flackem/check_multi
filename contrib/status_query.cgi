@@ -27,6 +27,7 @@ use strict;
 use CGI qw(:standard -debug escape);
 use CGI::Carp qw(fatalsToBrowser);
 BEGIN { eval("use Time::HiRes qw(time)") }
+use Data::Dumper;
 
 #-----------------------------------------------------------------------------
 #--- adopt this value to your local installation -----------------------------
@@ -38,44 +39,171 @@ my $STATUSDAT="/usr/local/nagios/var/status.dat"; # location of status.dat
 #--- nothing to change from here ;-) -----------------------------------------
 #-----------------------------------------------------------------------------
 
+#--- detect from URL how we've been called
 my $MYSELF=url(-relative=>1);
 my ($CGI_BIN)=(url()=~/(.*)\/$MYSELF/);
 my ($NAGIOS_URL)=(url()=~/(.*)\/cgi-bin\/$MYSELF/);
+
+#--- vars
 my $query="";
 my @numops=(">",">=","==","!=","<","<=");
 my @strops=("=~","!~","eq","ne");
-my @allops=(@numops,@strops);
+my @allops=(@strops,@numops);
+my $ops={
+	"NUMERICAL" => \@numops,
+	"STRING"    => \@strops,
+	"TIMESTAMP" => \@numops,
+	"UNKNOWN"   => \@allops,
+};
 my @st=("OK","WARNING","CRITICAL","UNKNOWN");
 my @fg=("OK","WARNING","CRITICAL","UNKNOWN");
 my @bg=("Even","BGWARNING","BGCRITICAL","BGUNKNOWN");
-my @fields=();
-my $ftype="";
-my $opref=[];
+my $fields;
+my @ftype=();
+my @opref=();
+
+#--- status.dat fields (retrieved from <nagiossrc>/include/statusdata.h)
+my $statusfields={
+   "host"=>{
+        acknowledgement_type                     => "NUMERICAL",
+        active_checks_enabled                    => "NUMERICAL",
+        check_command                            => "STRING",
+        check_execution_time                     => "NUMERICAL",
+        check_interval                           => "NUMERICAL",
+        check_latency                            => "NUMERICAL",
+        check_options                            => "NUMERICAL",
+        check_period                             => "NUMERICAL",
+        check_type                               => "NUMERICAL",
+        current_attempt                          => "NUMERICAL",
+        current_event_id                         => "NUMERICAL",
+        current_event_id                         => "NUMERICAL",
+        current_notification_id                  => "NUMERICAL",
+        current_notification_number              => "NUMERICAL",
+        current_problem_id                       => "NUMERICAL",
+        current_state                            => "NUMERICAL",
+        event_handler                            => "UNKNOWN",
+        event_handler_enabled                    => "NUMERICAL",
+        failure_prediction_enabled               => "NUMERICAL",
+        flap_detection_enabled                   => "NUMERICAL",
+        has_been_checked                         => "NUMERICAL",
+        host_name                                => "STRING",
+        is_flapping                              => "NUMERICAL",
+        last_check                               => "TIMESTAMP",
+        last_event_id                            => "NUMERICAL",
+        last_event_id                            => "NUMERICAL",
+        last_hard_state                          => "NUMERICAL",
+        last_hard_state_change                   => "TIMESTAMP",
+        last_notification                        => "NUMERICAL",
+        last_problem_id                          => "NUMERICAL",
+        last_state_change                        => "TIMESTAMP",
+        last_time_down                           => "TIMESTAMP",
+        last_time_unreachable                    => "TIMESTAMP",
+        last_time_up                             => "TIMESTAMP",
+        last_update                              => "TIMESTAMP",
+        long_plugin_output                       => "UNKNOWN",
+        max_attempts                             => "NUMERICAL",
+        modified_attributes                      => "NUMERICAL",
+        next_check                               => "TIMESTAMP",
+        next_notification                        => "NUMERICAL",
+        no_more_notifications                    => "NUMERICAL",
+        notification_period                      => "STRING",
+        notifications_enabled                    => "NUMERICAL",
+        obsess_over_host                         => "NUMERICAL",
+        passive_checks_enabled                   => "NUMERICAL",
+        percent_state_change                     => "NUMERICAL",
+        performance_data                         => "STRING",
+        plugin_output                            => "NUMERICAL",
+        problem_has_been_acknowledged            => "NUMERICAL",
+        process_performance_data                 => "NUMERICAL",
+        retry_interval                           => "NUMERICAL",
+        scheduled_downtime_depth                 => "NUMERICAL",
+        should_be_scheduled                      => "NUMERICAL",
+        state_type                               => "NUMERICAL",
+  },
+  "service"=>{
+        acknowledgement_type                     => "NUMERICAL",
+        active_checks_enabled                    => "NUMERICAL",
+        check_command                            => "NUMERICAL",
+        check_execution_time                     => "NUMERICAL",
+        check_interval                           => "NUMERICAL",
+        check_latency                            => "NUMERICAL",
+        check_options                            => "NUMERICAL",
+        check_period                             => "NUMERICAL",
+        check_type                               => "NUMERICAL",
+        current_attempt                          => "NUMERICAL",
+        current_event_id                         => "NUMERICAL",
+        current_notification_id                  => "NUMERICAL",
+        current_notification_number              => "NUMERICAL",
+        current_problem_id                       => "NUMERICAL",
+        current_state                            => "NUMERICAL",
+        event_handler                            => "UNKNOWN",
+        event_handler_enabled                    => "NUMERICAL",
+        failure_prediction_enabled               => "NUMERICAL",
+        flap_detection_enabled                   => "NUMERICAL",
+        has_been_checked                         => "NUMERICAL",
+        host_name                                => "STRING",
+        is_flapping                              => "NUMERICAL",
+        last_check                               => "TIMESTAMP",
+        last_event_id                            => "NUMERICAL",
+        last_hard_state                          => "NUMERICAL",
+        last_hard_state_change                   => "TIMESTAMP",
+        last_notification                        => "TIMESTAMP",
+        last_problem_id                          => "NUMERICAL",
+        last_state_change                        => "TIMESTAMP",
+        last_time_critical                       => "TIMESTAMP",
+        last_time_ok                             => "TIMESTAMP",
+        last_time_unknown                        => "NUMERICAL",
+        last_time_warning                        => "NUMERICAL",
+        last_update                              => "TIMESTAMP",
+        long_plugin_output                       => "STRING",
+        max_attempts                             => "NUMERICAL",
+        modified_attributes                      => "NUMERICAL",
+        next_check                               => "TIMESTAMP",
+        next_notification                        => "NUMERICAL",
+        no_more_notifications                    => "NUMERICAL",
+        notification_period                      => "NUMERICAL",
+        notifications_enabled                    => "NUMERICAL",
+        obsess_over_service                      => "NUMERICAL",
+        passive_checks_enabled                   => "NUMERICAL",
+        percent_state_change                     => "NUMERICAL",
+        performance_data                         => "STRING",
+        plugin_output                            => "STRING",
+        problem_has_been_acknowledged            => "NUMERICAL",
+        process_performance_data                 => "NUMERICAL",
+        retry_interval                           => "NUMERICAL",
+        scheduled_downtime_depth                 => "NUMERICAL",
+        service_description                      => "STRING",
+        should_be_scheduled                      => "NUMERICAL",
+        state_type                               => "NUMERICAL",
+  },
+};
 
 #-----------------------------------------------------------------------------
 #--- Main --------------------------------------------------------------------
 #-----------------------------------------------------------------------------
+$SIG{ALRM} = sub { kill 9,$$; };
+
+alarm(10);
+
 
 #--- print HTML header with nagios stylesheets
-print header(-target=>'main');
+print header(
+	-target=>'main',	# frame target for Nagios
+);
 print "<LINK REL='stylesheet' TYPE='text/css' HREF='$NAGIOS_URL/stylesheets/common.css'>";
 print "<LINK REL='stylesheet' TYPE='text/css' HREF='$NAGIOS_URL/stylesheets/status.css'>";
-print start_html('Nagios Query');
-#--- determine field names from status.dat (dependent on host / service)
-@fields=get_fields(param('qtype')?param('qtype'):"service");
+print start_html(
+	-title=>'Nagios Query',
+	-author=>'Matthias.Flacke@gmx.de',
+	-base=>'true',
+	-target=>'main',
+	-meta=>{
+		'copyright'=>'2008-2009 Matthias Flacke'
+	},
+	-noscript=>"No javascript enabled - this CGI needs javascript!",
+);
 
-#--- determine field type from first record
-$ftype=get_field_type(param('qtype'),param('qfield'));
-# print "Field type: $ftype ";
-if ($ftype eq "NUMERICAL" || $ftype eq "TIMESTAMP") {
-	$opref=\@numops;
-} elsif ($ftype eq "STRING") {
-	$opref=\@strops;
-} else {
-	$opref=\@allops;
-}
-
-#--- if statusdat set, take this as file path
+#--- if statusdat parameter is set, take it as file path
 if (defined(param('statusdat')) && param('statusdat')) {
 	if (-f param('statusdat')) {
 		$STATUSDAT=param('statusdat');
@@ -84,55 +212,262 @@ if (defined(param('statusdat')) && param('statusdat')) {
 	}
 }
 
-#--- print form
-print start_form(-target=>'main'),
-	hr,
-	"Query ",
-    	popup_menu(-name=>'qtype',-values=>['service','host'],-default=>'service',onChange=>'this.form.qexpr.value="";this.form.submit();'),
-	" Expression ",
-    	popup_menu(-name=>'qfield',-values=>\@fields,-default=>'plugin_output',onChange=>'this.form.qexpr.value="";this.form.submit();'),
-    	popup_menu(-name=>'qop',-values=>$opref,-default=>$$opref[0]),
-	textfield(-name=>'qexpr',value=>''),
-    	submit(-name=>'Submit'),
-	hr,
-    	end_form;
+#--- create form
+print hr;
+print start_form(-target=>'main');
+print hidden(-name=>'nqueries',-default=>1);
+param('nqueries',1) if (param('nqueries')<1);
+print "<table>";
+print "<SCRIPT LANGUAGE='JavaScript'> 
+	function Toggle(node) { 
+		if (node.nextSibling.style.display == 'none') { 
+			if (node.childNodes.length > 0) {
+				 node.childNodes.item(0).replaceData(0,1,String.fromCharCode(8211))
+			} 
+			node.nextSibling.style.display = 'block' 
+		} else { 
+			if (node.childNodes.length > 0) { 
+				node.childNodes.item(0).replaceData(0,1,'+')
+			}
+			node.nextSibling.style.display = 'none' 
+		}
+	}
+</SCRIPT>";
+
+#--- loop over number of queries
+for (my $i=0;$i<param('nqueries');$i++) {
+
+	#--- check if removal button ('-') has been pressed
+	print hidden(-name=>'remove'.$i,-default=>0);
+
+	#--- yes -> don't show row, reset remove flag and correct number of rows
+	if (param('nqueries')>1 && param('remove'.$i) eq "1") {
+		param('remove'.$i,"0");
+		param('nqueries',param('nqueries')-1);
+		next;
+	} else {
+		param('remove'.$i,"0");
+	}
+	#print "<tr><td>nqueries:",param('nqueries'),"</td><td>i:",$i,"</td></tr>";
+	print "<tr><td></td><td></td></tr>";
+	print "<tr>";
+
+
+	#print "<br>$i: qtype:".param('qtype')." qfield$i:".param('qfield'.$i)." qop$i:".param('qop'.$i)." qexpr$i:".param('qexpr'.$i)." ";
+
+	#--- 1. only in first line: Labels and selection of query source [host|service]
+	if ($i==0) {
+		print "<td>Query<td>";
+		print "<td>";
+		print popup_menu(
+			-name=>'qtype',
+			-values=>['service','host'],
+			-default=>'service',
+			-onChange=>'this.form.qexpr'.$i.'.value="";this.form.qfield'.$i.'.value="plugin_output";this.form.qop'.$i.'.value="=~";this.form.submit();'
+		);
+		param('qtype',"service") if (param('qtype') eq "");
+		print "</td>";
+		print "<td>Expression</td>";
+	#---    following lines: placeholders
+	} else {
+		print "<td></td><td></td><td></td><td>";
+	}
+
+	#--- 2. fields popup (filled with field names retrieved from status.dat)
+	@{$fields->[$i]}=sort keys %{$$statusfields{param('qtype')}};
+	print "<td>";
+	print popup_menu(
+		-name=>"qfield$i",
+		-values=>$fields->[$i],
+		-default=>'plugin_output',
+		-onChange=>'this.form.qexpr'.$i.'.value="";this.form.submit();'
+	);
+	param('qfield'.$i,"plugin_output") if (param('qfield'.$i) eq "");
+	print "</td>";
+
+	#--- 3. operators - depending on field type
+	$ftype[$i]=get_field_type(param('qtype'),param('qfield'.$i));
+	#print "field $i type:$ftype[$i] ";
+	$opref[$i]=$$ops{$ftype[$i]};
+	print "<td>";
+	print popup_menu(
+		-name=>"qop$i",
+		-values=>$opref[$i],
+		-onChange=>'this.form.qexpr'.$i.'.value="";this.form.submit();'
+	);
+	param('qop'.$i,$ops->{"STRING"}) if (param('qop'.$i) eq "");
+	print "</td>";
+
+	#--- 4. input field
+	print "<td>";
+	print textfield(
+		-name=>"qexpr$i",
+		-default=>''
+	);
+	print "</td>";
+
+	
+	#--- 5.-7. only in the last line
+ 	if ($i == param('nqueries')-1) {
+
+		#--- 5. plus field (add another line of input)
+		print "<td>",button(-name=>"plus$i",-value=>'+',-onClick=>'this.form.nqueries.value++;this.form.submit();'),"</td>";
+
+		#--- 6. minus field (remove a (TODO:this) line of input)
+ 		if ($i>0) {
+			print "<td>",button(-name=>"minus$i",-value=>'-',-onClick=>'this.form.nqueries.value--;this.form.submit();'),"</td>";
+		}
+
+		#--- 7. at last: submit button in last line
+		print "<td>",submit(-name=>'Submit query'),"</td>";
+		#--- multiple rows? add radiobutton in the last line to query AND or OR
+		if ($i>0) {
+			#print "</tr><td>nqueries:".param('nqueries')."</td><td></td><td></td><td></td>";
+			print "</tr><td></td><td></td><td></td><td></td>";
+			print "<td colspan=5>";
+			print radio_group(
+				-name=>'qany_or_all',
+				-values=>['match ALL expressions','match ANY expression'],
+				-default=>'match ALL expressions'
+			);
+			param('qany_or_all',"match ALL expressions") if (param('qany_or_all') eq "");
+			print "</td>";
+		}
+	}
+	print "</tr>";
+}
+print "</table>";
+print end_form;
+print hr;
 
 #--- if debug parameter set, print some values
 if (defined(param('debug')) && param('debug')) {
-	my %fields=(
-		"NAGIOS_URL"	=> $NAGIOS_URL,
+	my %gfields=(
 		"CGI_BIN"	=> $CGI_BIN,
-		"query type"	=> param('qtype'),
-		"query field"	=> param('qfield'),
-		"query operator"=> param('qop'),
-		"query expr"	=> param('qexpr'),
-		"field type"	=> $ftype,
+		"NAGIOS_URL"	=> $NAGIOS_URL,
 		"STATUSDAT"	=> $STATUSDAT,
 		"param(statusdat)"=> param('statusdat'),
 	);
+	my %fields=(
+		"query type"	=> 'qtype',
+		"query field"	=> 'qfield',
+		"query operator"=> 'qop',
+		"query expr"	=> 'qexpr',
+		"field type"	=> \@ftype,
+		
+	);
 	print sup;
 	print "<table>";
-	foreach my $key(keys %fields) {
+	foreach my $key(sort keys %gfields) {
 		print "<tr><td>$key</td><td>$fields{$key}</td></tr>";
+	}
+	for (my $i=0;$i<param('nqueries');$i++) {
+		foreach my $key(sort keys %gfields) {
+			if ($fields{$key}=~/^q/) {
+				print "<tr><td>$i $key</td><td>".param("$key$i")."</td></tr>";
+			} else {
+				print "<tr><td>$i $key</td><td>$fields{$key}->[$i]</td></tr>";
+			}
+		}
 	}
 	print "</table>";
 }
 
-#--- launch query
+#--- queries
 my $starttime=time;
-my @result=get_status(param('qtype'),param('qfield'),param('qop'),param('qexpr'));
+my @q=();
+for (my $i=0;$i<param('nqueries');$i++) {
 
-#--- sort results: 1. field 2. host
-@result=sort {uc($a->{param('qfield')}) cmp uc($b->{param('qfield')})} @result;
+	#--- launch query for field
+	@{$q[$i]}=get_status(param('qtype'),param('qfield'.$i),param('qop'.$i),param('qexpr'.$i));
+
+
+	# printf "$i qtype:%s qfield%d:%s qop%d:%s qexpr%d:%s<br><br>",
+	#	param('qtype'),$i,param('qfield'.$i),$i,param('qop'.$i),$i,param('qexpr'.$i);
+		#my $dump=Dumper($q[$i]);
+		#$dump=~s/\n/<br>/g;
+		#print $dump;
+	#print hr;
+}
+my @result=();
+#--- AND
+#print "param(qany_or_all):", param('qany_or_all'), "<br>";
+if (param('qany_or_all') eq "match ALL expressions") {
+	#--- 1st run: count all occurrences of results
+	my %count=();
+	for (my $i=1;$i<param('nqueries');$i++) {
+		if (param('qtype') eq "host") {
+			for (my $j=0;$j<$#{$q[$i]};$j++) {
+				$count{$q[$i][$j]->{host_name}}++;
+				#print $q[$i][$j]->{host_name}.":".$count{$q[$i][$j]->{host_name}}."<br>";
+			}
+		} else {
+			for (my $j=0;$j<$#{$q[$i]};$j++) {
+				$count{$q[$i][$j]->{host_name}."_".$q[$i][$j]->{service_description}}++;
+				#print $q[$i][$j]->{host_name}."_".$q[$i][$j]->{service_description}.":".$count{$q[$i][$j]->{host_name}."_".$q[$i][$j]->{service_description}}."<br>";
+			}
+		}
+	}
+	#--- 2nd run: only copy result to target array if if occurred in ALL query results
+	for (my $j=0;$j<$#{$q[0]};$j++) {
+		if (param('qtype') eq "host") {
+			push @result, $q[0][$j] if ($count{$q[0][$j]->{host_name}} == param('nqueries')-1);
+		} else {
+			push @result, $q[0][$j] if ($count{$q[0][$j]->{host_name}."_".$q[0][$j]->{service_description}} == param('nqueries')-1);
+		}
+	}
+#--- OR (covers also queries with one expression)
+} else {
+	my %count=();
+	for (my $i=0;$i<param('nqueries');$i++) {
+		for (my $j=0;$j<$#{$q[$i]};$j++) {
+			#--- only copy ONE occurence of package to target array
+			if (param('qtype') eq "host") {
+				#print "pushing $q[$i][$j]->{host_name}<br>";
+				push @result, $q[$i][$j] if (!defined($count{$q[$i][$j]->{host_name}}));
+				$count{$q[$i][$j]->{host_name}}++;
+			} else {
+				#print "pushing $q[$i][$j]->{host_name}_$q[$i][$j]->{service_description}<br>";
+				push @result, $q[$i][$j] if (!defined($count{$q[$i][$j]->{host_name}."_".$q[$i][$j]->{service_description}}));
+				$count{$q[$i][$j]->{host_name}."_".$q[$i][$j]->{service_description}}++;
+			}
+		}
+	}
+}
+#--- at last: sort the results
+#--- 1. hosts
 @result=sort { $a->{host_name} cmp $b->{host_name} } @result;
+
+#--- 2. fields from last to first
+for (my $i=param('nqueries');$i>=0;$i--){
+	#--- string comparison
+	if ($ftype[$i] eq "STRING") {
+		@result=sort {uc($a->{param('qfield'.$i)}) cmp uc($b->{param('qfield'.$i)})} @result;
+	#--- numeric or timestamp comparison
+	} else {
+		@result=sort {$a->{param('qfield'.$i)} <=> $b->{param('qfield'.$i)}} @result;
+	}
+}
+
 
 #--- print query stats, and URL for saving query
 print sup;
 printf "%d results in %.2fs - ", $#result+1, time-$starttime;
 print "bookmark this URL to save the query: ";
-printf "<A HREF=%s>Query %s %s %s %s", 
+printf "<A HREF=%s>Query %s %s %s %s ", 
 	url(-path_info=>1,-query=>1),
-	param('qtype'),param('qfield'),param('qop'),param('qexpr');
+	param('qtype'),
+	param('qfield0'),
+	param('qop0'),
+       	param('qexpr0');
+for (my $i=1;$i<param('nqueries');$i++) {
+	printf "%s %s %s %s ", 
+		param('qany_or_all') eq "match ALL expressions" ? "AND" : "OR",
+		param('qfield'.$i),
+		param('qop'.$i),
+		param('qexpr'.$i);
+}
+print "</A>";
 
 #--- print result table
 print "<TABLE CLASS='status'>";
@@ -140,7 +475,12 @@ print "<TR align='left'>";
 print "<TH class='status'>Hostname</TH>";
 print "<TH class='status'>Service</TH>" if (param('qtype') eq "service");
 print "<TH class='status'>State</TH>";
-print "<TH class='status'>" . param('qfield') . "</TH>" if (param('qfield') ne "plugin_output");
+for (my $i=0,my %shown=();$i<param('nqueries');$i++) {
+	if (!$shown{param('qfield'.$i)}) {
+		print "<TH class='status'>" . param('qfield'.$i) . "</TH>" if (param('qfield'.$i) ne "plugin_output");
+		$shown{param('qfield'.$i)}++;
+	}
+}
 print "<TH class='status'>Plugin Output</TH>";
 print "</TR>";
 #--- loop over items
@@ -156,7 +496,7 @@ foreach my $item (@result) {
 	if ($item->{host_name} ne $previous_host) {
 		print "<TD CLASS='statusEven'>";
 		#print "<A HREF=", $CGI_BIN, "extinfo.cgi?type=1&host=", $item->{host_name}, ">", $item->{host_name};
-		printf "<A HREF=%sextinfo.cgi?type=1&host=%s>%s", $CGI_BIN,$item->{host_name},$item->{host_name};
+		printf "<A HREF=%s/extinfo.cgi?type=1&host=%s>%s", $CGI_BIN,$item->{host_name},$item->{host_name};
 		$previous_host=$item->{host_name};
 	} else {
 		print "<TD>";
@@ -167,7 +507,7 @@ foreach my $item (@result) {
 	# http://localhost/nagios/cgi-bin/extinfo.cgi?type=2&host=localhost&service=Embedded%20Perl%20Check
 	if (param('qtype') eq "service") {
 		print "<TD CLASS='status$bg'>";
-		printf "<A HREF=%sextinfo.cgi?type=2&host=%s&service=%s>%s",$CGI_BIN,$item->{host_name},
+		printf "<A HREF=%s/extinfo.cgi?type=2&host=%s&service=%s>%s",$CGI_BIN,$item->{host_name},
 			escape($item->{service_description}),$item->{service_description};
 		print "</TD>";
 	}
@@ -176,10 +516,15 @@ foreach my $item (@result) {
 	print "<TD CLASS='status$fg'>", $state, "</TD>";
 
 	#--- 4. print query field
-	if (param('qfield') ne "plugin_output") {
-		printf "<TD CLASS=\'status$bg\' %s>%s</TD>", 
-			($ftype eq "TIMESTAMP") ? sprintf("title=\'%s\'",timestamp($item->{param('qfield')})) : "", 
-			$item->{param('qfield')};
+	for (my $i=0,my %shown=();$i<param('nqueries');$i++) {
+		if (param('qfield'.$i) ne "plugin_output") {
+			if (!$shown{param('qfield'.$i)}) {
+				printf "<TD CLASS=\'status$bg\' %s>%s</TD>", 
+					($ftype[$i] eq "TIMESTAMP") ? sprintf("title=\'%s\'",timestamp($item->{param('qfield'.$i)})) : "", 
+					$item->{param('qfield'.$i)};
+				$shown{param('qfield'.$i)}++;
+			}
+		}
 	}
 
 	#--- 5. print plugin_output anyway
@@ -190,6 +535,7 @@ foreach my $item (@result) {
 }
 print "</TABLE>";
 print end_html;
+alarm(0);
 
 #---
 #--- print nagios like timestamp
@@ -223,10 +569,24 @@ sub get_fields {
 	}
 }
 
+sub get_field_type {
+	my ($type,$field)=@_;
+	#print "get_field_type - type:$type field:$field field_type:".$$statusfields{$type}{$field}."<br>";
+	#--- no field defined: then default setting 'plugin_output' -> "STRING" is set.
+	if ($field eq "") {
+		return "STRING";
+	#--- found field type? then return it
+	} elsif (defined($$statusfields{$type}{$field})) {
+		return $$statusfields{$type}{$field};
+	#--- nothing found: return UNKNOWN
+	} else {
+		return "UNKNOWN";
+	}
+}
 #---
 #--- get field_type from status.dat
 #---
-sub get_field_type {
+sub get_field_type_old {
 	my ($type,$field)=@_;
 	#print " DEBUG: looking for field:$field type:$type<br> ";
 	open(DAT,$STATUSDAT) || die "Cannot open $STATUSDAT:$!";

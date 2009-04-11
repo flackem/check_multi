@@ -1,5 +1,7 @@
 
 ===== Changelog =====
+	* status_query.cgi now with multiple combined queries
+	* nagios_status.cgi renamed to status_query.cgi
 	* added nagios_status.cgi to contrib directory, queries for all and everything ;)
 	* added option to provide multi output also in status cgi view, thx Sascha
 	* added LWP for reading config file remotely (http://hostname/path/to/configfile)
