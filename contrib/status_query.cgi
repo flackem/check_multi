@@ -72,7 +72,7 @@ my $statusfields={
         check_interval                           => "NUMERICAL",
         check_latency                            => "NUMERICAL",
         check_options                            => "NUMERICAL",
-        check_period                             => "NUMERICAL",
+        check_period                             => "STRING",
         check_type                               => "NUMERICAL",
         current_attempt                          => "NUMERICAL",
         current_event_id                         => "NUMERICAL",
@@ -128,7 +128,7 @@ my $statusfields={
         check_interval                           => "NUMERICAL",
         check_latency                            => "NUMERICAL",
         check_options                            => "NUMERICAL",
-        check_period                             => "NUMERICAL",
+        check_period                             => "STRING",
         check_type                               => "NUMERICAL",
         current_attempt                          => "NUMERICAL",
         current_event_id                         => "NUMERICAL",
@@ -177,6 +177,37 @@ my $statusfields={
         state_type                               => "NUMERICAL",
   },
 };
+my $JSCRIPT=<<EOJSCRIPT;
+function check_value(string,type) {
+	if (type=="NUMERICAL") {
+	        for(var i=0;i<val.length;i++){
+			if(!isNumerical(val.charAt(i))){
+				alert(string + ' is not numerical!');
+				return false;
+			}
+		}
+	} else if (type=="TIMEDATE") {
+		if (string.length > 10) {
+			alert(string + ' exceeds maximum length of 10 digits!');
+			return false;
+		}
+	        for(var i=0;i<val.length;i++){
+			if(!isNumerical(val.charAt(i))){
+				alert(string + ' is not numerical!');
+				return false;
+			}
+		}
+	}
+	alert(string + ' is OK - ' + type + ' - ' + string.length);
+	return true;
+}
+function isNumeric(val){
+        return(parseFloat(val,10)==(val*1));
+}
+EOJSCRIPT
+my $PSCRIPT=<<EOPSCRIPT;
+	print ">>>$$<<<";
+EOPSCRIPT
 
 #-----------------------------------------------------------------------------
 #--- Main --------------------------------------------------------------------
@@ -189,20 +220,20 @@ alarm(10);
 #--- print HTML header with nagios stylesheets
 print header(
 	-target=>'main',	# frame target for Nagios
+	-expires=>'now',	# do not cache results
 );
 print "<LINK REL='stylesheet' TYPE='text/css' HREF='$NAGIOS_URL/stylesheets/common.css'>";
 print "<LINK REL='stylesheet' TYPE='text/css' HREF='$NAGIOS_URL/stylesheets/status.css'>";
 print start_html(
 	-title=>'Nagios Query',
 	-author=>'Matthias.Flacke@gmx.de',
-	-base=>'true',
 	-target=>'main',
 	-meta=>{
-		'copyright'=>'2008-2009 Matthias Flacke'
+		'copyright'=>'2008-2009 Matthias Flacke',
 	},
-	-noscript=>"No javascript enabled - this CGI needs javascript!",
+	-script=>$JSCRIPT,
+	-xbase=>url,
 );
-
 #--- if statusdat parameter is set, take it as file path
 if (defined(param('statusdat')) && param('statusdat')) {
 	if (-f param('statusdat')) {
@@ -214,26 +245,14 @@ if (defined(param('statusdat')) && param('statusdat')) {
 
 #--- create form
 print hr;
-print start_form(-target=>'main');
+print start_multipart_form(
+	-target=>'main',
+);
 print hidden(-name=>'nqueries',-default=>1);
 param('nqueries',1) if (param('nqueries')<1);
+print hidden(-name=>'sort_order',-default=>1);
+param('sort_order',1) if (param('sort_order') != 1 && param('sort_order') != 0);
 print "<table>";
-print "<SCRIPT LANGUAGE='JavaScript'> 
-	function Toggle(node) { 
-		if (node.nextSibling.style.display == 'none') { 
-			if (node.childNodes.length > 0) {
-				 node.childNodes.item(0).replaceData(0,1,String.fromCharCode(8211))
-			} 
-			node.nextSibling.style.display = 'block' 
-		} else { 
-			if (node.childNodes.length > 0) { 
-				node.childNodes.item(0).replaceData(0,1,'+')
-			}
-			node.nextSibling.style.display = 'none' 
-		}
-	}
-</SCRIPT>";
-
 #--- loop over number of queries
 for (my $i=0;$i<param('nqueries');$i++) {
 
@@ -263,7 +282,7 @@ for (my $i=0;$i<param('nqueries');$i++) {
 			-name=>'qtype',
 			-values=>['service','host'],
 			-default=>'service',
-			-onChange=>'this.form.qexpr'.$i.'.value="";this.form.qfield'.$i.'.value="plugin_output";this.form.qop'.$i.'.value="=~";this.form.submit();'
+			-onChange=>'this.form.qexpr'.$i.'.valuea\'\';this.form.qfield'.$i.'.value=\'plugin_output\';this.form.qop'.$i.'.value=\'=~\';this.form.submit();'
 		);
 		param('qtype',"service") if (param('qtype') eq "");
 		print "</td>";
@@ -280,7 +299,7 @@ for (my $i=0;$i<param('nqueries');$i++) {
 		-name=>"qfield$i",
 		-values=>$fields->[$i],
 		-default=>'plugin_output',
-		-onChange=>'this.form.qexpr'.$i.'.value="";this.form.submit();'
+		-onChange=>'this.form.qexpr'.$i.'.value=\'\';this.form.submit();'
 	);
 	param('qfield'.$i,"plugin_output") if (param('qfield'.$i) eq "");
 	print "</td>";
@@ -293,7 +312,7 @@ for (my $i=0;$i<param('nqueries');$i++) {
 	print popup_menu(
 		-name=>"qop$i",
 		-values=>$opref[$i],
-		-onChange=>'this.form.qexpr'.$i.'.value="";this.form.submit();'
+		-onChange=>'this.form.qexpr'.$i.'.value=\'\';this.form.submit();'
 	);
 	param('qop'.$i,$ops->{"STRING"}) if (param('qop'.$i) eq "");
 	print "</td>";
@@ -302,7 +321,9 @@ for (my $i=0;$i<param('nqueries');$i++) {
 	print "<td>";
 	print textfield(
 		-name=>"qexpr$i",
-		-default=>''
+		-default=>'',
+		-size=>20,
+		-maxlength=>($ftype[$i] eq "TIMESTAMP") ? 10 : ($ftype[$i] eq "NUMERICAL") ? 15 : 40,
 	);
 	print "</td>";
 
@@ -319,7 +340,12 @@ for (my $i=0;$i<param('nqueries');$i++) {
 		}
 
 		#--- 7. at last: submit button in last line
-		print "<td>",submit(-name=>'Submit query'),"</td>";
+		print "<td>";
+		print submit(
+			-name=>'Submit query',
+			-onSubmit=>'if (!check_value(this.form.qexpr'.$i.'.value,"'.$ftype[$i].'")) { this.form.qexpr'.$i.'.value=\'\'; }',
+		);
+		print "</td>";
 		#--- multiple rows? add radiobutton in the last line to query AND or OR
 		if ($i>0) {
 			#print "</tr><td>nqueries:".param('nqueries')."</td><td></td><td></td><td></td>";
@@ -440,12 +466,23 @@ if (param('qany_or_all') eq "match ALL expressions") {
 
 #--- 2. fields from last to first
 for (my $i=param('nqueries');$i>=0;$i--){
-	#--- string comparison
-	if ($ftype[$i] eq "STRING") {
-		@result=sort {uc($a->{param('qfield'.$i)}) cmp uc($b->{param('qfield'.$i)})} @result;
-	#--- numeric or timestamp comparison
+	#print "sort_order:" . param('sort_order')."<br>";
+	if (param('sort_order')==1) {
+		#--- string comparison
+		if ($ftype[$i] eq "STRING") {
+			@result=sort {uc($a->{param('qfield'.$i)}) cmp uc($b->{param('qfield'.$i)})} @result;
+		#--- numeric or timestamp comparison
+		} else {
+			@result=sort {$a->{param('qfield'.$i)} <=> $b->{param('qfield'.$i)}} @result;
+		}
 	} else {
-		@result=sort {$a->{param('qfield'.$i)} <=> $b->{param('qfield'.$i)}} @result;
+		#--- string comparison
+		if ($ftype[$i] eq "STRING") {
+			@result=sort {uc($b->{param('qfield'.$i)}) cmp uc($a->{param('qfield'.$i)})} @result;
+		#--- numeric or timestamp comparison
+		} else {
+			@result=sort {$b->{param('qfield'.$i)} <=> $a->{param('qfield'.$i)}} @result;
+		}
 	}
 }
 
@@ -477,7 +514,14 @@ print "<TH class='status'>Service</TH>" if (param('qtype') eq "service");
 print "<TH class='status'>State</TH>";
 for (my $i=0,my %shown=();$i<param('nqueries');$i++) {
 	if (!$shown{param('qfield'.$i)}) {
-		print "<TH class='status'>" . param('qfield'.$i) . "</TH>" if (param('qfield'.$i) ne "plugin_output");
+		if (param('qfield'.$i) ne "plugin_output") {
+			print "<TH class='status'>" . param('qfield'.$i);
+			my $querystring=url(-path_info=>1,-query=>1);
+			$querystring=~s/;sort_order=[01]//g;
+			print "<A HREF='".$querystring.";sort_order=0;"."'><IMG SRC='/nagios/images/down.gif' BORDER=0'>";
+			print "<A HREF='".$querystring.";sort_order=1;"."'><IMG SRC='/nagios/images/up.gif' BORDER=0'>";
+			print "</TH>";
+		}
 		$shown{param('qfield'.$i)}++;
 	}
 }
@@ -519,9 +563,11 @@ foreach my $item (@result) {
 	for (my $i=0,my %shown=();$i<param('nqueries');$i++) {
 		if (param('qfield'.$i) ne "plugin_output") {
 			if (!$shown{param('qfield'.$i)}) {
-				printf "<TD CLASS=\'status$bg\' %s>%s</TD>", 
-					($ftype[$i] eq "TIMESTAMP") ? sprintf("title=\'%s\'",timestamp($item->{param('qfield'.$i)})) : "", 
-					$item->{param('qfield'.$i)};
+				printf "<TD CLASS=\'status$bg\' align=%s title=%s>%s</TD>", 
+					($ftype[$i] eq "STRING") ? "left" : "right",
+					#($ftype[$i] eq "TIMESTAMP") ? sprintf("title=\'%s\'",timestamp($item->{param('qfield'.$i)})) : "", 
+					$item->{param('qfield'.$i)},
+					($ftype[$i] eq "TIMESTAMP") ? sprintf("%s",timestamp($item->{param('qfield'.$i)})) : $item->{param('qfield'.$i)}; 
 				$shown{param('qfield'.$i)}++;
 			}
 		}
