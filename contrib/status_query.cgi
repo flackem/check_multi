@@ -104,7 +104,7 @@ my $statusfields={
         max_attempts                             => "NUMERICAL",
         modified_attributes                      => "NUMERICAL",
         next_check                               => "TIMESTAMP",
-        next_notification                        => "NUMERICAL",
+        next_notification                        => "TIMESTAMP",
         no_more_notifications                    => "NUMERICAL",
         notification_period                      => "STRING",
         notifications_enabled                    => "NUMERICAL",
@@ -159,7 +159,7 @@ my $statusfields={
         max_attempts                             => "NUMERICAL",
         modified_attributes                      => "NUMERICAL",
         next_check                               => "TIMESTAMP",
-        next_notification                        => "NUMERICAL",
+        next_notification                        => "TIMESTAMP",
         no_more_notifications                    => "NUMERICAL",
         notification_period                      => "NUMERICAL",
         notifications_enabled                    => "NUMERICAL",
@@ -232,6 +232,7 @@ print start_html(
 		'copyright'=>'2008-2009 Matthias Flacke',
 	},
 	-script=>$JSCRIPT,
+	-base=>'target="main"',
 	-xbase=>url,
 );
 #--- if statusdat parameter is set, take it as file path
@@ -253,6 +254,7 @@ param('nqueries',1) if (param('nqueries')<1);
 print hidden(-name=>'sort_order',-default=>1);
 param('sort_order',1) if (param('sort_order') != 1 && param('sort_order') != 0);
 print "<table>";
+
 #--- loop over number of queries
 for (my $i=0;$i<param('nqueries');$i++) {
 
@@ -312,7 +314,7 @@ for (my $i=0;$i<param('nqueries');$i++) {
 	print popup_menu(
 		-name=>"qop$i",
 		-values=>$opref[$i],
-		-default=>$ops->{"STRING"},
+		#-default=>@{$opref[$i]}->[0],
 		-onChange=>'this.form.qexpr'.$i.'.value=\'\';this.form.submit();'
 	);
 	param('qop'.$i,$ops->{"STRING"}) if (param('qop'.$i) eq "");
@@ -324,7 +326,7 @@ for (my $i=0;$i<param('nqueries');$i++) {
 		-name=>"qexpr$i",
 		-default=>'',
 		-size=>20,
-		-maxlength=>($ftype[$i] eq "TIMESTAMP") ? 10 : ($ftype[$i] eq "NUMERICAL") ? 20 : 40,
+		#-maxlength=>($ftype[$i] eq "TIMESTAMP") ? 10 : ($ftype[$i] eq "NUMERICAL") ? 20 : 40,
 	);
 	print "</td>";
 
@@ -355,7 +357,9 @@ for (my $i=0;$i<param('nqueries');$i++) {
 			print radio_group(
 				-name=>'qany_or_all',
 				-values=>['match ALL expressions','match ANY expression'],
-				-default=>'match ALL expressions'
+				-default=>'match ALL expressions',
+				-rows=>1,
+				-columns=>2,
 			);
 			param('qany_or_all',"match ALL expressions") if (param('qany_or_all') eq "");
 			print "</td>";
@@ -424,12 +428,12 @@ if (param('qany_or_all') eq "match ALL expressions") {
 	my %count=();
 	for (my $i=1;$i<param('nqueries');$i++) {
 		if (param('qtype') eq "host") {
-			for (my $j=0;$j<$#{$q[$i]};$j++) {
+			for (my $j=0;$j<=$#{$q[$i]};$j++) {
 				$count{$q[$i][$j]->{host_name}}++;
 				#print $q[$i][$j]->{host_name}.":".$count{$q[$i][$j]->{host_name}}."<br>";
 			}
 		} else {
-			for (my $j=0;$j<$#{$q[$i]};$j++) {
+			for (my $j=0;$j<=$#{$q[$i]};$j++) {
 				$count{$q[$i][$j]->{host_name}."_".$q[$i][$j]->{service_description}}++;
 				#print $q[$i][$j]->{host_name}."_".$q[$i][$j]->{service_description}.":".$count{$q[$i][$j]->{host_name}."_".$q[$i][$j]->{service_description}}."<br>";
 			}
@@ -447,7 +451,7 @@ if (param('qany_or_all') eq "match ALL expressions") {
 } else {
 	my %count=();
 	for (my $i=0;$i<param('nqueries');$i++) {
-		for (my $j=0;$j<$#{$q[$i]};$j++) {
+		for (my $j=0;$j<=$#{$q[$i]};$j++) {
 			#--- only copy ONE occurence of package to target array
 			if (param('qtype') eq "host") {
 				#print "pushing $q[$i][$j]->{host_name}<br>";
@@ -502,7 +506,7 @@ for (my $i=1;$i<param('nqueries');$i++) {
 	printf "%s %s %s %s ", 
 		param('qany_or_all') eq "match ALL expressions" ? "AND" : "OR",
 		param('qfield'.$i),
-		param('qop'.$i),
+		param('qop'.$i)=~/ARRAY/ ? param_fetch('qop'.$i)->[0][0] : param('qop'.$i),
 		param('qexpr'.$i);
 }
 print "</A>";
@@ -516,7 +520,10 @@ print "<TH class='status'>State</TH>";
 for (my $i=0,my %shown=();$i<param('nqueries');$i++) {
 	if (!$shown{param('qfield'.$i)}) {
 		if (param('qfield'.$i) ne "plugin_output") {
-			print "<TH class='status'>" . param('qfield'.$i);
+			#--- replace '_' by ' ' to provide header wrapping
+			my $field_name=param('qfield'.$i); $field_name=~s/_/ /g;
+			print "<TH class='status'>" . $field_name;
+			#print "<TH class='status'>" . param('qfield'.$i);
 			my $querystring=url(-path_info=>1,-query=>1);
 			$querystring=~s/;sort_order=[01]//g;
 			print "<A HREF='".$querystring.";sort_order=0;"."'><IMG SRC='/nagios/images/down.gif' BORDER=0'>";
@@ -581,6 +588,10 @@ foreach my $item (@result) {
 
 }
 print "</TABLE>";
+print hr;
+print "<object data='../query_examples.html' width='100%' height=768>";
+print "<p>Either your browser does not support object data or you did not copy the query_examples.html into /path/to/nagios/share.<p>You can see the embedded page <a href='../query_examples.html'>query_examples.html here</a>.";
+print "</object>";
 print end_html;
 alarm(0);
 
@@ -717,6 +728,7 @@ sub get_status {
 				}
 			}
 			if ($found) {
+				#print "pushed $r{host_name}-$r{service_description}<p>\n";
 				push @result,\%r;
 			}
 		} else {

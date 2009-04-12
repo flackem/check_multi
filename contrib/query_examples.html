@@ -1,0 +1,69 @@
+<!-- 
+
+Example queries
+for use with query_status.cgi
+
+Copyright (c) 2007 Matthias Flacke (matthias.flacke at gmx.de)
+
+This program is free software; you can redistribute it and/or
+modify it under the terms of the GNU General Public License
+as published by the Free Software Foundation; either version 2
+of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+
+$Id$
+
+Copy this file into /path/to/nagios/share and start the CGI via
+http://<hostname>/nagios/cgi-bin/status_query.cgi (YMMV)
+
+ -->
+
+<html><body>
+<table border=0><tr align='left'><th>Host</th><th>Service</th></tr>
+<tr valign='top'><td>
+
+<li><a href='cgi-bin/status_query.cgi?nqueries=3;sort_order=1;remove0=0;qtype=host;qfield0=current_state;qop0=%3D%3D;qexpr0=1;remove1=0;qfield1=current_state;qop1=%3D%3D;qexpr1=2;remove2=0;qfield2=current_state;qop2=%3D%3D;qexpr2=3;Submit%20query=Submit%20query;qany_or_all=match%20ANY%20expression;.cgifields=qany_or_all' target='main'>Hosts with non-OK state</a>
+<li><a href='cgi-bin/status_query.cgi?nqueries=1;sort_order=1;remove0=0;qtype=host;qfield0=check_execution_time;qop0=%3E;qexpr0=1;remove1=0;qfield1=check_type;qop1=%3D%3D;qexpr1=0;qany_or_all=match%20ALL%20expressions;.cgifields=qany_or_all' target='main'>Slow hosts (execution time above 1s)</a>
+<li><a href='cgi-bin/status_query.cgi?nqueries=1;sort_order=1;remove0=0;qtype=host;qfield0=check_latency;qop0=%3E;qexpr0=5;Submit%20query=Submit%20query ' target='main'>Late hosts (latency above 5s)</a>
+<li><a href='cgi-bin/status_query.cgi?nqueries=2;sort_order=1;remove0=0;qtype=host;qfield0=active_checks_enabled;qop0=%21%3D;qexpr0=1;remove1=0;qfield1=check_type;qop1=%3D%3D;qexpr1=0;Submit%20query=Submit%20query;qany_or_all=match%20ALL%20expressions;.cgifields=qany_or_all' target='main'>Active checks where checking was disabled</a>
+<li><a href='cgi-bin/status_query.cgi?nqueries=1;sort_order=1;remove0=0;qtype=host;qfield0=notifications_enabled;qop0=%3D%3D;qexpr0=0;Submit%20query=Submit%20query' target='main'>Hosts with notification disabled</a>
+<li><a href='cgi-bin/status_query.cgi?nqueries=1;sort_order=1;remove0=0;qtype=host;qfield0=problem_has_been_acknowledged;qop0=%3D%3D;qexpr0=1;Submit%20query=Submit%20query' target='main'>Hosts being acknowledged</a>
+<li><a href='cgi-bin/status_query.cgi?nqueries=1;sort_order=1;remove0=0;qtype=host;qfield0=obsess_over_host;qop0=%3D%3D;qexpr0=0;Submit%20query=Submit%20query' target='main'>Hosts not being obsessed</a>
+<li><a href='cgi-bin/status_query.cgi?nqueries=1;sort_order=1;remove0=0;qtype=host;qfield0=scheduled_downtime_depth;qop0=%3D%3D;qexpr0=1;Submit%20query=Submit%20query' target='main'>Hosts with scheduled downtimes</a>
+<li><a href='cgi-bin/status_query.cgi?nqueries=1;sort_order=1;remove0=0;qtype=host;qfield0=last_hard_state_change;qop0=%3E;qexpr0=time-24%2A60%2A60;Submit%20query=Submit%20query' target='main'>Hosts with hard state changes last day</a>
+<li><a href='cgi-bin/status_query.cgi?nqueries=1;sort_order=1;remove0=0;qtype=host;qfield0=last_hard_state_change;qop0=%3E;qexpr0=time-7%2A24%2A60%2A60;Submit%20query=Submit%20query' target='main'>Hosts with hard state changes last week</a>
+<li><a href='cgi-bin/status_query.cgi?nqueries=1;sort_order=1;remove0=0;qtype=host;qfield0=last_notification;qop0=%3E;qexpr0=time-24%2A60%2A60;Submit%20query=Submit%20query' target='main'>Hosts with notification last day</a>
+<li><a href='cgi-bin/status_query.cgi?nqueries=3;sort_order=1;remove0=0;qtype=host;qfield0=flap_detection_enabled;qop0=%3D%3D;qexpr0=1;remove1=0;qfield1=is_flapping;qop1=%3D%3D;qexpr1=1;remove2=0;qfield2=percent_state_change;qop2=%3E;qexpr2=0;Submit%20query=Submit%20query;qany_or_all=match%20ALL%20expressions;.cgifields=qany_or_all' target='main'>Hosts flapping</a>
+<li><a href='cgi-bin/status_query.cgi?nqueries=1;sort_order=1;remove0=0;qtype=host;qfield0=last_notification;qop0=%3E;qexpr0=time-7%2A24%2A60%2A60;Submit%20query=Submit%20query' target='main'>Hosts with notification last week</a>
+<li><a href='cgi-bin/status_query.cgi?nqueries=1;sort_order=1;remove0=0;qtype=host;qfield0=plugin_output;qop0=%3D~;qexpr0=%28no%20output%20returned%20from%20plugin%29;Submit%20query=Submit%20query' target='main'>(no output returned from plugin)</a>
+<li><a href='cgi-bin/status_query.cgi?nqueries=3;sort_order=1;remove0=0;qtype=host;qfield0=state_type;qop0=%3D%3D;qexpr0=0;remove1=0;qfield1=current_attempt;qop1=%3E;qexpr1=0;remove2=0;qfield2=max_attempts;qop2=%3E;qexpr2=0;Submit%20query=Submit%20query;qany_or_all=match%20ALL%20expressions;.cgifields=qany_or_all' target='main'>Hosts in SOFT state (with current and max attempt)</a>
+
+</td><td>
+
+<li><a href='cgi-bin/status_query.cgi?nqueries=3;sort_order=1;remove0=0;qtype=service;qfield0=current_state;qop0=%3D%3D;qexpr0=1;remove1=0;qfield1=current_state;qop1=%3D%3D;qexpr1=2;remove2=0;qfield2=current_state;qop2=%3D%3D;qexpr2=3;Submit%20query=Submit%20query;qany_or_all=match%20ANY%20expression;.cgifields=qany_or_all' target='main'>Services with non-OK state</a>
+<li><a href='cgi-bin/status_query.cgi?nqueries=1;sort_order=1;remove0=0;qtype=service;qfield0=check_execution_time;qop0=%3E;qexpr0=5;remove1=0;qfield1=check_type;qop1=%3D%3D;qexpr1=0;qany_or_all=match%20ALL%20expressions;.cgifields=qany_or_all' target='main'>Slow services (execution time above 5s)</a>
+<li><a href='cgi-bin/status_query.cgi?nqueries=1;sort_order=1;remove0=0;qtype=service;qfield0=check_latency;qop0=%3E;qexpr0=10;Submit%20query=Submit%20query ' target='main'>Late services (latency above 10s)</a>
+<li><a href='cgi-bin/status_query.cgi?nqueries=2;sort_order=1;remove0=0;qtype=service;qfield0=active_checks_enabled;qop0=%21%3D;qexpr0=1;remove1=0;qfield1=check_type;qop1=%3D%3D;qexpr1=0;Submit%20query=Submit%20query;qany_or_all=match%20ALL%20expressions;.cgifields=qany_or_all' target='main'>Active checks where checking was disabled</a>
+<li><a href='cgi-bin/status_query.cgi?nqueries=1;sort_order=1;remove0=0;qtype=service;qfield0=notifications_enabled;qop0=%3D%3D;qexpr0=0;Submit%20query=Submit%20query' target='main'>Services with notification disabled</a>
+<li><a href='cgi-bin/status_query.cgi?nqueries=1;sort_order=1;remove0=0;qtype=service;qfield0=problem_has_been_acknowledged;qop0=%3D%3D;qexpr0=1;Submit%20query=Submit%20query' target='main'>Services being acknowledged</a>
+<li><a href='cgi-bin/status_query.cgi?nqueries=1;sort_order=1;remove0=0;qtype=service;qfield0=obsess_over_service;qop0=%3D%3D;qexpr0=0;Submit%20query=Submit%20query' target='main'>Services not being obsessed</a>
+<li><a href='cgi-bin/status_query.cgi?nqueries=1;sort_order=1;remove0=0;qtype=service;qfield0=scheduled_downtime_depth;qop0=%3D%3D;qexpr0=1;Submit%20query=Submit%20query' target='main'>Services with scheduled downtimes</a>
+<li><a href='cgi-bin/status_query.cgi?nqueries=1;sort_order=1;remove0=0;qtype=service;qfield0=last_hard_state_change;qop0=%3E;qexpr0=time-24%2A60%2A60;Submit%20query=Submit%20query' target='main'>Services with hard state changes last day</a>
+<li><a href='cgi-bin/status_query.cgi?nqueries=1;sort_order=1;remove0=0;qtype=service;qfield0=last_hard_state_change;qop0=%3E;qexpr0=time-7%2A24%2A60%2A60;Submit%20query=Submit%20query' target='main'>Services with hard state changes last week</a>
+<li><a href='cgi-bin/status_query.cgi?nqueries=1;sort_order=1;remove0=0;qtype=service;qfield0=last_notification;qop0=%3E;qexpr0=time-24%2A60%2A60;Submit%20query=Submit%20query' target='main'>Services with notification last day</a>
+<li><a href='cgi-bin/status_query.cgi?nqueries=3;sort_order=1;remove0=0;qtype=service;qfield0=flap_detection_enabled;qop0=%3D%3D;qexpr0=1;remove1=0;qfield1=is_flapping;qop1=%3D%3D;qexpr1=1;remove2=0;qfield2=percent_state_change;qop2=%3E;qexpr2=0;Submit%20query=Submit%20query;qany_or_all=match%20ALL%20expressions;.cgifields=qany_or_all' target='main'>Services flapping</a>
+<li><a href='cgi-bin/status_query.cgi?nqueries=1;sort_order=1;remove0=0;qtype=service;qfield0=last_notification;qop0=%3E;qexpr0=time-7%2A24%2A60%2A60;Submit%20query=Submit%20query' target='main'>Services with notification last week</a>
+<li><a href='cgi-bin/status_query.cgi?nqueries=1;sort_order=1;remove0=0;qtype=service;qfield0=plugin_output;qop0=%3D~;qexpr0=%28no%20output%20returned%20from%20plugin%29;Submit%20query=Submit%20query' target='main'>(no output returned from plugin)</a>
+<li><a href='cgi-bin/status_query.cgi?nqueries=3;sort_order=1;remove0=0;qtype=service;qfield0=state_type;qop0=%3D%3D;qexpr0=0;remove1=0;qfield1=current_attempt;qop1=%3E;qexpr1=0;remove2=0;qfield2=max_attempts;qop2=%3E;qexpr2=0;Submit%20query=Submit%20query;qany_or_all=match%20ALL%20expressions;.cgifields=qany_or_all' target='main'>Services in SOFT state (with current and max attempt)</a>
+<li><a href='' target='main'></a>
+</td></tr>
+</table>
+</body></html>
