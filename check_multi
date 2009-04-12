@@ -175,6 +175,7 @@ my $check_multi={
 
 sub process_parameters {
 
+	my @SAVEARGV=@ARGV;
 	#--- check version of modules
 	if ($Getopt::Long::VERSION < 2.27) {
 		print "Error: module Getopt::Long version $Getopt::Long::VERSION is too old, minimum version is 2.27\n";
@@ -411,6 +412,12 @@ sub process_parameters {
 		print "\n";
 		return $UNKNOWN;
 	}
+
+	#--- do some debug output
+	DEBUG2("\n$MYSELF".' $Id $');
+	DEBUG2("Command line: $0 ".join(' ',@SAVEARGV));
+	#DEBUG2("User: ".getlogin()." ($>)");
+
 	return $OK;
 }
 
@@ -1185,7 +1192,7 @@ sub report {
 	DEBUG1("-" x 80);
 	for ($no=1;$no<=$#cmds;$no++) {
 		DEBUG1(sprintf "[%2.d] %-${maxcmdlen}s %6.4fs %3d %s", $no, $cmds[$no]{name}, $cmds[$no]{runtime}, $cmds[$no]{rc}, $cmds[$no]{output});
-		DEBUG2(sprintf "%s%-12s%s", ' ' x ($maxcmdlen+6), $cmds[$no]{type}, $cmds[$no]{command});
+		DEBUG1(sprintf "%s%-12s%s", ' ' x ($maxcmdlen+6), $cmds[$no]{type}, $cmds[$no]{command});
 	}
 
 	#--- print state settings and RC evaluation result
@@ -1237,9 +1244,11 @@ sub report_html {
 
 	#--- collapse of contents with javascript
 	#--- conditions: 1. option is set and 2. multi output is *not* in status view
-	if ($opt{set}{collapse} == 1 && ! $opt{set}{extinfo_in_status}) {
+	#if ($opt{set}{collapse} == 1 && ! $opt{set}{extinfo_in_status}) {
+	if ($opt{set}{collapse} == 1) {
 		$output.="<SCRIPT LANGUAGE='JavaScript'> function Toggle(node) { if (node.nextSibling.style.display == 'none') { if (node.childNodes.length > 0) { node.childNodes.item(0).replaceData(0,1,String.fromCharCode(8211)) } node.nextSibling.style.display = 'block' } else { if (node.childNodes.length > 0) { node.childNodes.item(0).replaceData(0,1,'+') } node.nextSibling.style.display = 'none' } } </SCRIPT>";
-		if ($rc{top} == $OK && $ENV{"MULTI_PPID"} != $$) {
+		if (($rc{top} == $OK && $ENV{"MULTI_PPID"} != $$) ||
+		    ($rc{top} == $OK && $opt{set}{extinfo_in_status})) {
 			$output.="<A onClick='Toggle(this)' ".$opt{set}{style_plus_minus}.">+</A>";
 			$output.="<DIV style='display:none'>";
 		} else {
@@ -1547,7 +1556,7 @@ sub error_in_perfdata {
 			$perfdata=$3;
 			DEBUG3("error_in_perfdata: parsed perfdata -'label':$1 data:$2 rest:$3");	
 		#--- label w/o \'
-		} elsif ($perfdata=~/^\s*([^=]+)=([^ ]+)(.*)/) {
+		} elsif ($perfdata=~/^\s*([^\s=']+)=([^ ]+)(.*)/) {
 			$label=$1;
 			$data=$2;
 			$perfdata=$3;
@@ -1627,7 +1636,6 @@ install_signal_handler(\install_signal_handler, "INT", "TERM", "QUIT", "HUP");
 exit $UNKNOWN if (&process_parameters != $OK);
 
 #--- don't run this as root ;-)
-DEBUG3("main: userid=$>");
 add_error("please don't run plugins as root!") if ($> == 0);
 
 #--- parse command file (nrpe format)
