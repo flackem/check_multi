@@ -1402,6 +1402,9 @@ sub report_html {
 		$output.="</div>";
 	}
 	
+	#--- status_in_extinfo? escape newlines by '<br>'
+	$output=~s/\n/<br \/>/g if ($opt{set}{extinfo_in_status});
+
 	#--- last not least: output ;-)
 	print $output;
 }
