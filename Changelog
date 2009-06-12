@@ -1,5 +1,6 @@
 
 ===== Changelog =====
+	* added pnp_path (as replacement for action_url) and image_path, thx Amit Mor
 	* fixed html output for status_in_extinfo mode: <br /> instead of \n, thx Sascha
 	* added query_examples.html with sample queries
 	* status_query.cgi now with multiple combined queries

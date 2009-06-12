@@ -79,8 +79,6 @@ my %opt=(
 	"execute"	=> [],
 	"filename"	=> [],
 	"set"		=> {
-		# nagios action url, not used at the moment
-		action_url	=> "",
 		# update config file (if HTTP/FTP/etc) once a day (in seconds)
 		cmdfile_update_interval	=> 24*60*60,
 		# should check_multi collapse child check_multi checks per default?
@@ -98,6 +96,8 @@ my %opt=(
 		ignore_missing_cmd_file => 0,
 		# characters to cleanup from command files
 		illegal_chars	=> "\r",
+		# path to Nagios images
+		image_path	=> "/nagios/images",
 		# indentation character(s)
 		indent		=> " ",
 		# child checks indented?
@@ -112,6 +112,8 @@ my %opt=(
 		notes_url	=> "",
 		# create persistent data
 		persistent	=> 0,
+		# path to PNP cgis
+		pnp_path	=> "/nagios/pnp",
 		# report option, binary coded as sum of detail options
 		report		=> 13,
 		#
@@ -466,13 +468,13 @@ Options:
      1024: show notes_url
 -s, --set <option>=<value>
    <KEY>=<VALUE> - set multi variable \$<KEY>\$ to <VALUE>
-   action_url=<URL> - see Nagios action_url
    extinfo_in_status=(0|1) - show child checks also in Nagios status view (HTML)
    file_extension=<ext> - standard file extension for config files
    ignore_missing_cmd_file=(0|1) - don't complain if config file missing
    indent_label=(0|1) - indentation width is label (HTML)
    no_checks_rc=<RC> - which RC should be returned if no checks are defined, default:$opt{set}{no_checks_rc}
    notes_url=<URL> - see Nagios notes_url
+   pnp_path=<URL> - path to PNP CGIs
    suppress_perfdata=<tag1>[,<tag2>][,...] - don't provide perfdata for check tag1,tag2...
    target=<target> - frame target for action_url and notes_url
    tmp_dir=<directory> - path for temporary files
@@ -1277,9 +1279,11 @@ sub report_html {
 
 			my $hostname=($ENV{NAGIOS_HOSTNAME}) ? $ENV{NAGIOS_HOSTNAME} : `uname -n`; chomp($hostname);
 			DEBUG2("report_html: hostname is $hostname");
+			my $pnp_path=substitute_macros($opt{set}{pnp_path});
+			my $image_path=substitute_macros($opt{set}{image_path});
 			$output.=sprintf "<td nowrap>%s</td>", 
-				"<A HREF='/nagios/pnp/index.php?host=${hostname}&srv=$cmds[$no]{name}' TARGET=\'$opt{set}{target}\'>" . 
-				"<img src='/nagios/images/action.gif' width=20 height=20 border=0 align=top alt='Show performance chart for $hostname / $cmds[$no]{plugin}'></A>";
+				"<A HREF=\'$pnp_path/index.php?host=${hostname}&srv=$cmds[$no]{name}\' TARGET=\'$opt{set}{target}\'>" . 
+				"<img src=\'$image_path/action.gif\' width=20 height=20 border=0 align=top alt='Show performance chart for $hostname / $cmds[$no]{plugin}'></A>";
 		} else {
 			$output.="<td></td>";
 		}
@@ -1288,9 +1292,10 @@ sub report_html {
 			defined($opt{set}{notes_url}) &&
 			!$opt{set}{tag_notes_link}) {
 			my $notes_url=substitute_macros($opt{set}{notes_url});
+			my $image_path=substitute_macros($opt{set}{image_path});
 			$output.=sprintf "<td nowrap>%s</td>", 
 				"<A HREF=\'$notes_url\' TARGET=\'$opt{set}{target}\'>" . 
-				"<img src='/nagios/images/notes.gif' width=20 height=20 border=0 align=top alt='Show notes for $cmds[$no]{plugin}'></A>";
+				"<img src=\'$image_path/notes.gif\' width=20 height=20 border=0 align=top alt='Show notes for $cmds[$no]{plugin}'></A>";
 		} else {
 			$output.="<td></td>";
 		}
