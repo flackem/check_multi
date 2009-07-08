@@ -1,5 +1,7 @@
 
 ===== Changelog =====
+	* added PERFDATA_<tag> environment var: perfdata for child checks, thx Bjoern Becker
+	* underscore is now allowed tag character
 	* added pnp_path (as replacement for action_url) and image_path, thx Amit Mor
 	* fixed html output for status_in_extinfo mode: <br /> instead of \n, thx Sascha
 	* added query_examples.html with sample queries

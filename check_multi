@@ -471,10 +471,11 @@ Options:
    extinfo_in_status=(0|1) - show child checks also in Nagios status view (HTML)
    file_extension=<ext> - standard file extension for config files
    ignore_missing_cmd_file=(0|1) - don't complain if config file missing
+   image_path=/path/to/Nagios/imagefiles
    indent_label=(0|1) - indentation width is label (HTML)
    no_checks_rc=<RC> - which RC should be returned if no checks are defined, default:$opt{set}{no_checks_rc}
    notes_url=<URL> - see Nagios notes_url
-   pnp_path=<URL> - path to PNP CGIs
+   pnp_path=/path/to/PNP/CGIs
    suppress_perfdata=<tag1>[,<tag2>][,...] - don't provide perfdata for check tag1,tag2...
    target=<target> - frame target for action_url and notes_url
    tmp_dir=<directory> - path for temporary files
@@ -696,7 +697,7 @@ sub parse_lines {
 
 			#--- invalid characters found?
 			$name=substitute_macros($name);
-			if ($name!~/^[\w:-]+$/) {
+			if ($name!~/^[\w:-\_]+$/) {
 				if ($name=~/\$([^\$]+)\$/) {
 					add_error("parse_lines: tag $name invalid - macro \$$1\$ not found");
 				} else {
@@ -966,6 +967,11 @@ sub exec_command {
 		DEBUG2("exec_command: environment var MULTI_$cmds[$no]{name}=$cmds[$no]{output}");
 		$ENV{"MULTI_STATE_".$cmds[$no]{name}}="$cmds[$no]{rc}";
 		DEBUG2("exec_command: environment var MULTI_STATE_$cmds[$no]{name}=$cmds[$no]{rc}");
+		#--- suppress_perfdata set? ignore perfdata
+		if ($cmds[$no]{process_perfdata} && $cmds[$no]{performance}) {
+			$ENV{"MULTI_PERFDATA_".$cmds[$no]{name}}="$cmds[$no]{performance}";
+			DEBUG2("exec_command: environment var MULTI_PERFDATA_$cmds[$no]{name}=$cmds[$no]{performance}");
+		}
 	}
 	return $cmds[$no]{rc};
 }
