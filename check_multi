@@ -175,6 +175,10 @@ my $check_multi={
 #--- subs ----------------------------------------------------------------------
 #-------------------------------------------------------------------------------
 
+
+#---
+#--- process command line parameters
+#---
 sub process_parameters {
 
 	my @SAVEARGV=@ARGV;
@@ -204,116 +208,137 @@ sub process_parameters {
 		short_usage();
 		return $UNKNOWN;
 	}
+
+	#--- 3 debug levels: 1. verbose 2. detailed 3. programmers trace
 	*DEBUG1=($opt{set}{verbose}>=1) ? \&debug_message : sub {};
 	*DEBUG2=($opt{set}{verbose}>=2) ? \&debug_message : sub {};
 	*DEBUG3=($opt{set}{verbose}>=3) ? \&debug_message : sub {};
 
+	#--- -V(ersion) option
 	if ($opt{version}) {
 		print "$MYSELF: v$VERSION\n";
 		return $UNKNOWN;
 	}
+
+	#--- -h/--help shows long usage
 	if ($opt{help}) {
 		short_usage();
 		long_usage();
 		return $UNKNOWN;
 	}
+
+	#--- check_multi uses a temporary directory, per default /tmp/check_multi
+	#--- 1. create if not yet done
 	if (! -d "$opt{set}{tmp_dir}") {
 		mkdir "$opt{set}{tmp_dir}";
 		chmod oct("$opt{set}{tmp_dir_permissions}"), "$opt{set}{tmp_dir}";
 	}
+	#--- 2. check if tmp_dir is available
 	if (! -d "$opt{set}{tmp_dir}") {
 		print "Error: could not create tmp directory $opt{set}{tmp_dir} as user " . getpwuid($<) . "\n";
 		return $UNKNOWN;
+	#--- 3. and at last: it has to be writeable
 	} elsif (! -w "$opt{set}{tmp_dir}") {
 		print "Error: cannot write to tmp directory $opt{set}{tmp_dir} as user " . getpwuid($<) . "\n";
 		return $UNKNOWN;
 	}
+
+	#---
+	#--- getting commands - either per command file or per command parameter
+
+	#--- none of them? return UNKNOWN
 	if (! $opt{filename}[0] && ! $opt{execute}[0]) {
 		print "$MYSELF error: no config file(s) or command parameters specified\n";
 		short_usage();
 		return $UNKNOWN;
-	} else {
-		#--- if URL specified as filename: see if LWP::Simple is available
-		if (grep {/http|ftp/} @{$opt{filename}}) {
-			unless (eval "require LWP::Simple;1") {
-				print "$MYSELF error: http/ftp config file(s) specified, but no LWP::Simple module is available\n";
-				return $UNKNOWN;
-			} else {
-				$opt{set}{use_lwp_simple}=1;
-				DEBUG2("process_parameters: LWP::Simple loaded");
-			}
+	}
+
+	#--- if URL specified as filename: load LWP::Simple for retrieving command file
+	if (grep {/http|ftp/} @{$opt{filename}}) {
+		unless (eval "require LWP::Simple;1") {
+			print "$MYSELF error: http/ftp config file(s) specified, but no LWP::Simple module is available\n";
+			return $UNKNOWN;
+		} else {
+			$opt{set}{use_lwp_simple}=1;
+			DEBUG2("process_parameters: LWP::Simple loaded");
 		}
-		#--- loop over filename / URL / directory array
-		for (my $i=0;$i<@{$opt{filename}}; $i++) {
-			#--- filename URL found
-			if ($opt{filename}[$i]=~/\/\//) {
-				DEBUG2("http/ftp URL specified: $opt{filename}[$i]");
+	}
 
-				#--- LWP module NOT loaded?
- 				if (!$opt{set}{use_lwp_simple}) {
-					add_error("LWP::Simple module not available, could not get command file $opt{filename}[$i]");
-					next;
+	#--- loop over filename / URL / directory array
+	for (my $i=0;$i<@{$opt{filename}}; $i++) {
+
+		#--- 1. filename URL found
+		if ($opt{filename}[$i]=~/\/\//) {
+			DEBUG2("http/ftp URL specified: $opt{filename}[$i]");
+
+			#--- LWP module NOT loaded?
+ 			if (!$opt{set}{use_lwp_simple}) {
+				add_error("LWP::Simple module not available, could not get command file $opt{filename}[$i]");
+				next;
+			}
+			#--- split path components of URL
+			my ($host,$path,$file)=("","","");
+			if ($opt{filename}[$i]=~/.*\/\/([^\/]+)([\/]*.*)/) {
+				$host=$1; $path=$2;
+				if ($path=~/(.*)\/(.*$opt{set}{file_extension})/) {
+					$path=$1; $file=$2;
 				}
-				#--- split path components of URL
-        			my ($host,$path,$file)=("","","");
-        			if ($opt{filename}[$i]=~/.*\/\/([^\/]+)([\/]*.*)/) {
-                			$host=$1; $path=$2;
-                			if ($path=~/(.*)\/(.*$opt{set}{file_extension})/) {
-                        			$path=$1; $file=$2;
-                			}
-                			chop($path) if ($path && $path=~/\S+\/$/);
-                			$path=$1 if ($path && $path=~/\/(\S+)$/);
-					if ($path eq "" || $file eq "") {
-						print "$MYSELF error: empty path or filename specified in URL $opt{filename}[$i]\n";
-						return $UNKNOWN;
-					}
-					DEBUG2("URL:$opt{filename}[$i] hostname:$host path:$path file:$file");
-        			}
-				
-				#--- create directory to store saved config files
-				my $cmdfile_path="$opt{set}{tmp_dir}/$opt{set}{etc}/$host/$path";
-				`mkdir -p "$cmdfile_path"` if (! -d "$cmdfile_path");
+				chop($path) if ($path && $path=~/\S+\/$/);
+				$path=$1 if ($path && $path=~/\/(\S+)$/);
+				if ($path eq "" || $file eq "") {
+					print "$MYSELF error: empty path or filename specified in URL $opt{filename}[$i]\n";
+					return $UNKNOWN;
+				}
+				DEBUG2("URL:$opt{filename}[$i] hostname:$host path:$path file:$file");
+			}
+			
+			#--- create directory to store saved config files
+			my $cmdfile_path="$opt{set}{tmp_dir}/$opt{set}{etc}/$host/$path";
+			`mkdir -p "$cmdfile_path"` if (! -d "$cmdfile_path");
 
-				#--- use ctime to determine if config file should be updated after
-				#--- having reached cmdfile_update_interval
-				my $cmdfile_age=time-(stat("$cmdfile_path/$file"))[10] if (-f "$cmdfile_path/$file");
-				if (!-f "$cmdfile_path/$file" || 
-				    $cmdfile_age>$opt{set}{cmdfile_update_interval}) {
-					DEBUG2("$cmdfile_path/$file age is $cmdfile_age, greater than allowed interval $opt{set}{cmdfile_update_interval}");
-					my $RC=LWP::Simple::mirror($opt{filename}[$i],"$cmdfile_path/$file");
-					if (LWP::Simple::is_success($RC) || $RC == 304) {
-						DEBUG2("Mirroring $opt{filename}[$i] to $cmdfile_path/$file OK: RC $RC");
-						$opt{filename}[$i]="$cmdfile_path/$file";
-						`touch $opt{filename}[$i]`;
-					} else {
-						DEBUG2("Error: mirroring $opt{filename}[$i] to $cmdfile_path/$file failed: $RC");
-					}
-				} else {
-					DEBUG2("$opt{filename}[$i] is already downloaded $cmdfile_path/$file");
+			#--- use ctime to determine if config file should be updated after
+			#--- having reached cmdfile_update_interval
+			my $cmdfile_age=time-(stat("$cmdfile_path/$file"))[10] if (-f "$cmdfile_path/$file");
+			if (!-f "$cmdfile_path/$file" || 
+			    $cmdfile_age>$opt{set}{cmdfile_update_interval}) {
+				DEBUG2("$cmdfile_path/$file age is $cmdfile_age, greater than allowed interval $opt{set}{cmdfile_update_interval}");
+				my $RC=LWP::Simple::mirror($opt{filename}[$i],"$cmdfile_path/$file");
+				if (LWP::Simple::is_success($RC) || $RC == 304) {
+					DEBUG2("Mirroring $opt{filename}[$i] to $cmdfile_path/$file OK: RC $RC");
 					$opt{filename}[$i]="$cmdfile_path/$file";
+					`touch $opt{filename}[$i]`;
+				} else {
+					DEBUG2("Error: mirroring $opt{filename}[$i] to $cmdfile_path/$file failed: $RC");
 				}
-
-			#--- standard path found?
-			#--- check if filenames are directories and replace with '*cmd' files
-			} elsif (-d $opt{filename}[$i]) {
-				splice(@{$opt{filename}},$i,1,glob "$opt{filename}[$i]/*$opt{set}->{file_extension}");
-
-			#--- and at last: this is the simple filename
 			} else {
-				if (! -f $opt{filename}[$i] || ! -r $opt{filename}[$i]) {
-					DEBUG2("Error: filename $opt{filename}[$i] not existing or not readable");
-				}
+				DEBUG2("$opt{filename}[$i] is already downloaded $cmdfile_path/$file");
+				$opt{filename}[$i]="$cmdfile_path/$file";
+			}
+
+		#--- 2. directory found? replace directory with '*cmd' files from these directories
+		} elsif (-d $opt{filename}[$i]) {
+			splice(@{$opt{filename}},$i,1,glob "$opt{filename}[$i]/*$opt{set}->{file_extension}");
+
+		#--- 3. and at last: the simple filename
+		} else {
+			if (! -f $opt{filename}[$i] || ! -r $opt{filename}[$i]) {
+				DEBUG2("Error: filename $opt{filename}[$i] not existing or not readable");
 			}
 		}
 	}
+
+	#--- report options - name
 	if ($opt{set}{report} & $DETAIL_PERFORMANCE_LINK && !$opt{set}{name}) {
 		$opt{set}{name}=$MYSELF;
 		DEBUG2("process_parameters: performance report option set and no name defined: taking $MYSELF as name");
 	}
+
+	#--- report option - notes_url
 	if ($opt{set}{report} & $DETAIL_NOTES_LINK && !$opt{set}{notes_url}) {
 		$opt{set}{notes_url}=$ENV{NAGIOS_SERVICENOTESURL};
 		DEBUG2("process_parameters: notes report option set - taking Nagios SERVICENOTESURL $ENV{NAGIOS_SERVICENOTESURL}");
 	}
+
 	#--- if no module HTML::Entities available - set var
 	if ($opt{set}{report} & $DETAIL_HTML) {
 		$opt{set}{use_html_entities} = 1;
@@ -322,6 +347,7 @@ sub process_parameters {
 			DEBUG2("process_parameters: HTML::Entities not available");
 		}
 	}
+
 	#--- if no modules IPC::Open3 or IO::Select, use old backquote exec and temp files
 	if ($opt{set}{exec_open3}) {
 		unless (eval "use IPC::Open3;1") {
@@ -336,10 +362,13 @@ sub process_parameters {
 		}
 		DEBUG2("process_parameters: IPC::Open3 and IO::Select modules loaded");
 	}
+
 	#--- set libexec-dir at the beginning of PATH var
 	if ($opt{set}{libexec}) {
 		$ENV{PATH}="$opt{set}{libexec}:$ENV{PATH}";
 	}
+
+	#--- all state definitions can be set via command line
 	if ($opt{ok}) {
 		$rc{expr}[$OK]=$opt{ok};
 	}
@@ -352,30 +381,38 @@ sub process_parameters {
 	if ($opt{unknown}) {
 		$rc{expr}[$UNKNOWN]=$opt{unknown};
 	}
+
+	#--- timeout checking: overall TIMEOUT has to be greater than child check timeout
 	if ($opt{set}{timeout} && $opt{set}{TIMEOUT} && $opt{set}{timeout} > $opt{set}{TIMEOUT}) {
 		print "$MYSELF: error - child timeout $opt{set}{timeout}s must not be greater than parent timeout $opt{set}{TIMEOUT}s\n";
 		return $UNKNOWN;
 	}
+	
+	#--- add all set options as environment variables, so client scripts can use it
 	foreach my $option (sort keys(%{$opt{set}})) {
 		$ENV{"MULTI_".$option}=$opt{set}{$option};
 	}
+
+	#--- add _the_ parent pid as indicator of the absolute first instance in a check_multi tree
+	#--- there can be multiple recursive called instances and they need to detect which is the first
 	if (!defined($ENV{"MULTI_PPID"})) {
 		$ENV{"MULTI_PPID"}=$$;
 	}
-	foreach my $option (sort keys(%opt)) {
-		DEBUG3("process_parameters: \$opt{$option}=$opt{$option}") if (defined($opt{$option}));
-	}
-	foreach my $option (sort keys(%{$opt{set}})) {
-		DEBUG3("process_parameters: \$opt{set}{$option}=$opt{set}{$option}") if (defined($opt{set}{$option}));
-	}
-        if ($opt{set}{persistent}) {
-                $opt{set}{use_xml_simple} = 1;
-                unless (eval "require XML::Simple;1") {
-                        $opt{set}{use_xml_simple} = 0;
-                        DEBUG1("process_parameters: XML::Simple not available:$@");
-                }
-                if ($opt{set}{use_xml_simple}) {
-        		#--- take filename to store persistent data from HOSTNAME-SERVICEDESC
+
+	#--- persistency - on the way to check_multi 2.0
+	if ($opt{set}{persistent}) {
+
+		#--- try to load module XML::Simple
+		$opt{set}{use_xml_simple} = 1;
+		unless (eval "require XML::Simple;1") {
+			$opt{set}{use_xml_simple} = 0;
+			DEBUG1("process_parameters: XML::Simple not available:$@");
+		}
+
+		#--- successful load? 
+		if ($opt{set}{use_xml_simple}) {
+
+			#--- take filename to store persistent data from HOSTNAME-SERVICEDESC
 			if ($ENV{MULTI_HOSTNAME} && $ENV{MULTI_SERVICEDESC}) {
 				$cmds[0]{key}="$ENV{MULTI_HOSTNAME}-$ENV{MULTI_SERVICEDESC}";
 			} elsif ($ENV{NAGIOS_HOSTNAME} && $ENV{NAGIOS_SERVICEDESC}) {
@@ -384,28 +421,34 @@ sub process_parameters {
 				print "process_parameters: need HOSTNAME and SERVICEDESC for persistent mode.\nPlease specify -s HOSTNAME=<hostname> -s SERVICEDESC=<service description>\n";
 				return $UNKNOWN;
 			}
+
 			#--- replace whitechar with underscore
 			$cmds[0]{key}=~s/\s+/_/g;
-                        DEBUG2("process_parameters: command key: $cmds[0]{key}");
+         DEBUG2("process_parameters: command key: $cmds[0]{key}");
+
 			#--- read persistent data 
 			my $in;
 			if (-f "$opt{set}{tmp_dir}/${MYSELF}_$cmds[0]{key}.xml") {
-                        	DEBUG2("process_parameters: reading file $opt{set}{tmp_dir}/${MYSELF}_$cmds[0]{key}.xml");
-                        	$in=XML::Simple::XMLin("$opt{set}{tmp_dir}/${MYSELF}_$cmds[0]{key}.xml",KeyAttr => [ ]);
+				DEBUG2("process_parameters: reading file $opt{set}{tmp_dir}/${MYSELF}_$cmds[0]{key}.xml");
+				$in=XML::Simple::XMLin("$opt{set}{tmp_dir}/${MYSELF}_$cmds[0]{key}.xml",KeyAttr => [ ]);
 			} else {
 				DEBUG1("process_parameters: persistency file $opt{set}{tmp_dir}/${MYSELF}_$cmds[0]{key}.xml not found.");
 			}
-                	unless (eval "use Data::Dumper;1") {
-                        	$opt{set}{test}=0;
-                        	DEBUG2("process_parameters: Data::Dumper not available");
-                	} else {
-                        	DEBUG2("process_parameters: Data::Dumper module loaded");
-                        	#DEBUG2("report_all:" . Dumper(\@cmds));
-                        	DEBUG2("process_parameters: loaded persistent data:");
-                        	DEBUG2(Dumper($in));
-                	}
+
+			#--- debug output per Data::Dumper
+			unless (eval "use Data::Dumper;1") {
+				$opt{set}{test}=0;
+				DEBUG2("process_parameters: Data::Dumper not available");
+			} else {
+				DEBUG2("process_parameters: Data::Dumper module loaded");
+				#DEBUG2("report_all:" . Dumper(\@cmds));
+				DEBUG2("process_parameters: loaded persistent data:");
+				DEBUG2(Dumper($in));
+			}
 		}
-        }
+	}
+
+	#--- any remaining parameters are orphaned - tell the caller what's going wrong here
 	if (@ARGV) {
 		print "Error: orphaned parameters found on command line:";
 		for (my $i=1; $#ARGV>-1; $i++) {
@@ -420,14 +463,24 @@ sub process_parameters {
 	DEBUG2("Command line: $0 ".join(' ',@SAVEARGV));
 	#DEBUG2("User: ".getlogin()." ($>)");
 
+	#--- just debugging: print options
+	foreach my $option (sort keys(%opt)) {
+		DEBUG3("process_parameters: \$opt{$option}=$opt{$option}") if (defined($opt{$option}));
+	}
+	foreach my $option (sort keys(%{$opt{set}})) {
+		DEBUG3("process_parameters: \$opt{set}{$option}=$opt{set}{$option}") if (defined($opt{set}{$option}));
+	}
+
 	return $OK;
 }
 
+#---
+#--- short usage as quick reference
+#---
 sub short_usage {
 print <<SHORTEOF;
 $MYSELF -f <config file> [-n name] [-t timeout] [-T TIMEOUT] 
 	[-r level] [-l libexec_path] [-s option=value]
-	[-x command] [-w <expr>] [-c <expr>] [-u <expr>] [-o <expr>]
 $MYSELF [-h | --help]
 $MYSELF [-v | --verbose]
 $MYSELF [-V | --version]
@@ -437,6 +490,9 @@ $MYSELF [-V | --version]
 SHORTEOF
 }
 
+#---
+#--- long usage as detailed help (if anything else fails: read the instruction)
+#---
 sub long_usage {
 print <<LONGEOF;
 Options:
@@ -797,7 +853,7 @@ sub exec_command {
 		eval {
 			alarm($opt{set}{timeout});
 	
-			#--- classic exec with temporary files
+			#--- classic execution with temporary files
 			if (!$opt{set}{exec_open3}) {
 
 				#--- prepare tmpfiles for stdout and stderr
@@ -859,8 +915,11 @@ sub exec_command {
 				DEBUG2("exec_command: open3 raw stderr >$cmds[$no]{error}<");
 				chomp $cmds[$no]{output};	
 				chomp $cmds[$no]{error};
-			}	
-			#--- unknown return code? change it explicitly to UNKNOWN
+			}
+
+			#--- unknown return code? change it explicitly to UNKNOWN and add error
+			#---    this prevents the result rating routine from dealing with erraneous RCs
+			#---    but keeps the information 
 			if (! defined($def{r2s}{$cmds[$no]{rc}})) {
 				$cmds[$no]{error}.=" RC was $cmds[$no]{rc}!";
 				$cmds[$no]{rc}=$UNKNOWN;
@@ -1097,7 +1156,7 @@ sub report_all {
 	#--- classical report
 	if (! ($opt{set}{report} & $DETAIL_HTML) &&
 	    ! ($opt{set}{report} & $DETAIL_XML)) {
-		&report;
+		&report_ascii;
 	}
 	#--- report HTML output
 	if ($opt{set}{report} & $DETAIL_HTML) {
@@ -1107,7 +1166,6 @@ sub report_all {
 	if ($opt{set}{report} & $DETAIL_XML) {
 		&report_xml;
 	}
-	
 	
 	#--- at last: perfdata
 	&report_perfdata;
@@ -1123,7 +1181,7 @@ sub report_all {
 #---
 #--- report results stored in %cmds (ASCII report)
 #---
-sub report {
+sub report_ascii {
 
 	DEBUG1("\n","-" x 80);
 	DEBUG1("Plugin output");
@@ -1249,10 +1307,7 @@ sub report_html {
 	$output.=" [" . join(", ",@{$cmds[0]{error}}) . "]" if (defined($cmds[0]{error}[0]));
 	$output.=($opt{set}{extinfo_in_status})?"<br />":"\n";
 
-
 	#--- collapse of contents with javascript
-	#--- conditions: 1. option is set and 2. multi output is *not* in status view
-	#if ($opt{set}{collapse} == 1 && ! $opt{set}{extinfo_in_status}) {
 	if ($opt{set}{collapse} == 1) {
 		$output.="<SCRIPT LANGUAGE='JavaScript'> function Toggle(node) { if (node.nextSibling.style.display == 'none') { if (node.childNodes.length > 0) { node.childNodes.item(0).replaceData(0,1,String.fromCharCode(8211)) } node.nextSibling.style.display = 'block' } else { if (node.childNodes.length > 0) { node.childNodes.item(0).replaceData(0,1,'+') } node.nextSibling.style.display = 'none' } } </SCRIPT>";
 		if (($rc{top} == $OK && $ENV{"MULTI_PPID"} != $$) ||
@@ -1362,6 +1417,8 @@ sub report_html {
 		$output.="<tr bgcolor='" . $colors[$flipflop] . "'><td></td><td style='text-align:right'>Overall state</td><td style='font-weight:bold'>$def{label}{$rc{top}}</td></tr>";
 		$output.="</table></div>";
 	}
+
+	#--- verbose mode - add some tables
 	if ($opt{set}{verbose} >=1) {
 
 		if ($ENV{"MULTI_PPID"} != $$) {
@@ -1420,6 +1477,9 @@ sub report_html {
 	print $output;
 }
 
+#---
+#--- report in XML (at the moment hidden in HTML comment)
+#---
 sub report_xml {
 
 	my $xmlstr="<div id=\"check_multi_xml\" style='display:none'>";
@@ -1469,6 +1529,10 @@ sub report_xml {
 	print $xmlstr;
 }
 
+#---
+#--- print out all perfdata 
+#---    if its compliant to developers guidelines ;)
+#---
 sub report_perfdata {
 	if (!$opt{set}{report} & $DETAIL_HTML) {
 		DEBUG1("\n","-" x 80);
@@ -1549,6 +1613,9 @@ sub report_perfdata {
 	}
 }
 
+#---
+#--- find errors in perfdata
+#---
 sub error_in_perfdata {
 	my $perfdata=shift;
 	my $label="";
@@ -1603,6 +1670,9 @@ sub error_in_perfdata {
 	return undef;
 }
 
+#---
+#--- helper routine to generate Nagios service check definitions
+#---    mostly needed for 'check_multi_feeds_passive'
 sub report_service_definition {
 	my @tpl="";
 	if (! -f "$opt{set}{service_definition_template}") {
@@ -1649,13 +1719,15 @@ install_signal_handler(\install_signal_handler, "INT", "TERM", "QUIT", "HUP");
 #--- parse command line options
 exit $UNKNOWN if (&process_parameters != $OK);
 
-#--- don't run this as root ;-)
+#--- don't run this as root ;-) 
 add_error("please don't run plugins as root!") if ($> == 0);
 
 #--- parse command file (nrpe format)
 &parse_files($opt{filename});
+
 #--- parse single command lines
 &parse_lines(@{$opt{execute}});
+
 #--- no child checks defined yet? Throw UNKNOWN
 if ($#cmds<1) {
 	add_error("no checks defined");
