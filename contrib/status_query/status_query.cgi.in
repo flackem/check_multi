@@ -27,13 +27,13 @@ use strict;
 use CGI qw(:standard -debug escape);
 use CGI::Carp qw(fatalsToBrowser);
 BEGIN { eval("use Time::HiRes qw(time)") }
-use Data::Dumper;
+#use Data::Dumper;
 
 #-----------------------------------------------------------------------------
 #--- adopt this value to your local installation -----------------------------
 #-----------------------------------------------------------------------------
 
-my $STATUSDAT="/usr/local/nagios/var/status.dat"; # location of status.dat
+my $STATUSDAT="@VARDIR@/status.dat"; # location of status.dat
 
 #-----------------------------------------------------------------------------
 #--- nothing to change from here ;-) -----------------------------------------

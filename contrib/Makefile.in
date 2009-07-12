@@ -1,0 +1,29 @@
+#---
+#--- Makefile contrib
+#---
+#--- $Id$
+#---
+prefix=@prefix@
+LIBEXECDIR=@libexecdir@
+HTMLDIR=@datarootdir@
+INSTALL=@INSTALL@
+INSTALL_OPTS=@INSTALL_OPTS@
+
+all: 
+
+clean:
+	cd notify_service && $(MAKE) $@
+	cd status_query   && $(MAKE) $@
+	
+
+distclean: clean
+	-rm -f Makefile
+	cd notify_service && $(MAKE) $@
+	cd status_query   && $(MAKE) $@
+
+devclean: distclean
+
+install: 
+	cd notify_service && $(MAKE) $@
+	cd status_query   && $(MAKE) $@
+

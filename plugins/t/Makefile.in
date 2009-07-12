@@ -1,0 +1,24 @@
+#---
+#--- Makefile plugins/t
+#---
+#--- $Id$
+#---
+prefix=@prefix@
+LIBEXECDIR=@libexecdir@
+HTMLDIR=@datarootdir@
+INSTALL=@INSTALL@
+INSTALL_OPTS=@INSTALL_OPTS@
+
+all:
+
+clean:
+	-rm -f check_multi.t
+
+distclean: clean
+	-rm -f Makefile
+
+devclean: distclean
+
+test: 
+	@PERL@ check_multi.t
+

@@ -1,0 +1,23 @@
+#---
+#--- Makefile sample_config/multi_long
+#---
+#--- $Id$
+#---
+prefix=@prefix@
+HTMLDIR=@datarootdir@
+CGIDIR=@sbindir@
+CFGDIR=@multi_config_dir@
+INSTALL=@INSTALL@
+INSTALL_OPTS=@INSTALL_OPTS@
+
+clean:
+	-rm -f multi_long.cmd
+
+distclean: clean
+	-rm -f Makefile
+
+devclean: distclean
+
+install: 
+	$(INSTALL) -m 755 $(INSTALL_OPTS) -d $(DESTDIR)${CFGDIR}
+	$(INSTALL) -m 755 $(INSTALL_OPTS) multi_long.cmd $(DESTDIR)${CFGDIR}

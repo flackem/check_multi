@@ -37,23 +37,23 @@
 MYSELF=`basename $0`
 #
 #--- for debugging: uncomment the following line
-#--- then look into /tmp for *stdout.<pid> and *stderr.<pid>
+#--- then look into @TMPDIR@ for *stdout.<pid> and *stderr.<pid>
 # set -x
 #
 #--- save stdout / stderr
-exec 1>>"/tmp/$MYSELF-stdout.$$"
-exec 2>>"/tmp/$MYSELF-stderr.$$"
+exec 1>>"@TMPDIR@/$MYSELF-stdout.$$"
+exec 2>>"@TMPDIR@/$MYSELF-stderr.$$"
 #
-#--- adoptions here ;) --------------------------------------------------------------
-NAME="[Nagios]"; export NAME                # sender NAME in mail
-NAGIOS_URL="http://localhost/nagios"        # URL where Nagios can be found
-NAGIOSDIR="/usr/local/nagios"               # physical path of Nagios installation
+#--- adoptions here ;) if not already fixed by configure ----------------------------
+NAME="[@nagios_name@]"; export NAME         # sender NAME in mail
+NAGIOS_URL="http://localhost/@nagios_name@" # URL where Nagios can be found
+NAGIOSDIR="@prefix@"                        # physical path of Nagios installation
 MAILBIN="$NAGIOSDIR/libexec/mailx"          # path to MIME capable mail client
 #
 #--- no adoptions necessary from here -----------------------------------------------
 #
 #--- 1. create ASCII file
-MAIL_ATTACHMENT_TXT="/tmp/mailx.$NAGIOS_HOSTNAME.$NAGIOS_SERVICEDESC.txt"
+MAIL_ATTACHMENT_TXT="@TMPDIR@/mailx.$NAGIOS_HOSTNAME.$NAGIOS_SERVICEDESC.txt"
 cat <<EOF > $MAIL_ATTACHMENT_TXT
 
 Nagios service notification
@@ -96,7 +96,7 @@ EOF
 if [ "x$NAGIOS_LONGSERVICEOUTPUT" != "x" ]; then
 
 	#--- create HTML output
-	MAIL_ATTACHMENT_HTML="/tmp/mailx.$NAGIOS_HOSTNAME.$NAGIOS_SERVICEDESC.html"
+	MAIL_ATTACHMENT_HTML="@TMPDIR@/mailx.$NAGIOS_HOSTNAME.$NAGIOS_SERVICEDESC.html"
 	cat <<HTMLEOF > $MAIL_ATTACHMENT_HTML
 <html>
 <head>
@@ -129,6 +129,6 @@ RC=$?	# catch RC
 #--- 4. cleanup if everything ok, in case of error files will remain for debugging
 if [ $RC -eq 0 ]; then
         rm -f "$MAIL_ATTACHMENT_TXT" "$MAIL_ATTACHMENT_HTML"
-        rm -f /tmp/${MYSELF}-*$$
+        rm -f @TMPDIR@/${MYSELF}-*$$
 fi
 echo "`date` $NAGIOS_HOSTNAME.$NAGIOS_SERVICEDESC $NAGIOS_NOTIFICATIONTYPE: Service $NAGIOS_HOSTNAME/$NAGIOS_SERVICEDESC is $NAGIOS_SERVICESTATE to $NAGIOS_CONTACTEMAIL: RC $RC" >> /$NAGIOSDIR/var/$MYSELF.log

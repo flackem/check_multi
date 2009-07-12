@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+#!@PERL@ -w
 # nagios: -epn
 #
 # check_multi - nagios plugin
@@ -27,7 +27,7 @@ use Getopt::Long qw(:config no_ignore_case bundling);
 BEGIN { eval("use Time::HiRes qw(time)") }
 use FindBin;
 use lib "$FindBin::Bin";
-use lib "/usr/local/nagios/libexec";
+use lib "@LIBEXECDIR@";
 use vars qw(
 $MYSELF %cmds $returncode %def %rc $no $VERSION $tmp_stdout $tmp_stderr $xml $check_multi
 $OK $WARNING $CRITICAL $UNKNOWN
@@ -80,62 +80,64 @@ my %opt=(
 	"filename"	=> [],
 	"set"		=> {
 		# update config file (if HTTP/FTP/etc) once a day (in seconds)
-		cmdfile_update_interval	=> 24*60*60,
+		cmdfile_update_interval	=> @multi_cmdfile_update_interval@,
 		# should check_multi collapse child check_multi checks per default?
-		collapse	=> 1,
-		# etc dir for local configuration files
-		etc		=> "etc",
+		collapse	=> @multi_collapse@,
+		# path to check_multi config directory
+		config_dir	=> "@multi_config_dir@",
 		# use open3 method to exec child checks
-		exec_open3	=> 0,
+		exec_open3	=> @multi_exec_open3@,
 		# show child checks also in status view (only in HTML mode)
-		extinfo_in_status => 0,
+		extinfo_in_status => "@multi_extinfo_in_status@",
 		# standard extension of check_multi command files, 
 		# to be searched in directories
-		file_extension	=> "cmd",
+		file_extension	=> "@multi_file_extension@",
 		# if set, return UNKNOWN if command file is not found
-		ignore_missing_cmd_file => 0,
+		ignore_missing_cmd_file => @multi_ignore_missing_cmd_file@,
 		# characters to cleanup from command files
-		illegal_chars	=> "\r",
+		illegal_chars	=> "@multi_illegal_chars@",
 		# path to Nagios images
-		image_path	=> "/nagios/images",
+		image_path	=> "@multi_nagios_images@",
 		# indentation character(s)
-		indent		=> " ",
+		indent		=> "@multi_indent@",
 		# child checks indented?
-		indent_label	=> 1,
+		indent_label	=> @multi_indent_label@,
 		# plugin directory to be added to check_multi search path
 		libexec		=> "$FindBin::Bin",
 		# label to be shown in output: <name> OK, ...
-		name		=> "",
+		name		=> "@multi_name@",
 		# what RC should be returned if no checks are defined
-		no_checks_rc	=> $UNKNOWN,
+		no_checks_rc	=> @multi_no_checks_rc@,
 		# see tag_notes_link: URL to be added
-		notes_url	=> "",
+		notes_url	=> "@multi_notes_url@",
 		# create persistent data
-		persistent	=> 0,
+		persistent	=> @multi_persistent@,
 		# path to PNP cgis
-		pnp_path	=> "/nagios/pnp",
+		pnp_path	=> "@multi_pnp_path@",
 		# report option, binary coded as sum of detail options
-		report		=> 13,
+		report		=> @multi_report@,
 		#
-		service_definition_template => "/tmp/service_definition.tpl",
+		service_definition_template => "@multi_service_definition_template@",
 		# style of plus/minus char
 		style_plus_minus => "style='color:#4444FF;line-height:0.1em;font-size:1.5em;cursor:crosshair'",
 		# documentation URL to be added to child check tags
-		tag_notes_link	=> 0,
+		tag_notes_link	=> "@multi_tag_notes_link@",
 		# frame target for action_url and notes_url
-		target		=> "_self",
+		target		=> "@multi_target@",
 		# internal development and test mode 
 		test		=> 0,
+		# temporary etc dir for local copies of configuration files
+		tmp_etc		=> "@multi_tmp_etc@",
 		# child check timeout (small t)
-		timeout		=> 10,
+		timeout		=> @multi_child_timeout@,
 		# global check_multi timeout (BIG T)
-		TIMEOUT		=> 60,
+		TIMEOUT		=> @multi_parent_timeout@,
 		# directory where check_multi stores its temporary output files
-		tmp_dir		=> "/tmp/check_multi",
+		tmp_dir		=> "@multi_tmp_dir@",
 		# octal permissions of tmp_dir
-		tmp_dir_permissions => "01777",
+		tmp_dir_permissions => "@multi_tmp_dir_permissions@",
 		# verbosity, from 1 (less verbose) to 3 (much verbose)
-		verbose		=> 0,
+		verbose		=> @multi_verbose@,
 		# elements to be added to XML structure
 		xml_elements	=> "name,rc,output,error,plugin,command,performance,runtime",
 	},
@@ -293,7 +295,7 @@ sub process_parameters {
 			}
 			
 			#--- create directory to store saved config files
-			my $cmdfile_path="$opt{set}{tmp_dir}/$opt{set}{etc}/$host/$path";
+			my $cmdfile_path="$opt{set}{tmp_dir}/$opt{set}{tmp_etc}/$host/$path";
 			`mkdir -p "$cmdfile_path"` if (! -d "$cmdfile_path");
 
 			#--- use ctime to determine if config file should be updated after

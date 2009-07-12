@@ -1,0 +1,121 @@
+#---
+#--- Top level Makefile for check_multi
+#---
+#--- $Id$
+#---
+
+#---
+#--- Src directories
+SRC_PLUGINS=@srcdir@/plugins
+SRC_PL_TEST=@srcdir@/plugins/t
+SRC_CONTRIB=@srcdir@/contrib
+SRC_CONFIG=@srcdir@/sample_config
+
+#---
+#--- user settings
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+CFGDIR=@sysconfdir@
+LIBEXECDIR=@libexecdir@
+CONTRIBDIR=@contribdir@
+DATAROOTDIR=@datarootdir@
+CGIDIR=@sbindir@
+
+INSTALL=@INSTALL@
+
+@SET_MAKE@
+
+#---
+#--- none: make without option shows help
+none:
+	@echo ""
+	@echo " make"
+	@echo ""
+	@echo " all               do all subsequent options except install"
+	@echo ""
+	@echo " plugins           create plugins"
+	@echo " test              test plugins"
+	@echo " config            sample configuration"
+	@echo " contrib           generate all contrib files"
+	@echo ""
+	@echo " test              run test scripts"
+	@echo ""
+	@echo " install           install check_multi plugin"
+	@echo " install-plugins   install check_multi plugin"
+	@echo " install-contrib   install contribution files"
+	@echo " install-config    install sample config"
+	@echo ""
+	@echo " fullinstall       install sample config"
+	@echo ""
+
+#---
+#--- combination of all targets
+all:
+	cd $(SRC_PLUGINS) && $(MAKE) $@
+	cd $(SRC_PL_TEST) && $(MAKE) $@
+	cd $(SRC_CONTRIB) && $(MAKE) $@
+	cd $(SRC_CONFIG)  && $(MAKE) $@
+
+	@echo ""
+	@echo " Make process finished"
+	@echo ""
+	@echo " Next step:  make test"
+	@echo ""
+	@echo " and then:   make install"
+	@echo ""
+	@echo "     - This installs the check_multi plugin"
+	@echo ""
+
+
+#---
+#--- here the different subsections follow
+contrib:
+	cd $(SRC_CONTRIB) && $(MAKE) $@
+
+config:
+	cd $(SRC_CONFIG)  && $(MAKE) $@
+
+test:
+	cd $(SRC_PL_TEST)  && $(MAKE) $@
+
+#---
+#--- install sections
+install:
+	cd $(SRC_PLUGINS) && $(MAKE) $@
+
+	@echo ""
+	@echo "Please run 'make install-contrib' to install contrib files"
+	@echo "Please run 'make install-config'  to install sample config files"
+	@echo ""
+
+install-contrib:
+	cd $(SRC_CONTRIB) && $(MAKE) $@
+
+install-config:
+	cd $(SRC_CONFIG) && $(MAKE) $@
+
+fullinstall: install install-contrib install-config
+
+#---
+#--- cleanup sections
+clean:
+	cd $(SRC_PLUGINS) && $(MAKE) $@
+	cd $(SRC_PL_TEST) && $(MAKE) $@
+	cd $(SRC_CONTRIB) && $(MAKE) $@
+	cd $(SRC_CONFIG)  && $(MAKE) $@
+	#-rm -f *.cfg core
+	#-rm -f *~ *.*~ */*~ */*.*~
+	$(MAKE) distclean
+
+distclean: 
+	cd $(SRC_PLUGINS) && $(MAKE) $@
+	cd $(SRC_PL_TEST) && $(MAKE) $@
+	cd $(SRC_CONTRIB) && $(MAKE) $@
+	cd $(SRC_CONFIG)  && $(MAKE) $@
+	-rm -f Makefile config.status config.log subst
+
+devclean: distclean
+
+#--- !!!TODO!!!
+#--- uninstall sections
+#uninstall:

@@ -1,0 +1,240 @@
+#! @PERL@ -w -I ..
+#
+# Process Tests via check_multi
+# thanks to Ton Voon for his persistency on testing ;)
+#
+
+use strict;
+use Test::More;
+use NPTest;
+
+my $t;
+
+#--- add $libexec_dir to PATH to be sure that plugins will be called from libexec_dir
+my $libexec_dir="/usr/local/nagios/libexec";
+$ENV{PATH}="$libexec_dir:$ENV{PATH}";
+
+#--- check needed plugins for tests
+my @plugins=(
+	"check_procs",
+	"echo",
+	"@PERL@",
+);
+foreach my $plugin (@plugins) {
+	my $path_to_plugin=`which $plugin`; chomp $path_to_plugin;
+	if (! -x "$path_to_plugin") {
+		plan skip_all => "Skipping tests because component $plugin not found or not executable as \'$path_to_plugin\'";
+	}
+}
+plan tests => 22;
+
+my $result;
+
+#-------------------------------------------------------------------------------
+#--- simple OK output with 1 plugin --------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi -x 'command [ procs ] = check_procs'"
+);
+is(
+	$result->return_code, 
+	0, 
+	"default report option"
+);
+like(
+	$result->output,
+	'/^OK - 1 plugins checked, 1 ok\n'.
+	'\[ 1\] procs PROCS OK: \d+ processes|check_multi::check_multi::plugins=1 time=\d+$/',
+	"output correct"
+);
+
+
+#-------------------------------------------------------------------------------
+#--- report option 0 -----------------------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi -r 0 -x 'command [ procs ] = check_procs'"
+);
+is(
+	$result->return_code, 
+	0, 
+	"report option 0 (all states shown)"
+);
+like(
+	$result->output,
+	'/^OK - 1 plugins checked, 0 critical, 0 warning, 0 unknown, 1 ok\n'.
+	'\[ 1\] procs PROCS OK: \d+ processes$/',
+	"output correct"
+);
+
+
+#-------------------------------------------------------------------------------
+#--- report option 1 -----------------------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi -r 1 -x 'command [ procs ] = check_procs -w 1'"
+);
+is(
+	$result->return_code, 
+	1, 
+	"report option 1 (service names in state list)"
+);
+like(
+	$result->output,
+	'/^WARNING - 1 plugins checked, 1 warning \(procs\)\n'.
+	'\[ 1\] procs PROCS WARNING: \d+ processes$/',
+	"output correct"
+);
+
+
+#-------------------------------------------------------------------------------
+#--- report option 2 -----------------------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi -r 2 -x 'command [ procs ] = check_procs'"
+);
+is(
+	$result->return_code, 
+	0, 
+	"report option 2 (HTML)"
+);
+like(
+	$result->output,
+	'/^OK - 1 plugins checked, 0 critical, 0 warning, 0 unknown, 1 ok\n'.
+	'<SCRIPT LANGUAGE=\'JavaScript\'> function Toggle.*PROCS OK: \d+ processes.*div>$/',
+	"output correct"
+);
+
+#-------------------------------------------------------------------------------
+#--- report option 4 -----------------------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi -r 4 -x 'command [ procs ] = check_prox'"
+);
+is(
+	$result->return_code, 
+	3, 
+	"report option 4 (stderr)"
+);
+like(
+	$result->output,
+	'/^UNKNOWN - 1 plugins checked, 0 critical, 0 warning, 1 unknown, 0 ok\n'.
+	'\[ 1\] procs  \[ STDERR: sh: check_prox: command not found RC was 127!\]$/',
+	"output correct"
+);
+
+
+#-------------------------------------------------------------------------------
+#--- report option 8 -----------------------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi -x 'command [ eins ] = echo \"1|eins=1\"' -x 'command [ zwei ] = echo \"2|zwei=2\"' -r 8"
+);
+is(
+	$result->return_code, 
+	0, 
+	"report option 8 (check_multi perfdata)"
+);
+like(
+	$result->output,
+	'/^OK - 2 plugins checked, 0 critical, 0 warning, 0 unknown, 2 ok\n'.
+	'\[ 1\] eins 1\n'.
+	'\[ 2\] zwei 2\|check_multi::check_multi::plugins=2 time=\d+\.\d+ eins::echo::eins=1 zwei::echo::zwei=2 $/',
+	"output correct"
+);
+
+#-------------------------------------------------------------------------------
+#--- report option 32 ----------------------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi -x 'command [ eins ] = echo \"1|eins=1\"' -x 'command [ zwei ] = echo \"2|zwei=2\"' -r 32"
+);
+is(
+	$result->return_code, 
+	0, 
+	"report option 32 (classical perfdata)"
+);
+like(
+	$result->output,
+	'/^OK - 2 plugins checked, 0 critical, 0 warning, 0 unknown, 2 ok\n'.
+	'\[ 1\] eins 1\n'.
+	'\[ 2\] zwei 2\|eins=1 zwei=2 $/',
+	"output correct"
+);
+
+
+#-------------------------------------------------------------------------------
+#--- report option 64 ----------------------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi -x 'command [ eins ] = echo \"1|eins=1\"' -x 'command [ zwei ] = echo \"2|zwei=2\"' -r 64"
+);
+is(
+	$result->return_code, 
+	0, 
+	"report option 64 (state in front of output)"
+);
+like(
+	$result->output,
+	'/^OK - 2 plugins checked, 0 critical, 0 warning, 0 unknown, 2 ok\n'.
+	'\[ 1\] eins OK 1\n'.
+	'\[ 2\] zwei OK 2$/',
+	"output correct"
+);
+
+
+#-------------------------------------------------------------------------------
+#--- report option 143 ---------------------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi -x 'command [ eins ] = echo \"1|eins=1\"' -x 'command [ zwei ] = echo \"2|zwei=2\"' -r 143"
+);
+is(
+	$result->return_code, 
+	0, 
+	"report option 143 (HTML performance output with PNP link)"
+);
+like(
+	$result->output,
+	'/^check_multi OK - 2 plugins checked, 2 ok\n'.
+	'.*<img src=.*Show performance chart.*'.
+	'.*zwei::echo::zwei=2 $/',
+	"output correct"
+);
+
+#-------------------------------------------------------------------------------
+#--- check_multi recursive -----------------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi -x 'command [ child1 ] = @PERL@ ../check_multi -x \"command [ grandchild1 ] = echo g1\"' -r 1"
+);
+is(
+	$result->return_code, 
+	0, 
+	"check_multi recursive (check_multi calls check_multi)"
+);
+like(
+	$result->output,
+	'/^OK - 1 plugins checked, 1 ok\n'.
+	'\[ 1\] child1 OK - 1 plugins checked, 1 ok\n'.
+	' \[ 1\] grandchild1 g1$/',
+	"output correct"
+);
+
+#-------------------------------------------------------------------------------
+#--- discarding perfdata  ------------------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi -x 'command [ eins ] = echo \"eins|eins=1,1\"' -r 9",
+);
+is(
+	$result->return_code, 
+	0, 
+	"check_multi discards invalid perfdata"
+);
+like(
+	$result->output,
+	'/^OK - 1 plugins checked, 1 ok \[eins perfdata discarded for eins: bad UOM \',\' in data \'1,1\' \]\n'.
+	'\[ 1\] eins eins\|check_multi::check_multi::plugins=1 time=\d+\.\d+ $/',
+	"output correct"
+);

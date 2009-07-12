@@ -1,0 +1,26 @@
+#---
+#--- Makefile sample_config/cluster
+#---
+#--- $Id$
+#---
+prefix=@prefix@
+HTMLDIR=@datarootdir@
+CGIDIR=@sbindir@
+CFGDIR=@multi_config_dir@
+INSTALL=@INSTALL@
+INSTALL_OPTS=@INSTALL_OPTS@
+
+clean:
+	-rm -f download.cfg  download.cmd  download_my-plugin.cmd  download_sourceforge.cmd
+
+distclean: clean
+	-rm -f Makefile
+
+devclean: distclean
+
+install: 
+	$(INSTALL) -m 755 $(INSTALL_OPTS) -d $(DESTDIR)${CFGDIR}/cluster
+	$(INSTALL) -m 755 $(INSTALL_OPTS) download.cfg $(DESTDIR)${CFGDIR}/cluster
+	$(INSTALL) -m 755 $(INSTALL_OPTS) download.cmd $(DESTDIR)${CFGDIR}/cluster
+	$(INSTALL) -m 755 $(INSTALL_OPTS) download_my-plugin.cmd $(DESTDIR)${CFGDIR}/cluster
+	$(INSTALL) -m 755 $(INSTALL_OPTS) download_sourceforge.cmd $(DESTDIR)${CFGDIR}/cluster

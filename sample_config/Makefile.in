@@ -1,0 +1,29 @@
+#---
+#--- Makefile contrib
+#---
+#--- $Id$
+#---
+prefix=@prefix@
+LIBEXECDIR=@libexecdir@
+HTMLDIR=@datarootdir@
+INSTALL=@INSTALL@
+INSTALL_OPTS=@INSTALL_OPTS@
+
+all: 
+
+clean:
+	cd cluster    && $(MAKE) $@
+	cd multi_long && $(MAKE) $@
+	
+
+distclean: clean
+	cd cluster    && $(MAKE) $@
+	cd multi_long && $(MAKE) $@
+	-rm -f Makefile
+
+devclean: distclean
+
+install: 
+	cd multi_long && $(MAKE) $@
+	cd cluster    && $(MAKE) $@
+

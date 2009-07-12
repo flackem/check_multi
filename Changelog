@@ -1,5 +1,6 @@
 
 ===== Changelog =====
+	* at last: first configure version (including lots of cleanup and directory moving)
 	* added PERFDATA_<tag> environment var: perfdata for child checks, thx Bjoern Becker
 	* underscore is now allowed tag character
 	* added pnp_path (as replacement for action_url) and image_path, thx Amit Mor

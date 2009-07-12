@@ -1,0 +1,27 @@
+#---
+#--- Makefile contrib/status_query
+#---
+#--- $Id$
+#---
+prefix=@prefix@
+HTMLDIR=@datarootdir@
+CGIDIR=@sbindir@
+INSTALL=@INSTALL@
+INSTALL_OPTS=@INSTALL_OPTS@
+
+all: 
+
+clean:
+	-rm -f status_query.cgi
+	-rm -f query_examples.html
+
+distclean: clean
+	-rm -f Makefile
+
+devclean: distclean
+
+install: 
+	$(INSTALL) -m 755 $(INSTALL_OPTS) -d $(DESTDIR)$(CGIDIR)
+	$(INSTALL) -m 755 $(INSTALL_OPTS) status_query.cgi $(DESTDIR)$(CGIDIR)
+	$(INSTALL) -m 755 $(INSTALL_OPTS) -d $(DESTDIR)$(HTMLDIR)
+	$(INSTALL) -m 755 $(INSTALL_OPTS) query_examples.html.cgi $(DESTDIR)$(HTMLDIR)
