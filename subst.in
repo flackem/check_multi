@@ -25,6 +25,8 @@ while (my $f = shift @ARGV) {
 
 	while (<IN>) {
 		s|\@PERL\@|@PERL@|g;
+		s|\@INSTALL\@|@INSTALL@|g;
+		s|\@INSTALL_OPTS\@|@INSTALL_OPTS@|g;
 		s|\@nagios_user\@|@nagios_user@|g;
 		s|\@nagios_group\@|@nagios_group@|g;
 		s|\@localstatedir\@|@localstatedir@|g;
