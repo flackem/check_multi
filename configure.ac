@@ -19,14 +19,18 @@ AC_PREFIX_DEFAULT(/usr/local/nagios)
 #---
 #--- package settings, some of them dynamic
 PKG_NAME=check_multi
-PKG_VERSION=`svn info check_multi  | grep "Revision:" | sed 's/Revision: //'`
+PKG_VERSION="$Rev$"
+PKG_VERSION="$Author$"
 PKG_HOME_URL="http://my-plugin.de/check_multi/"
-PKG_REL_DATE=`svn info check_multi  | grep "Last Changed Date:" | sed 's/Last Changed Date: //'`
+PKG_REL_DATE="$Date$"
+PKG_ID="$Id:"
 
 AC_SUBST(PKG_NAME)
 AC_SUBST(PKG_VERSION)
+AC_SUBST(PKG_AUTHOR)
 AC_SUBST(PKG_HOME_URL)
 AC_SUBST(PKG_REL_DATE)
+AC_SUBST(PKG_ID)
 
 #---
 #--- checks for programs

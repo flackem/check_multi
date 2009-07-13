@@ -616,8 +616,10 @@ host_alias
 target_alias
 PKG_NAME
 PKG_VERSION
+PKG_AUTHOR
 PKG_HOME_URL
 PKG_REL_DATE
+PKG_ID
 SET_MAKE
 CP
 INSTALL
@@ -1710,9 +1712,13 @@ _ACEOF
 #---
 #--- package settings, some of them dynamic
 PKG_NAME=check_multi
-PKG_VERSION=`svn info check_multi  | grep "Revision:" | sed 's/Revision: //'`
+PKG_VERSION="$Rev$"
+PKG_VERSION="$Author$"
 PKG_HOME_URL="http://my-plugin.de/check_multi/"
-PKG_REL_DATE=`svn info check_multi  | grep "Last Changed Date:" | sed 's/Last Changed Date: //'`
+PKG_REL_DATE="$Date$"
+PKG_ID="$Id:"
+
+
 
 
 
@@ -2843,8 +2849,10 @@ host_alias!$host_alias$ac_delim
 target_alias!$target_alias$ac_delim
 PKG_NAME!$PKG_NAME$ac_delim
 PKG_VERSION!$PKG_VERSION$ac_delim
+PKG_AUTHOR!$PKG_AUTHOR$ac_delim
 PKG_HOME_URL!$PKG_HOME_URL$ac_delim
 PKG_REL_DATE!$PKG_REL_DATE$ac_delim
+PKG_ID!$PKG_ID$ac_delim
 SET_MAKE!$SET_MAKE$ac_delim
 CP!$CP$ac_delim
 INSTALL!$INSTALL$ac_delim
@@ -2887,7 +2895,7 @@ LIBOBJS!$LIBOBJS$ac_delim
 LTLIBOBJS!$LTLIBOBJS$ac_delim
 _ACEOF
 
-  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 81; then
+  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 83; then
     break
   elif $ac_last_try; then
     { { echo "$as_me:$LINENO: error: could not make $CONFIG_STATUS" >&5
