@@ -20,10 +20,10 @@ AC_PREFIX_DEFAULT(/usr/local/nagios)
 #--- package settings, some of them dynamic
 PKG_NAME=check_multi
 PKG_VERSION="$Rev$"
-PKG_VERSION="$Author$"
+PKG_AUTHOR="$Author$"
 PKG_HOME_URL="http://my-plugin.de/check_multi/"
 PKG_REL_DATE="$Date$"
-PKG_ID="$Id:"
+PKG_ID="$Id$"
 
 AC_SUBST(PKG_NAME)
 AC_SUBST(PKG_VERSION)
@@ -157,10 +157,11 @@ $PERL subst sample_config/cluster/download_sourceforge.cmd
 #--- review options and show the user what he has broken ;)
 AC_MSG_RESULT([
  -------------------------------------------------------------------
- --- $PKG_NAME configure summary (SVN $PKG_VERSION) 
+ --- $PKG_NAME configure summary (SVN ${PKG_VERSION}) 
  -------------------------------------------------------------------
 ])
-echo " Release date: $PKG_REL_DATE"
+echo " Release date ${PKG_REL_DATE}"
+echo " Author       ${PKG_AUTHOR}"
 echo
 echo " --- Directories"
 echo " -------------------------------------------------------------------"
@@ -189,7 +190,7 @@ AC_MSG_RESULT([ Name / Label              '$multi_name'])
 AC_MSG_RESULT([ Report option default     $multi_report])
 AC_MSG_RESULT([ HTML target frame         $multi_target])
 AC_MSG_RESULT([ Child checks indented?    $multi_indent_label])
-AC_MSG_RESULT([ Ascii indentation char   '$multi_indent'])
+AC_MSG_RESULT([ Ascii indentation char    '$multi_indent'])
 AC_MSG_RESULT([ Collapse tree?            $multi_collapse])
 AC_MSG_RESULT([ Collapse plus style       $multi_style_plus_minus])
 AC_MSG_RESULT([ Extinfo in status.cgi?    $multi_extinfo_in_status])

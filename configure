@@ -1713,10 +1713,10 @@ _ACEOF
 #--- package settings, some of them dynamic
 PKG_NAME=check_multi
 PKG_VERSION="$Rev$"
-PKG_VERSION="$Author$"
+PKG_AUTHOR="$Author$"
 PKG_HOME_URL="http://my-plugin.de/check_multi/"
 PKG_REL_DATE="$Date$"
-PKG_ID="$Id:"
+PKG_ID="$Id$"
 
 
 
@@ -3250,15 +3250,16 @@ $PERL subst sample_config/cluster/download_sourceforge.cmd
 #--- review options and show the user what he has broken ;)
 { echo "$as_me:$LINENO: result:
  -------------------------------------------------------------------
- --- $PKG_NAME configure summary (SVN $PKG_VERSION)
+ --- $PKG_NAME configure summary (SVN ${PKG_VERSION})
  -------------------------------------------------------------------
 " >&5
 echo "${ECHO_T}
  -------------------------------------------------------------------
- --- $PKG_NAME configure summary (SVN $PKG_VERSION)
+ --- $PKG_NAME configure summary (SVN ${PKG_VERSION})
  -------------------------------------------------------------------
 " >&6; }
-echo " Release date: $PKG_REL_DATE"
+echo " Release date ${PKG_REL_DATE}"
+echo " Author       ${PKG_AUTHOR}"
 echo
 echo " --- Directories"
 echo " -------------------------------------------------------------------"
@@ -3306,8 +3307,8 @@ echo "${ECHO_T} Report option default     $multi_report" >&6; }
 echo "${ECHO_T} HTML target frame         $multi_target" >&6; }
 { echo "$as_me:$LINENO: result:  Child checks indented?    $multi_indent_label" >&5
 echo "${ECHO_T} Child checks indented?    $multi_indent_label" >&6; }
-{ echo "$as_me:$LINENO: result:  Ascii indentation char   '$multi_indent'" >&5
-echo "${ECHO_T} Ascii indentation char   '$multi_indent'" >&6; }
+{ echo "$as_me:$LINENO: result:  Ascii indentation char    '$multi_indent'" >&5
+echo "${ECHO_T} Ascii indentation char    '$multi_indent'" >&6; }
 { echo "$as_me:$LINENO: result:  Collapse tree?            $multi_collapse" >&5
 echo "${ECHO_T} Collapse tree?            $multi_collapse" >&6; }
 { echo "$as_me:$LINENO: result:  Collapse plus style       $multi_style_plus_minus" >&5
