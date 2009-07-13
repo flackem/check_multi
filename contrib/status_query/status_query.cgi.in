@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!@client_perl@
 #
 # nagios_status (query nagios services from status.dat)
 #

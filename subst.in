@@ -30,6 +30,7 @@ while (my $f = shift @ARGV) {
 		s|\@PERL\@|@PERL@|g;
 		s|\@INSTALL\@|@INSTALL@|g;
 		s|\@INSTALL_OPTS\@|@INSTALL_OPTS@|g;
+		s|\@client_perl\@|@client_perl@|g;
 		s|\@nagios_user\@|@nagios_user@|g;
 		s|\@nagios_group\@|@nagios_group@|g;
 		s|\@localstatedir\@|@localstatedir@|g;

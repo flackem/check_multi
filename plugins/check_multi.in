@@ -1,4 +1,4 @@
-#!@PERL@ -w
+#!@client_perl@ -w
 # nagios: -epn
 #
 # check_multi - nagios plugin

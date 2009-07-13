@@ -624,6 +624,7 @@ SET_MAKE
 CP
 INSTALL
 PERL
+client_perl
 multi_action_url
 multi_child_timeout
 multi_contrib_dir
@@ -1238,11 +1239,12 @@ Optional Packages:
 
 check_multi settings:
   --action_url=<URL>                  action URL (default:"")
+  --client_perl=<perl path>           sets perl cmdline / path (e.g. #!/usr/bin/perl)
   --cmdfile_update_interval=<seconds> interval to update command file(s) (default:86400, one day)
   --collapse=<0|1>                    HTML javascript tree collapse option (default:1)
   --config_dir=<path>                 directory for check_multi configuration files (default:${prefix}/etc/multi)
-  --exec_open3=<0|1>                  use new exec method with function open3
-  --extinfo_in_status=<0|1>           display check_multi output in status.cgi
+  --exec_open3=<0|1>                  use new exec method with function open3 (default:0)
+  --extinfo_in_status=<0|1>           display check_multi output in status.cgi (default:0)
   --file_extension=<ext>              default extension for check_multi command files (default:"cmd")
   --ignore_missing_cmd_file=<0|1>     if missing cmd files should be ignored (default:0)
   --illegal_chars=<chars>             characters to be stripped from command files (default:"\r")
@@ -1266,7 +1268,7 @@ check_multi settings:
   --verbose=<N>                       verbosity of check_multi (default:0)
   --nagios-user=<user>                user name to run plugin (default:nagios)
   --nagios-group=<group>              group name to run plugin (default:nagios)
-  --nagios-name=<name>                set nagios name (there should some clones ;)) (default:nagios)
+  --nagios-name=<name>                set nagios name (there might be some clones ;)) (default:nagios)
 
 _ACEOF
 ac_status=$?
@@ -1879,7 +1881,6 @@ echo "${ECHO_T}no" >&6; }
 fi
 
 
-
 #--- too difficult to escape this - so define it as a variable before using it ;)
 ACTION_URL="style='color:#4444FF;line-height:0.1em;font-size:1.5em;cursor:crosshair'"
 
@@ -1890,6 +1891,58 @@ else
   multi_action_url=""
 fi
 
+#--- too difficult to escape this - so define it as a variable before using it ;)
+client_perL=no
+
+# Check whether --with-client_perl was given.
+if test "${with_client_perl+set}" = set; then
+  withval=$with_client_perl; client_perl=$withval
+else
+  client_perl=no
+fi
+
+if test client_perl=no; then
+       # Extract the first word of "perl", so it can be a program name with args.
+set dummy perl; ac_word=$2
+{ echo "$as_me:$LINENO: checking for $ac_word" >&5
+echo $ECHO_N "checking for $ac_word... $ECHO_C" >&6; }
+if test "${ac_cv_path_client_perl+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  case $client_perl in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_client_perl="$client_perl" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+  for ac_exec_ext in '' $ac_executable_extensions; do
+  if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_test_x "$as_dir/$ac_word$ac_exec_ext"; }; then
+    ac_cv_path_client_perl="$as_dir/$ac_word$ac_exec_ext"
+    echo "$as_me:$LINENO: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+client_perl=$ac_cv_path_client_perl
+if test -n "$client_perl"; then
+  { echo "$as_me:$LINENO: result: $client_perl" >&5
+echo "${ECHO_T}$client_perl" >&6; }
+else
+  { echo "$as_me:$LINENO: result: no" >&5
+echo "${ECHO_T}no" >&6; }
+fi
+
+
+fi
 
 # Check whether --with-multi_cmdfile_update_interval was given.
 if test "${with_multi_cmdfile_update_interval+set}" = set; then
@@ -2857,6 +2910,7 @@ SET_MAKE!$SET_MAKE$ac_delim
 CP!$CP$ac_delim
 INSTALL!$INSTALL$ac_delim
 PERL!$PERL$ac_delim
+client_perl!$client_perl$ac_delim
 multi_action_url!$multi_action_url$ac_delim
 multi_child_timeout!$multi_child_timeout$ac_delim
 multi_contrib_dir!$multi_contrib_dir$ac_delim
@@ -2895,7 +2949,7 @@ LIBOBJS!$LIBOBJS$ac_delim
 LTLIBOBJS!$LTLIBOBJS$ac_delim
 _ACEOF
 
-  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 83; then
+  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 84; then
     break
   elif $ac_last_try; then
     { { echo "$as_me:$LINENO: error: could not make $CONFIG_STATUS" >&5
@@ -3296,6 +3350,8 @@ echo "${ECHO_T} RC if no checks defined   $multi_no_checks_rc" >&6; }
 echo "${ECHO_T} default file extension    $multi_file_extension" >&6; }
 { echo "$as_me:$LINENO: result:  ignore missing cmd file?  $multi_ignore_missing_cmd_file" >&5
 echo "${ECHO_T} ignore missing cmd file?  $multi_ignore_missing_cmd_file" >&6; }
+{ echo "$as_me:$LINENO: result:  Perl shebang (path)       $client_perl" >&5
+echo "${ECHO_T} Perl shebang (path)       $client_perl" >&6; }
 echo
 echo " --- Output options"
 echo " -------------------------------------------------------------------"
