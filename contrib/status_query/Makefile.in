@@ -20,8 +20,8 @@ distclean: clean
 
 devclean: distclean
 
-install: 
+install-contrib: 
 	$(INSTALL) -m 755 $(INSTALL_OPTS) -d $(DESTDIR)$(CGIDIR)
 	$(INSTALL) -m 755 $(INSTALL_OPTS) status_query.cgi $(DESTDIR)$(CGIDIR)
 	$(INSTALL) -m 755 $(INSTALL_OPTS) -d $(DESTDIR)$(HTMLDIR)
-	$(INSTALL) -m 755 $(INSTALL_OPTS) query_examples.html.cgi $(DESTDIR)$(HTMLDIR)
+	$(INSTALL) -m 755 $(INSTALL_OPTS) query_examples.html $(DESTDIR)$(HTMLDIR)

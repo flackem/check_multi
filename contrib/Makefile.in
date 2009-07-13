@@ -23,7 +23,7 @@ distclean: clean
 
 devclean: distclean
 
-install: 
+install-contrib: 
 	cd notify_service && $(MAKE) $@
 	cd status_query   && $(MAKE) $@
 

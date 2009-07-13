@@ -18,7 +18,7 @@ distclean: clean
 
 devclean: distclean
 
-install: 
+install-config: 
 	$(INSTALL) -m 755 $(INSTALL_OPTS) -d $(DESTDIR)${CFGDIR}/cluster
 	$(INSTALL) -m 755 $(INSTALL_OPTS) download.cfg $(DESTDIR)${CFGDIR}/cluster
 	$(INSTALL) -m 755 $(INSTALL_OPTS) download.cmd $(DESTDIR)${CFGDIR}/cluster

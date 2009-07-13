@@ -19,7 +19,7 @@ distclean: clean
 
 devclean: distclean
 
-install: 
+install-contrib: 
 	$(INSTALL) -m 755 $(INSTALL_OPTS) -d $(DESTDIR)$(LIBEXECDIR)
-	$(INSTALL) -m 755 $(INSTALL_OPTS) notify_service_html $(DESTDIR)$(LIBEXECDIR)
+	$(INSTALL) -m 755 $(INSTALL_OPTS) notify_service_html.sh $(DESTDIR)$(LIBEXECDIR)
 

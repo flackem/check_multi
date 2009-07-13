@@ -33,7 +33,7 @@ BEGIN { eval("use Time::HiRes qw(time)") }
 #--- adopt this value to your local installation -----------------------------
 #-----------------------------------------------------------------------------
 
-my $STATUSDAT="@VARDIR@/status.dat"; # location of status.dat
+my $STATUSDAT="@localstatedir@/status.dat"; # location of status.dat
 
 #-----------------------------------------------------------------------------
 #--- nothing to change from here ;-) -----------------------------------------

@@ -3,6 +3,9 @@
 my ${prefix}="@prefix@";
 my ${exec_prefix}="@exec_prefix@";
 my ${LIBEXECDIR}="@prefix@/libexec";
+my ${sbindir}="@sbindir@";
+my ${datarootdir}="@datarootdir@";
+my ${localstatedir}="@localstatedir@";
 my ${multi_config_dir}="@multi_config_dir@";
 my ${multi_nagios_images}="@multi_nagios_images@";
 my ${multi_pnp_path}="@multi_pnp_path@";
@@ -59,9 +62,14 @@ while (my $f = shift @ARGV) {
 		s|\@multi_tmp_dir_permissions\@|@multi_tmp_dir_permissions@|g;
 		s|\@multi_parent_timeout\@|@multi_parent_timeout@|g;
 		s|\@multi_verbose\@|@multi_verbose@|g;
-		s|\@LIBEXECDIR\@|$LIBEXECDIR|g; # put all --with-vars before directories
-		s|\$\{exec_prefix\}|$exec_prefix|g; # must be next to last
-		s|\$\{prefix\}|@prefix@|g; # must be last
+		s|\@exec_prefix\@|$exec_prefix|g;	# 
+		s|\@prefix\@|@prefix@|g;		# 
+		s|\@sbindir\@|$sbindir|g;		# put all --with-vars before directories
+		s|\@datarootdir\@|$datarootdir|g;	# put all --with-vars before directories
+		s|\@localstatedir\@|$localstatedir|g;	# put all --with-vars before directories
+		s|\@LIBEXECDIR\@|$LIBEXECDIR|g;		# put all --with-vars before directories
+		s|\$\{exec_prefix\}|$exec_prefix|g;	# must be next to last
+		s|\$\{prefix\}|@prefix@|g;		# must be last
 		print OUT $_;
 	}
 
