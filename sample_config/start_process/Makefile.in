@@ -1,0 +1,23 @@
+#---
+#--- Makefile sample_config/start_process
+#---
+#--- $Id$
+#---
+prefix=@prefix@
+HTMLDIR=@datarootdir@
+CGIDIR=@sbindir@
+CFGDIR=@multi_config_dir@
+INSTALL=@INSTALL@
+INSTALL_OPTS=@INSTALL_OPTS@
+
+clean:
+	-rm -f start_process.cmd
+
+distclean: clean
+	-rm -f Makefile
+
+devclean: distclean
+
+install-config: 
+	$(INSTALL) -m 755 $(INSTALL_OPTS) -d $(DESTDIR)${CFGDIR}
+	$(INSTALL) -m 755 $(INSTALL_OPTS) start_process.cmd $(DESTDIR)${CFGDIR}

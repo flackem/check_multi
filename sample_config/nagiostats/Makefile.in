@@ -1,0 +1,24 @@
+#---
+#--- Makefile sample_config/nagiostats
+#---
+#--- $Id$
+#---
+prefix=@prefix@
+HTMLDIR=@datarootdir@
+CGIDIR=@sbindir@
+CFGDIR=@multi_config_dir@
+INSTALL=@INSTALL@
+INSTALL_OPTS=@INSTALL_OPTS@
+
+clean:
+	-rm -f nagiostats.cmd
+	-rm -f nagiostats.php
+
+distclean: clean
+	-rm -f Makefile
+
+devclean: distclean
+
+install-config: 
+	$(INSTALL) -m 755 $(INSTALL_OPTS) -d $(DESTDIR)${CFGDIR}
+	$(INSTALL) -m 755 $(INSTALL_OPTS) nagiostats.cmd $(DESTDIR)${CFGDIR}

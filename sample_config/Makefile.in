@@ -14,11 +14,15 @@ all:
 clean:
 	cd cluster    && $(MAKE) $@
 	cd multi_long && $(MAKE) $@
+	cd nagiostats && $(MAKE) $@
+	cd start_process && $(MAKE) $@
 	
 
 distclean: clean
 	cd cluster    && $(MAKE) $@
 	cd multi_long && $(MAKE) $@
+	cd nagiostats && $(MAKE) $@
+	cd start_process && $(MAKE) $@
 	-rm -f Makefile
 
 devclean: distclean
@@ -26,4 +30,6 @@ devclean: distclean
 install: 
 	cd multi_long && $(MAKE) $@
 	cd cluster    && $(MAKE) $@
+	cd nagiostats && $(MAKE) $@
+	cd start_process && $(MAKE) $@
 

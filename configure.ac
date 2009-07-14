@@ -40,23 +40,18 @@ AC_PATH_PROG(CP,cp)
 AC_PATH_PROG(INSTALL,install)
 AC_SUBST(INSTALL)
 AC_PATH_PROG(PERL,perl)
+
 #--- too difficult to escape this - so define it as a variable before using it ;)
 ACTION_URL="style='color:#4444FF;line-height:0.1em;font-size:1.5em;cursor:crosshair'"
 AC_ARG_WITH(multi_action_url,		[  
 
 check_multi settings:
   --action_url=<URL>                  action URL (default:"")],multi_action_url=$withval,multi_action_url="")
-#--- too difficult to escape this - so define it as a variable before using it ;)
-client_perL=no
-AC_ARG_WITH(client_perl,                        [  --client_perl=<perl path>           sets perl cmdline / path (e.g. #!/usr/bin/perl)],client_perl=$withval,client_perl=no)
-if test client_perl=no; then
-       AC_PATH_PROG(client_perl,perl)
-fi
 AC_ARG_WITH(multi_cmdfile_update_interval,	[  --cmdfile_update_interval=<seconds> interval to update command file(s) (default:86400, one day)],multi_cmdfile_update_interval=$withval,multi_cmdfile_update_interval=86400)
 AC_ARG_WITH(multi_collapse,			[  --collapse=<0|1>                    HTML javascript tree collapse option (default:1)],multi_collapse=$withval,multi_collapse="1")
 AC_ARG_WITH(multi_config_dir,			[  --config_dir=<path>                 directory for check_multi configuration files (default:${prefix}/etc/multi)],multi_config_dir=$withval,multi_config_dir="${prefix}/etc/multi")
-AC_ARG_WITH(multi_exec_open3,			[  --exec_open3=<0|1>                  use new exec method with function open3 (default:0)],multi_exec_open3=$withval,multi_exec_open3=0)
-AC_ARG_WITH(multi_extinfo_in_status,		[  --extinfo_in_status=<0|1>           display check_multi output in status.cgi (default:0)],multi_extinfo_in_status=$withval,multi_extinfo_in_status=0)
+AC_ARG_WITH(multi_exec_open3,			[  --exec_open3=<0|1>                  use new exec method with function open3],multi_exec_open3=$withval,multi_exec_open3=0)
+AC_ARG_WITH(multi_extinfo_in_status,		[  --extinfo_in_status=<0|1>           display check_multi output in status.cgi],multi_extinfo_in_status=$withval,multi_extinfo_in_status=0)
 AC_ARG_WITH(multi_file_extension,		[  --file_extension=<ext>              default extension for check_multi command files (default:"cmd")],multi_file_extension=$withval,multi_file_extension="cmd")
 AC_ARG_WITH(multi_ignore_missing_cmd_file,	[  --ignore_missing_cmd_file=<0|1>     if missing cmd files should be ignored (default:0)],multi_ignore_missing_cmd_file=$withval,multi_ignore_missing_cmd_file="0")
 AC_ARG_WITH(multi_illegal_chars,		[  --illegal_chars=<chars>             characters to be stripped from command files (default:"\r")],multi_illegal_chars=$withval,multi_illegal_chars="\r")
@@ -80,7 +75,7 @@ AC_ARG_WITH(multi_child_timeout,		[  --child_timeout=<NN>                timeout
 AC_ARG_WITH(multi_verbose,			[  --verbose=<N>                       verbosity of check_multi (default:0)],multi_verbose=$withval,multi_verbose="0")
 AC_ARG_WITH(nagios_user,			[  --nagios-user=<user>                user name to run plugin (default:nagios)],nagios_user=$withval,nagios_user=nagios)
 AC_ARG_WITH(nagios_group,			[  --nagios-group=<group>              group name to run plugin (default:nagios)],nagios_group=$withval,nagios_group=nagios)
-AC_ARG_WITH(nagios_name,			[  --nagios-name=<name>                set nagios name (there might be some clones ;)) (default:nagios)],nagios_name=$withval,nagios_name=nagios)
+AC_ARG_WITH(nagios_name,			[  --nagios-name=<name>                set nagios name (there should some clones ;)) (default:nagios)],nagios_name=$withval,nagios_name=nagios)
 
 AC_SUBST(multi_action_url)
 AC_SUBST(multi_child_timeout)
@@ -157,6 +152,11 @@ $PERL subst sample_config/cluster/download.cfg
 $PERL subst sample_config/cluster/download.cmd
 $PERL subst sample_config/cluster/download_my-plugin.cmd
 $PERL subst sample_config/cluster/download_sourceforge.cmd
+$PERL subst sample_config/nagiostats/Makefile
+$PERL subst sample_config/nagiostats/nagiostats.cmd
+$PERL subst sample_config/nagiostats/nagiostats.php
+$PERL subst sample_config/start_process/Makefile
+$PERL subst sample_config/start_process/start_process.cmd
 
 #---
 #--- review options and show the user what he has broken ;)
@@ -188,7 +188,6 @@ AC_MSG_RESULT([ Nagios name               $nagios_name])
 AC_MSG_RESULT([ RC if no checks defined   $multi_no_checks_rc])
 AC_MSG_RESULT([ default file extension    $multi_file_extension])
 AC_MSG_RESULT([ ignore missing cmd file?  $multi_ignore_missing_cmd_file])
-AC_MSG_RESULT([ Perl shebang (path)       $client_perl])
 echo
 echo " --- Output options"
 echo " -------------------------------------------------------------------"
