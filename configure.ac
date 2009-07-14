@@ -47,6 +47,12 @@ AC_ARG_WITH(multi_action_url,		[
 
 check_multi settings:
   --action_url=<URL>                  action URL (default:"")],multi_action_url=$withval,multi_action_url="")
+#--- too difficult to escape this - so define it as a variable before using it ;)
+client_perL=no
+AC_ARG_WITH(client_perl,                        [  --client_perl=<perl path>           sets perl cmdline / path (e.g. #!/usr/bin/perl)],client_perl=$withval,client_perl=no)
+if test client_perl=no; then
+       AC_PATH_PROG(client_perl,perl)
+fi
 AC_ARG_WITH(multi_cmdfile_update_interval,	[  --cmdfile_update_interval=<seconds> interval to update command file(s) (default:86400, one day)],multi_cmdfile_update_interval=$withval,multi_cmdfile_update_interval=86400)
 AC_ARG_WITH(multi_collapse,			[  --collapse=<0|1>                    HTML javascript tree collapse option (default:1)],multi_collapse=$withval,multi_collapse="1")
 AC_ARG_WITH(multi_config_dir,			[  --config_dir=<path>                 directory for check_multi configuration files (default:${prefix}/etc/multi)],multi_config_dir=$withval,multi_config_dir="${prefix}/etc/multi")
@@ -179,7 +185,7 @@ AC_MSG_RESULT([ Contrib directory         $multi_contrib_dir])
 AC_MSG_RESULT([ Temporary directory       $multi_tmp_dir])
 AC_MSG_RESULT([ Temp dir permissions      $multi_tmp_dir_permissions])
 echo
-echo " --- Miscellaneous options"
+echo " --- System options"
 echo " -------------------------------------------------------------------"
 AC_MSG_RESULT([ Parent timeout (BIG T)    $multi_parent_timeout])
 AC_MSG_RESULT([ Child timeout (small t)   $multi_child_timeout])
@@ -188,6 +194,7 @@ AC_MSG_RESULT([ Nagios name               $nagios_name])
 AC_MSG_RESULT([ RC if no checks defined   $multi_no_checks_rc])
 AC_MSG_RESULT([ default file extension    $multi_file_extension])
 AC_MSG_RESULT([ ignore missing cmd file?  $multi_ignore_missing_cmd_file])
+AC_MSG_RESULT([ Client perl path          $client_perl])
 echo
 echo " --- Output options"
 echo " -------------------------------------------------------------------"
