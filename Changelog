@@ -1,6 +1,8 @@
 
 ===== Changelog =====
-        * added example section in documentation - find these examples in sample-config
+	* again some fixes for configure
+	* option action_mouseover now allows PNP popups in extinfo, thx to Amit Mor
+	* added example section in documentation - find these examples in sample-config
 	* at last: first configure version (including lots of cleanup and directory moving)
 	* added PERFDATA_<tag> environment var: perfdata for child checks, thx Bjoern Becker
 	* underscore is now allowed tag character

@@ -79,65 +79,67 @@ my %opt=(
 	"execute"	=> [],
 	"filename"	=> [],
 	"set"		=> {
+		# mouse_over & action_url: shows PNP chart popup triggered by mouse
+		action_mouseover => @action_mouseover@,
 		# update config file (if HTTP/FTP/etc) once a day (in seconds)
-		cmdfile_update_interval	=> @multi_cmdfile_update_interval@,
+		cmdfile_update_interval	=> @cmdfile_update_interval@,
 		# should check_multi collapse child check_multi checks per default?
-		collapse	=> @multi_collapse@,
+		collapse	=> @collapse@,
 		# path to check_multi config directory
-		config_dir	=> "@multi_config_dir@",
+		config_dir	=> "@config_dir@",
 		# use open3 method to exec child checks
-		exec_open3	=> @multi_exec_open3@,
+		exec_open3	=> @exec_open3@,
 		# show child checks also in status view (only in HTML mode)
-		extinfo_in_status => "@multi_extinfo_in_status@",
+		extinfo_in_status => "@extinfo_in_status@",
 		# standard extension of check_multi command files, 
 		# to be searched in directories
-		file_extension	=> "@multi_file_extension@",
+		file_extension	=> "@file_extension@",
 		# if set, return UNKNOWN if command file is not found
-		ignore_missing_cmd_file => @multi_ignore_missing_cmd_file@,
+		ignore_missing_cmd_file => @ignore_missing_cmd_file@,
 		# characters to cleanup from command files
-		illegal_chars	=> "@multi_illegal_chars@",
+		illegal_chars	=> "@illegal_chars@",
 		# path to Nagios images
-		image_path	=> "@multi_nagios_images@",
+		image_path	=> "@image_path@",
 		# indentation character(s)
-		indent		=> "@multi_indent@",
+		indent		=> "@indent@",
 		# child checks indented?
-		indent_label	=> @multi_indent_label@,
+		indent_label	=> @indent_label@,
 		# plugin directory to be added to check_multi search path
 		libexec		=> "$FindBin::Bin",
 		# label to be shown in output: <name> OK, ...
-		name		=> "@multi_name@",
+		name		=> "@name@",
 		# what RC should be returned if no checks are defined
-		no_checks_rc	=> @multi_no_checks_rc@,
+		no_checks_rc	=> @no_checks_rc@,
 		# see tag_notes_link: URL to be added
-		notes_url	=> "@multi_notes_url@",
+		notes_url	=> "@notes_url@",
 		# create persistent data
-		persistent	=> @multi_persistent@,
+		persistent	=> @persistent@,
 		# path to PNP cgis
-		pnp_path	=> "@multi_pnp_path@",
+		pnp_path	=> "@pnp_path@",
 		# report option, binary coded as sum of detail options
-		report		=> @multi_report@,
+		report		=> @report@,
 		#
-		service_definition_template => "@multi_service_definition_template@",
+		service_definition_template => "@service_definition_template@",
 		# style of plus/minus char
 		style_plus_minus => "style='color:#4444FF;line-height:0.1em;font-size:1.5em;cursor:crosshair'",
 		# documentation URL to be added to child check tags
-		tag_notes_link	=> "@multi_tag_notes_link@",
+		tag_notes_link	=> "@tag_notes_link@",
 		# frame target for action_url and notes_url
-		target		=> "@multi_target@",
+		target		=> "@target@",
 		# internal development and test mode 
 		test		=> 0,
 		# temporary etc dir for local copies of configuration files
-		tmp_etc		=> "@multi_tmp_etc@",
+		tmp_etc		=> "@tmp_etc@",
 		# child check timeout (small t)
-		timeout		=> @multi_child_timeout@,
+		timeout		=> @child_timeout@,
 		# global check_multi timeout (BIG T)
-		TIMEOUT		=> @multi_parent_timeout@,
+		TIMEOUT		=> @parent_timeout@,
 		# directory where check_multi stores its temporary output files
-		tmp_dir		=> "@multi_tmp_dir@",
+		tmp_dir		=> "@tmp_dir@",
 		# octal permissions of tmp_dir
-		tmp_dir_permissions => "@multi_tmp_dir_permissions@",
+		tmp_dir_permissions => "@tmp_dir_permissions@",
 		# verbosity, from 1 (less verbose) to 3 (much verbose)
-		verbose		=> @multi_verbose@,
+		verbose		=> @verbose@,
 		# elements to be added to XML structure
 		xml_elements	=> "name,rc,output,error,plugin,command,performance,runtime",
 	},
@@ -1334,19 +1336,35 @@ sub report_html {
 		$output.=sprintf "<tr style='font-size:8pt'><td nowrap><table style='background-color:%s'><tr style='vertical-align:middle'><td style='font-size:6pt'>%2.d</td></tr></table></td>", 
 			$def{color}{$cmds[$no]{rc}},
 			$no;
-		#--- Action url
+		#--- Action url (standard version)
 		if (	($opt{set}{report} & $DETAIL_PERFORMANCE) &&
 			($opt{set}{report} & $DETAIL_PERFORMANCE_LINK) && 
 			defined($cmds[$no]{performance}) &&
-			$cmds[$no]{process_perfdata}) {
+			$cmds[$no]{process_perfdata} &&
+			!$opt{set}{action_mouseover}) {
 
 			my $hostname=($ENV{NAGIOS_HOSTNAME}) ? $ENV{NAGIOS_HOSTNAME} : `uname -n`; chomp($hostname);
 			DEBUG2("report_html: hostname is $hostname");
 			my $pnp_path=substitute_macros($opt{set}{pnp_path});
 			my $image_path=substitute_macros($opt{set}{image_path});
 			$output.=sprintf "<td nowrap>%s</td>", 
-				"<A HREF=\'$pnp_path/index.php?host=${hostname}&srv=$cmds[$no]{name}\' TARGET=\'$opt{set}{target}\'>" . 
+				"<A TARGET=\'$opt{set}{target}\'> HREF=\'$pnp_path/index.php?host=${hostname}&srv=$cmds[$no]{name}\' " . 
 				"<img src=\'$image_path/action.gif\' width=20 height=20 border=0 align=top alt='Show performance chart for $hostname / $cmds[$no]{plugin}'></A>";
+		#--- Action url (mouseover version)
+		} elsif (($opt{set}{report} & $DETAIL_PERFORMANCE) &&
+			($opt{set}{report} & $DETAIL_PERFORMANCE_LINK) && 
+			defined($cmds[$no]{performance}) &&
+			$cmds[$no]{process_perfdata} &&
+			$opt{set}{action_mouseover}) {
+
+			my $hostname=($ENV{NAGIOS_HOSTNAME}) ? $ENV{NAGIOS_HOSTNAME} : `uname -n`; chomp($hostname);
+			DEBUG2("report_html: hostname is $hostname");
+			my $pnp_path=substitute_macros($opt{set}{pnp_path});
+			my $image_path=substitute_macros($opt{set}{image_path});
+			DEBUG1(">>>$opt{set}{target}:$pnp_path:${hostname}:$cmds{$no}{name}:${hostname}:$cmds{$no}{name}:$image_path:$hostname:$cmds{$no}{name}<<<");
+			$output.=sprintf "<td nowrap>%s</td>",
+				"<A TARGET=\'$opt{set}{target}\' HREF='/$pnp_path/index.php?host=${hostname}&srv=$cmds{$no}{name}' onmouseout='clear_g()' onmouseover=\"get_g(\'${hostname}\',\'$cmds{$no}{name}\')\">" .
+				"<img src=\'$image_path/action.gif\' width=20 height=20 border=0 align=top alt='Show performance chart for $hostname / $cmds{$no}{name}'></A>";
 		} else {
 			$output.="<td></td>";
 		}

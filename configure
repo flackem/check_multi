@@ -625,35 +625,36 @@ CP
 INSTALL
 PERL
 client_perl
-multi_action_url
-multi_child_timeout
-multi_contrib_dir
-multi_collapse
-multi_cmdfile_update_interval
-multi_config_dir
-multi_extinfo_in_status
-multi_exec_open3
-multi_file_extension
-multi_ignore_missing_cmd_file
-multi_illegal_chars
-multi_indent_label
-multi_indent
-multi_nagios_images
-multi_name
-multi_no_checks_rc
-multi_notes_url
-multi_persistent
-multi_pnp_path
-multi_report
-multi_service_definition_template
-multi_style_plus_minus
-multi_tag_notes_link
-multi_target
-multi_tmp_dir
-multi_tmp_etc
-multi_tmp_dir_permissions
-multi_parent_timeout
-multi_verbose
+action_mouseover
+action_url
+child_timeout
+contrib_dir
+collapse
+cmdfile_update_interval
+config_dir
+extinfo_in_status
+exec_open3
+file_extension
+ignore_missing_cmd_file
+illegal_chars
+image_path
+indent_label
+indent
+name
+no_checks_rc
+notes_url
+persistent
+pnp_path
+report
+service_definition_template
+style_plus_minus
+tag_notes_link
+target
+tmp_dir
+tmp_etc
+tmp_dir_permissions
+parent_timeout
+verbose
 nagios_user
 nagios_group
 nagios_name
@@ -1238,37 +1239,38 @@ Optional Packages:
 
 
 check_multi settings:
-  --action_url=<URL>                  action URL (default:"")
-  --client_perl=<perl path>           sets perl cmdline / path (e.g. #!/usr/bin/perl)
-  --cmdfile_update_interval=<seconds> interval to update command file(s) (default:86400, one day)
-  --collapse=<0|1>                    HTML javascript tree collapse option (default:1)
-  --config_dir=<path>                 directory for check_multi configuration files (default:${prefix}/etc/multi)
-  --exec_open3=<0|1>                  use new exec method with function open3
-  --extinfo_in_status=<0|1>           display check_multi output in status.cgi
-  --file_extension=<ext>              default extension for check_multi command files (default:"cmd")
-  --ignore_missing_cmd_file=<0|1>     if missing cmd files should be ignored (default:0)
-  --illegal_chars=<chars>             characters to be stripped from command files (default:"\r")
-  --image_path=<URL>                  relative URL to nagios images (default:"/nagios/images")
-  --indent=<char>                     ASCII output indent character (default:" ")
-  --indent_label=<0|1>                indentation of child checks? (default:1)
-  --name=<name>                       default name for check_multi label (default:"")
-  --no_checks_rc=<RC>                 RC if no checks are specified (default:3-UNKNOWN)
-  --notes_url=<URL>                   notes URL (default:"")
-  --persistent=<0|1>                  persistency: saving of state data between two calls (default:0)
-  --pnp_path=<URL>                    relative URL to PNP (default:"/nagios/pnp")
-  --report=<NN>                       default report option (default:13)
-  --style_plus_minus=<HTML code>      HTML style for plus/minus (default:$ACTION_URL)
-  --tag_notes_link=<URL>              documentation URL for child checks (default:"")
-  --target=<target_frame>             HTML target frame for URLs (default:_self)
-  --tmp_dir=<path>                    /path/to/tmp_dir (default:/tmp/check_multi)
-  --tmp_etc=<path>                    /path/to/tmp_dir/etc (default:$multi_tmp_dir/etc)
-  --tmp_dir_permissions=<octal perms> permissions of tmp_dir (default:01777)
-  --parent_timeut=<NN>                timeout for parent check (default:60)
-  --child_timeout=<NN>                timeout for child checks (default:10)
-  --verbose=<N>                       verbosity of check_multi (default:0)
-  --nagios-user=<user>                user name to run plugin (default:nagios)
-  --nagios-group=<group>              group name to run plugin (default:nagios)
-  --nagios-name=<name>                set nagios name (there should some clones ;)) (default:nagios)
+  --with-action_url=<URL>                  action URL (default:"")
+  --with-action_mouseover=<0|1>            show PNP chart popup triggered by mouseover (default:0)
+  --with-client_perl=<perl path>           sets perl cmdline / path (e.g. #!/usr/bin/perl)
+  --with-cmdfile_update_interval=<seconds> interval to update command file(s) (default:86400, one day)
+  --with-collapse=<0|1>                    HTML javascript tree collapse option (default:1)
+  --with-config_dir=<path>                 directory for check_multi configuration files (default:${prefix}/etc/multi)
+  --with-exec_open3=<0|1>                  use new exec method with function open3
+  --with-extinfo_in_status=<0|1>           display check_multi output in status.cgi
+  --with-file_extension=<ext>              default extension for check_multi command files (default:"cmd")
+  --with-ignore_missing_cmd_file=<0|1>     if missing cmd files should be ignored (default:0)
+  --with-illegal_chars=<chars>             characters to be stripped from command files (default:"\r")
+  --with-image_path=<URL>                  relative URL to nagios images (default:"/nagios/images")
+  --with-indent=<char>                     ASCII output indent character (default:" ")
+  --with-indent_label=<0|1>                indentation of child checks? (default:1)
+  --with-name=<name>                       default name for check_multi label (default:"")
+  --with-no_checks_rc=<RC>                 RC if no checks are specified (default:3-UNKNOWN)
+  --with-notes_url=<URL>                   notes URL (default:"")
+  --with-persistent=<0|1>                  persistency: saving of state data between two calls (default:0)
+  --with-pnp_path=<URL>                    relative URL to PNP (default:"/nagios/pnp")
+  --with-report=<NN>                       default report option (default:13)
+  --with-style_plus_minus=<HTML code>      HTML style for plus/minus (default:$ACTION_URL)
+  --with-tag_notes_link=<URL>              documentation URL for child checks (default:"")
+  --with-target=<target_frame>             HTML target frame for URLs (default:_self)
+  --with-tmp_dir=<path>                    /path/to/tmp_dir (default:/tmp/check_multi)
+  --with-tmp_etc=<path>                    /path/to/tmp_dir/etc (default:$tmp_dir/etc)
+  --with-tmp_dir_permissions=<octal perms> permissions of tmp_dir (default:01777)
+  --with-parent_timeut=<NN>                timeout for parent check (default:60)
+  --with-child_timeout=<NN>                timeout for child checks (default:10)
+  --with-verbose=<N>                       verbosity of check_multi (default:0)
+  --with-nagios-user=<user>                user name to run plugin (default:nagios)
+  --with-nagios-group=<group>              group name to run plugin (default:nagios)
+  --with-nagios-name=<name>                set nagios name (there should some clones ;)) (default:nagios)
 
 _ACEOF
 ac_status=$?
@@ -1885,11 +1887,19 @@ fi
 #--- too difficult to escape this - so define it as a variable before using it ;)
 ACTION_URL="style='color:#4444FF;line-height:0.1em;font-size:1.5em;cursor:crosshair'"
 
-# Check whether --with-multi_action_url was given.
-if test "${with_multi_action_url+set}" = set; then
-  withval=$with_multi_action_url; multi_action_url=$withval
+# Check whether --with-action_url was given.
+if test "${with_action_url+set}" = set; then
+  withval=$with_action_url; action_url=$withval
 else
-  multi_action_url=""
+  action_url=""
+fi
+
+
+# Check whether --with-action_mouseover was given.
+if test "${with_action_mouseover+set}" = set; then
+  withval=$with_action_mouseover; action_mouseover=$withval
+else
+  action_mouseover=0
 fi
 
 #--- too difficult to escape this - so define it as a variable before using it ;)
@@ -1945,211 +1955,211 @@ fi
 
 fi
 
-# Check whether --with-multi_cmdfile_update_interval was given.
-if test "${with_multi_cmdfile_update_interval+set}" = set; then
-  withval=$with_multi_cmdfile_update_interval; multi_cmdfile_update_interval=$withval
+# Check whether --with-cmdfile_update_interval was given.
+if test "${with_cmdfile_update_interval+set}" = set; then
+  withval=$with_cmdfile_update_interval; cmdfile_update_interval=$withval
 else
-  multi_cmdfile_update_interval=86400
+  cmdfile_update_interval=86400
 fi
 
 
-# Check whether --with-multi_collapse was given.
-if test "${with_multi_collapse+set}" = set; then
-  withval=$with_multi_collapse; multi_collapse=$withval
+# Check whether --with-collapse was given.
+if test "${with_collapse+set}" = set; then
+  withval=$with_collapse; collapse=$withval
 else
-  multi_collapse="1"
+  collapse="1"
 fi
 
 
-# Check whether --with-multi_config_dir was given.
-if test "${with_multi_config_dir+set}" = set; then
-  withval=$with_multi_config_dir; multi_config_dir=$withval
+# Check whether --with-config_dir was given.
+if test "${with_config_dir+set}" = set; then
+  withval=$with_config_dir; config_dir=$withval
 else
-  multi_config_dir="${prefix}/etc/multi"
+  config_dir="${prefix}/etc/multi"
 fi
 
 
-# Check whether --with-multi_exec_open3 was given.
-if test "${with_multi_exec_open3+set}" = set; then
-  withval=$with_multi_exec_open3; multi_exec_open3=$withval
+# Check whether --with-exec_open3 was given.
+if test "${with_exec_open3+set}" = set; then
+  withval=$with_exec_open3; exec_open3=$withval
 else
-  multi_exec_open3=0
+  exec_open3=0
 fi
 
 
-# Check whether --with-multi_extinfo_in_status was given.
-if test "${with_multi_extinfo_in_status+set}" = set; then
-  withval=$with_multi_extinfo_in_status; multi_extinfo_in_status=$withval
+# Check whether --with-extinfo_in_status was given.
+if test "${with_extinfo_in_status+set}" = set; then
+  withval=$with_extinfo_in_status; extinfo_in_status=$withval
 else
-  multi_extinfo_in_status=0
+  extinfo_in_status=0
 fi
 
 
-# Check whether --with-multi_file_extension was given.
-if test "${with_multi_file_extension+set}" = set; then
-  withval=$with_multi_file_extension; multi_file_extension=$withval
+# Check whether --with-file_extension was given.
+if test "${with_file_extension+set}" = set; then
+  withval=$with_file_extension; file_extension=$withval
 else
-  multi_file_extension="cmd"
+  file_extension="cmd"
 fi
 
 
-# Check whether --with-multi_ignore_missing_cmd_file was given.
-if test "${with_multi_ignore_missing_cmd_file+set}" = set; then
-  withval=$with_multi_ignore_missing_cmd_file; multi_ignore_missing_cmd_file=$withval
+# Check whether --with-ignore_missing_cmd_file was given.
+if test "${with_ignore_missing_cmd_file+set}" = set; then
+  withval=$with_ignore_missing_cmd_file; ignore_missing_cmd_file=$withval
 else
-  multi_ignore_missing_cmd_file="0"
+  ignore_missing_cmd_file="0"
 fi
 
 
-# Check whether --with-multi_illegal_chars was given.
-if test "${with_multi_illegal_chars+set}" = set; then
-  withval=$with_multi_illegal_chars; multi_illegal_chars=$withval
+# Check whether --with-illegal_chars was given.
+if test "${with_illegal_chars+set}" = set; then
+  withval=$with_illegal_chars; illegal_chars=$withval
 else
-  multi_illegal_chars="\r"
+  illegal_chars="\r"
 fi
 
 
-# Check whether --with-multi_image_path was given.
-if test "${with_multi_image_path+set}" = set; then
-  withval=$with_multi_image_path; multi_image_path=$withval
+# Check whether --with-image_path was given.
+if test "${with_image_path+set}" = set; then
+  withval=$with_image_path; image_path=$withval
 else
-  multi_image_path="/nagios/images"
+  image_path="/nagios/images"
 fi
 
 
-# Check whether --with-multi_indent was given.
-if test "${with_multi_indent+set}" = set; then
-  withval=$with_multi_indent; multi_indent=$withval
+# Check whether --with-indent was given.
+if test "${with_indent+set}" = set; then
+  withval=$with_indent; indent=$withval
 else
-  multi_indent=" "
+  indent=" "
 fi
 
 
-# Check whether --with-multi_indent_label was given.
-if test "${with_multi_indent_label+set}" = set; then
-  withval=$with_multi_indent_label; multi_indent_label=$withval
+# Check whether --with-indent_label was given.
+if test "${with_indent_label+set}" = set; then
+  withval=$with_indent_label; indent_label=$withval
 else
-  multi_indent_label=1
+  indent_label=1
 fi
 
 
-# Check whether --with-multi_name was given.
-if test "${with_multi_name+set}" = set; then
-  withval=$with_multi_name; multi_name=$withval
+# Check whether --with-name was given.
+if test "${with_name+set}" = set; then
+  withval=$with_name; name=$withval
 else
-  multi_name=""
+  name=""
 fi
 
 
-# Check whether --with-multi_no_checks_rc was given.
-if test "${with_multi_no_checks_rc+set}" = set; then
-  withval=$with_multi_no_checks_rc; multi_no_checks_rc=$withval
+# Check whether --with-no_checks_rc was given.
+if test "${with_no_checks_rc+set}" = set; then
+  withval=$with_no_checks_rc; no_checks_rc=$withval
 else
-  multi_no_checks_rc=3
+  no_checks_rc=3
 fi
 
 
-# Check whether --with-multi_notes_url was given.
-if test "${with_multi_notes_url+set}" = set; then
-  withval=$with_multi_notes_url; multi_notes_url=$withval
+# Check whether --with-notes_url was given.
+if test "${with_notes_url+set}" = set; then
+  withval=$with_notes_url; notes_url=$withval
 else
-  multi_notes_url=""
+  notes_url=""
 fi
 
 
-# Check whether --with-multi_persistent was given.
-if test "${with_multi_persistent+set}" = set; then
-  withval=$with_multi_persistent; multi_persisent=$withval
+# Check whether --with-persistent was given.
+if test "${with_persistent+set}" = set; then
+  withval=$with_persistent; persisent=$withval
 else
-  multi_persistent=0
+  persistent=0
 fi
 
 
-# Check whether --with-multi_pnp_path was given.
-if test "${with_multi_pnp_path+set}" = set; then
-  withval=$with_multi_pnp_path; multi_pnp_path=$withval
+# Check whether --with-pnp_path was given.
+if test "${with_pnp_path+set}" = set; then
+  withval=$with_pnp_path; pnp_path=$withval
 else
-  multi_pnp_path="/nagios/pnp"
+  pnp_path="/nagios/pnp"
 fi
 
 
-# Check whether --with-multi_report was given.
-if test "${with_multi_report+set}" = set; then
-  withval=$with_multi_report; multi_report=$withval
+# Check whether --with-report was given.
+if test "${with_report+set}" = set; then
+  withval=$with_report; report=$withval
 else
-  multi_report="13"
+  report="13"
 fi
 
 
-# Check whether --with-multi_style_plus_minus was given.
-if test "${with_multi_style_plus_minus+set}" = set; then
-  withval=$with_multi_style_plus_minus; multi_style_plus_minus=$withval
+# Check whether --with-style_plus_minus was given.
+if test "${with_style_plus_minus+set}" = set; then
+  withval=$with_style_plus_minus; style_plus_minus=$withval
 else
-  multi_style_plus_minus="$ACTION_URL"
+  style_plus_minus="$ACTION_URL"
 fi
 
 
-# Check whether --with-multi_tag_notes_link was given.
-if test "${with_multi_tag_notes_link+set}" = set; then
-  withval=$with_multi_tag_notes_link; multi_tag_notes_link=$withval
+# Check whether --with-tag_notes_link was given.
+if test "${with_tag_notes_link+set}" = set; then
+  withval=$with_tag_notes_link; tag_notes_link=$withval
 else
-  multi_tag_notes_link=""
+  tag_notes_link=""
 fi
 
 
-# Check whether --with-multi_target was given.
-if test "${with_multi_target+set}" = set; then
-  withval=$with_multi_target; multi_target=$withval
+# Check whether --with-target was given.
+if test "${with_target+set}" = set; then
+  withval=$with_target; target=$withval
 else
-  multi_target="_self"
+  target="_self"
 fi
 
 
-# Check whether --with-multi_tmp_dir was given.
-if test "${with_multi_tmp_dir+set}" = set; then
-  withval=$with_multi_tmp_dir; multi_tmp_dir=$withval
+# Check whether --with-tmp_dir was given.
+if test "${with_tmp_dir+set}" = set; then
+  withval=$with_tmp_dir; tmp_dir=$withval
 else
-  multi_tmp_dir="/tmp/check_multi"
+  tmp_dir="/tmp/check_multi"
 fi
 
 
-# Check whether --with-multi_tmp_etc was given.
-if test "${with_multi_tmp_etc+set}" = set; then
-  withval=$with_multi_tmp_etc; multi_tmp_etc=$withval
+# Check whether --with-tmp_etc was given.
+if test "${with_tmp_etc+set}" = set; then
+  withval=$with_tmp_etc; tmp_etc=$withval
 else
-  multi_tmp_etc="$multi_tmp_dir/etc"
+  tmp_etc="$tmp_dir/etc"
 fi
 
 
-# Check whether --with-multi_tmp_dir_permissions was given.
-if test "${with_multi_tmp_dir_permissions+set}" = set; then
-  withval=$with_multi_tmp_dir_permissions; multi_tmp_dir_permissions=$withval
+# Check whether --with-tmp_dir_permissions was given.
+if test "${with_tmp_dir_permissions+set}" = set; then
+  withval=$with_tmp_dir_permissions; tmp_dir_permissions=$withval
 else
-  multi_tmp_dir_permissions="01777"
+  tmp_dir_permissions="01777"
 fi
 
 
-# Check whether --with-multi_parent_timeout was given.
-if test "${with_multi_parent_timeout+set}" = set; then
-  withval=$with_multi_parent_timeout; multi_parent_timeout=$withval
+# Check whether --with-parent_timeout was given.
+if test "${with_parent_timeout+set}" = set; then
+  withval=$with_parent_timeout; parent_timeout=$withval
 else
-  multi_parent_timeout="60"
+  parent_timeout="60"
 fi
 
 
-# Check whether --with-multi_child_timeout was given.
-if test "${with_multi_child_timeout+set}" = set; then
-  withval=$with_multi_child_timeout; multi_child_timeout=$withval
+# Check whether --with-child_timeout was given.
+if test "${with_child_timeout+set}" = set; then
+  withval=$with_child_timeout; child_timeout=$withval
 else
-  multi_child_timeout="10"
+  child_timeout="10"
 fi
 
 
-# Check whether --with-multi_verbose was given.
-if test "${with_multi_verbose+set}" = set; then
-  withval=$with_multi_verbose; multi_verbose=$withval
+# Check whether --with-verbose was given.
+if test "${with_verbose+set}" = set; then
+  withval=$with_verbose; verbose=$withval
 else
-  multi_verbose="0"
+  verbose="0"
 fi
 
 
@@ -2175,6 +2185,7 @@ if test "${with_nagios_name+set}" = set; then
 else
   nagios_name=nagios
 fi
+
 
 
 
@@ -2912,35 +2923,36 @@ CP!$CP$ac_delim
 INSTALL!$INSTALL$ac_delim
 PERL!$PERL$ac_delim
 client_perl!$client_perl$ac_delim
-multi_action_url!$multi_action_url$ac_delim
-multi_child_timeout!$multi_child_timeout$ac_delim
-multi_contrib_dir!$multi_contrib_dir$ac_delim
-multi_collapse!$multi_collapse$ac_delim
-multi_cmdfile_update_interval!$multi_cmdfile_update_interval$ac_delim
-multi_config_dir!$multi_config_dir$ac_delim
-multi_extinfo_in_status!$multi_extinfo_in_status$ac_delim
-multi_exec_open3!$multi_exec_open3$ac_delim
-multi_file_extension!$multi_file_extension$ac_delim
-multi_ignore_missing_cmd_file!$multi_ignore_missing_cmd_file$ac_delim
-multi_illegal_chars!$multi_illegal_chars$ac_delim
-multi_indent_label!$multi_indent_label$ac_delim
-multi_indent!$multi_indent$ac_delim
-multi_nagios_images!$multi_nagios_images$ac_delim
-multi_name!$multi_name$ac_delim
-multi_no_checks_rc!$multi_no_checks_rc$ac_delim
-multi_notes_url!$multi_notes_url$ac_delim
-multi_persistent!$multi_persistent$ac_delim
-multi_pnp_path!$multi_pnp_path$ac_delim
-multi_report!$multi_report$ac_delim
-multi_service_definition_template!$multi_service_definition_template$ac_delim
-multi_style_plus_minus!$multi_style_plus_minus$ac_delim
-multi_tag_notes_link!$multi_tag_notes_link$ac_delim
-multi_target!$multi_target$ac_delim
-multi_tmp_dir!$multi_tmp_dir$ac_delim
-multi_tmp_etc!$multi_tmp_etc$ac_delim
-multi_tmp_dir_permissions!$multi_tmp_dir_permissions$ac_delim
-multi_parent_timeout!$multi_parent_timeout$ac_delim
-multi_verbose!$multi_verbose$ac_delim
+action_mouseover!$action_mouseover$ac_delim
+action_url!$action_url$ac_delim
+child_timeout!$child_timeout$ac_delim
+contrib_dir!$contrib_dir$ac_delim
+collapse!$collapse$ac_delim
+cmdfile_update_interval!$cmdfile_update_interval$ac_delim
+config_dir!$config_dir$ac_delim
+extinfo_in_status!$extinfo_in_status$ac_delim
+exec_open3!$exec_open3$ac_delim
+file_extension!$file_extension$ac_delim
+ignore_missing_cmd_file!$ignore_missing_cmd_file$ac_delim
+illegal_chars!$illegal_chars$ac_delim
+image_path!$image_path$ac_delim
+indent_label!$indent_label$ac_delim
+indent!$indent$ac_delim
+name!$name$ac_delim
+no_checks_rc!$no_checks_rc$ac_delim
+notes_url!$notes_url$ac_delim
+persistent!$persistent$ac_delim
+pnp_path!$pnp_path$ac_delim
+report!$report$ac_delim
+service_definition_template!$service_definition_template$ac_delim
+style_plus_minus!$style_plus_minus$ac_delim
+tag_notes_link!$tag_notes_link$ac_delim
+target!$target$ac_delim
+tmp_dir!$tmp_dir$ac_delim
+tmp_etc!$tmp_etc$ac_delim
+tmp_dir_permissions!$tmp_dir_permissions$ac_delim
+parent_timeout!$parent_timeout$ac_delim
+verbose!$verbose$ac_delim
 nagios_user!$nagios_user$ac_delim
 nagios_group!$nagios_group$ac_delim
 nagios_name!$nagios_name$ac_delim
@@ -2950,7 +2962,7 @@ LIBOBJS!$LIBOBJS$ac_delim
 LTLIBOBJS!$LTLIBOBJS$ac_delim
 _ACEOF
 
-  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 84; then
+  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 85; then
     break
   elif $ac_last_try; then
     { { echo "$as_me:$LINENO: error: could not make $CONFIG_STATUS" >&5
@@ -3333,70 +3345,72 @@ echo "${ECHO_T} Libexec directory         $libexecdir" >&6; }
 echo "${ECHO_T} CGI directory (sbin)      $sbindir" >&6; }
 { echo "$as_me:$LINENO: result:  HTML directory (dataroot) $datarootdir" >&5
 echo "${ECHO_T} HTML directory (dataroot) $datarootdir" >&6; }
-{ echo "$as_me:$LINENO: result:  Contrib directory         $multi_contrib_dir" >&5
-echo "${ECHO_T} Contrib directory         $multi_contrib_dir" >&6; }
-{ echo "$as_me:$LINENO: result:  Temporary directory       $multi_tmp_dir" >&5
-echo "${ECHO_T} Temporary directory       $multi_tmp_dir" >&6; }
-{ echo "$as_me:$LINENO: result:  Temp dir permissions      $multi_tmp_dir_permissions" >&5
-echo "${ECHO_T} Temp dir permissions      $multi_tmp_dir_permissions" >&6; }
+{ echo "$as_me:$LINENO: result:  Contrib directory         $contrib_dir" >&5
+echo "${ECHO_T} Contrib directory         $contrib_dir" >&6; }
+{ echo "$as_me:$LINENO: result:  Temporary directory       $tmp_dir" >&5
+echo "${ECHO_T} Temporary directory       $tmp_dir" >&6; }
+{ echo "$as_me:$LINENO: result:  Temp dir permissions      $tmp_dir_permissions" >&5
+echo "${ECHO_T} Temp dir permissions      $tmp_dir_permissions" >&6; }
 echo
 echo " --- System options"
 echo " -------------------------------------------------------------------"
-{ echo "$as_me:$LINENO: result:  Parent timeout (BIG T)    $multi_parent_timeout" >&5
-echo "${ECHO_T} Parent timeout (BIG T)    $multi_parent_timeout" >&6; }
-{ echo "$as_me:$LINENO: result:  Child timeout (small t)   $multi_child_timeout" >&5
-echo "${ECHO_T} Child timeout (small t)   $multi_child_timeout" >&6; }
+{ echo "$as_me:$LINENO: result:  Parent timeout (BIG T)    $parent_timeout" >&5
+echo "${ECHO_T} Parent timeout (BIG T)    $parent_timeout" >&6; }
+{ echo "$as_me:$LINENO: result:  Child timeout (small t)   $child_timeout" >&5
+echo "${ECHO_T} Child timeout (small t)   $child_timeout" >&6; }
 { echo "$as_me:$LINENO: result:  Nagios user/group         $nagios_user,$nagios_group" >&5
 echo "${ECHO_T} Nagios user/group         $nagios_user,$nagios_group" >&6; }
 { echo "$as_me:$LINENO: result:  Nagios name               $nagios_name" >&5
 echo "${ECHO_T} Nagios name               $nagios_name" >&6; }
-{ echo "$as_me:$LINENO: result:  RC if no checks defined   $multi_no_checks_rc" >&5
-echo "${ECHO_T} RC if no checks defined   $multi_no_checks_rc" >&6; }
-{ echo "$as_me:$LINENO: result:  default file extension    $multi_file_extension" >&5
-echo "${ECHO_T} default file extension    $multi_file_extension" >&6; }
-{ echo "$as_me:$LINENO: result:  ignore missing cmd file?  $multi_ignore_missing_cmd_file" >&5
-echo "${ECHO_T} ignore missing cmd file?  $multi_ignore_missing_cmd_file" >&6; }
+{ echo "$as_me:$LINENO: result:  RC if no checks defined   $no_checks_rc" >&5
+echo "${ECHO_T} RC if no checks defined   $no_checks_rc" >&6; }
+{ echo "$as_me:$LINENO: result:  default file extension    $file_extension" >&5
+echo "${ECHO_T} default file extension    $file_extension" >&6; }
+{ echo "$as_me:$LINENO: result:  ignore missing cmd file?  $ignore_missing_cmd_file" >&5
+echo "${ECHO_T} ignore missing cmd file?  $ignore_missing_cmd_file" >&6; }
 { echo "$as_me:$LINENO: result:  Client perl path          $client_perl" >&5
 echo "${ECHO_T} Client perl path          $client_perl" >&6; }
 echo
 echo " --- Output options"
 echo " -------------------------------------------------------------------"
-{ echo "$as_me:$LINENO: result:  Name / Label              '$multi_name'" >&5
-echo "${ECHO_T} Name / Label              '$multi_name'" >&6; }
-{ echo "$as_me:$LINENO: result:  Report option default     $multi_report" >&5
-echo "${ECHO_T} Report option default     $multi_report" >&6; }
-{ echo "$as_me:$LINENO: result:  HTML target frame         $multi_target" >&5
-echo "${ECHO_T} HTML target frame         $multi_target" >&6; }
-{ echo "$as_me:$LINENO: result:  Child checks indented?    $multi_indent_label" >&5
-echo "${ECHO_T} Child checks indented?    $multi_indent_label" >&6; }
-{ echo "$as_me:$LINENO: result:  Ascii indentation char    '$multi_indent'" >&5
-echo "${ECHO_T} Ascii indentation char    '$multi_indent'" >&6; }
-{ echo "$as_me:$LINENO: result:  Collapse tree?            $multi_collapse" >&5
-echo "${ECHO_T} Collapse tree?            $multi_collapse" >&6; }
-{ echo "$as_me:$LINENO: result:  Collapse plus style       $multi_style_plus_minus" >&5
-echo "${ECHO_T} Collapse plus style       $multi_style_plus_minus" >&6; }
-{ echo "$as_me:$LINENO: result:  Extinfo in status.cgi?    $multi_extinfo_in_status" >&5
-echo "${ECHO_T} Extinfo in status.cgi?    $multi_extinfo_in_status" >&6; }
-{ echo "$as_me:$LINENO: result:  Verbosity level default   $multi_verbose" >&5
-echo "${ECHO_T} Verbosity level default   $multi_verbose" >&6; }
+{ echo "$as_me:$LINENO: result:  Name / Label              '$name'" >&5
+echo "${ECHO_T} Name / Label              '$name'" >&6; }
+{ echo "$as_me:$LINENO: result:  Report option default     $report" >&5
+echo "${ECHO_T} Report option default     $report" >&6; }
+{ echo "$as_me:$LINENO: result:  HTML target frame         $target" >&5
+echo "${ECHO_T} HTML target frame         $target" >&6; }
+{ echo "$as_me:$LINENO: result:  Child checks indented?    $indent_label" >&5
+echo "${ECHO_T} Child checks indented?    $indent_label" >&6; }
+{ echo "$as_me:$LINENO: result:  Ascii indentation char    '$indent'" >&5
+echo "${ECHO_T} Ascii indentation char    '$indent'" >&6; }
+{ echo "$as_me:$LINENO: result:  Collapse tree?            $collapse" >&5
+echo "${ECHO_T} Collapse tree?            $collapse" >&6; }
+{ echo "$as_me:$LINENO: result:  Collapse plus style       $style_plus_minus" >&5
+echo "${ECHO_T} Collapse plus style       $style_plus_minus" >&6; }
+{ echo "$as_me:$LINENO: result:  Extinfo in status.cgi?    $extinfo_in_status" >&5
+echo "${ECHO_T} Extinfo in status.cgi?    $extinfo_in_status" >&6; }
+{ echo "$as_me:$LINENO: result:  Verbosity level default   $verbose" >&5
+echo "${ECHO_T} Verbosity level default   $verbose" >&6; }
+{ echo "$as_me:$LINENO: result:  PNP chart with mouseover  $action_mouseover" >&5
+echo "${ECHO_T} PNP chart with mouseover  $action_mouseover" >&6; }
 echo
 echo " --- Links"
 echo " -------------------------------------------------------------------"
-{ echo "$as_me:$LINENO: result:  action URL               '$multi_action_url'" >&5
-echo "${ECHO_T} action URL               '$multi_action_url'" >&6; }
-{ echo "$as_me:$LINENO: result:  notes URL                '$multi_notes_url'" >&5
-echo "${ECHO_T} notes URL                '$multi_notes_url'" >&6; }
-{ echo "$as_me:$LINENO: result:  documentation URL        '$multi_tag_notes_link'" >&5
-echo "${ECHO_T} documentation URL        '$multi_tag_notes_link'" >&6; }
+{ echo "$as_me:$LINENO: result:  action URL               '$action_url'" >&5
+echo "${ECHO_T} action URL               '$action_url'" >&6; }
+{ echo "$as_me:$LINENO: result:  notes URL                '$notes_url'" >&5
+echo "${ECHO_T} notes URL                '$notes_url'" >&6; }
+{ echo "$as_me:$LINENO: result:  documentation URL        '$tag_notes_link'" >&5
+echo "${ECHO_T} documentation URL        '$tag_notes_link'" >&6; }
 echo
 echo " --- Advanced Options"
 echo " -------------------------------------------------------------------"
-{ echo "$as_me:$LINENO: result:  cmdfile update interval  $multi_cmdfile_update_interval" >&5
-echo "${ECHO_T} cmdfile update interval  $multi_cmdfile_update_interval" >&6; }
-{ echo "$as_me:$LINENO: result:  illegal chars in cmdfile $multi_illegal_chars" >&5
-echo "${ECHO_T} illegal chars in cmdfile $multi_illegal_chars" >&6; }
-{ echo "$as_me:$LINENO: result:  check_multi persistent?  $multi_persistent" >&5
-echo "${ECHO_T} check_multi persistent?  $multi_persistent" >&6; }
+{ echo "$as_me:$LINENO: result:  cmdfile update interval  $cmdfile_update_interval" >&5
+echo "${ECHO_T} cmdfile update interval  $cmdfile_update_interval" >&6; }
+{ echo "$as_me:$LINENO: result:  illegal chars in cmdfile $illegal_chars" >&5
+echo "${ECHO_T} illegal chars in cmdfile $illegal_chars" >&6; }
+{ echo "$as_me:$LINENO: result:  check_multi persistent?  $persistent" >&5
+echo "${ECHO_T} check_multi persistent?  $persistent" >&6; }
 echo
 echo
 echo "*** Next step:  type 'make all'. ***"

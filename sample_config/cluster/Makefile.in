@@ -6,7 +6,7 @@
 prefix=@prefix@
 HTMLDIR=@datarootdir@
 CGIDIR=@sbindir@
-CFGDIR=@multi_config_dir@
+CFGDIR=@config_dir@
 INSTALL=@INSTALL@
 INSTALL_OPTS=@INSTALL_OPTS@
 
