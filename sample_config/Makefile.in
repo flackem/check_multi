@@ -1,5 +1,5 @@
 #---
-#--- Makefile contrib
+#--- Makefile sample-config
 #---
 #--- $Id$
 #---
@@ -16,6 +16,7 @@ clean:
 	cd multi_long && $(MAKE) $@
 	cd nagiostats && $(MAKE) $@
 	cd start_process && $(MAKE) $@
+	cd network_interface && $(MAKE) $@
 	
 
 distclean: clean
@@ -23,13 +24,15 @@ distclean: clean
 	cd multi_long && $(MAKE) $@
 	cd nagiostats && $(MAKE) $@
 	cd start_process && $(MAKE) $@
+	cd network_interface && $(MAKE) $@
 	-rm -f Makefile
 
 devclean: distclean
 
-install: 
+install-config: 
 	cd multi_long && $(MAKE) $@
 	cd cluster    && $(MAKE) $@
 	cd nagiostats && $(MAKE) $@
 	cd start_process && $(MAKE) $@
+	cd network_interface && $(MAKE) $@
 

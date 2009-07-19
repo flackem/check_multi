@@ -1,0 +1,26 @@
+#
+# network_interface.cmd (adopted for Linux hosts)
+#
+# Copyright (c) 2008-2009 Matthias Flacke (matthias.flacke at gmx.de)
+#
+# Matthias Flacke, 20.01.2008
+
+# determine def_gw interface from /proc/net/route
+command [ def_gw  ] = awk '$2 == "00000000" {print $1}' /proc/net/route
+
+# get ethtool output and store it in temporary file
+command [ ethtool ] = sudo @ethtool@ $def_gw$ > /tmp/if_$def_gw$.txt \
+                      && echo OK
+
+# get interface settings using ethtool
+command [ link    ] = awk '/Link detected:/    {print $3}' /tmp/if_$def_gw$.txt 
+command [ speed   ] = awk '/Speed:/            {print $2}' /tmp/if_$def_gw$.txt 
+command [ duplex  ] = awk '/Duplex:/           {print $2}' /tmp/if_$def_gw$.txt 
+command [ autoneg ] = awk '/Auto-negotiation:/ {print $2}' /tmp/if_$def_gw$.txt 
+
+# evaluate results
+state   [ UNKNOWN ] =  "$def_gw$"  eq "" || ethtool != OK
+state   [ WARNING ] = ("$speed$"   && "$speed$"   !~ /100/)   || \
+                      ("$duplex$"  && "$duplex$"  !~ /FULL/i) || \
+		      ("$autoneg$" && "$autoneg$" != "on")
+state   [ CRITICAL] =  "$link$"    && "$link$"    eq "no"

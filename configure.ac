@@ -40,6 +40,7 @@ AC_PATH_PROG(CP,cp)
 AC_PATH_PROG(INSTALL,install)
 AC_SUBST(INSTALL)
 AC_PATH_PROG(PERL,perl)
+AC_PATH_PROG(ETHTOOL,ethtool)
 
 #--- too difficult to escape this - so define it as a variable before using it ;)
 ACTION_URL="style='color:#4444FF;line-height:0.1em;font-size:1.5em;cursor:crosshair'"
@@ -57,6 +58,9 @@ fi
 AC_ARG_WITH(cmdfile_update_interval,	[  --with-cmdfile_update_interval=<seconds> interval to update command file(s) (default:86400, one day)],cmdfile_update_interval=$withval,cmdfile_update_interval=86400)
 AC_ARG_WITH(collapse,			[  --with-collapse=<0|1>                    HTML javascript tree collapse option (default:1)],collapse=$withval,collapse="1")
 AC_ARG_WITH(config_dir,			[  --with-config_dir=<path>                 directory for check_multi configuration files (default:${prefix}/etc/multi)],config_dir=$withval,config_dir="${prefix}/etc/multi")
+if test ethtool=""; then
+	AC_ARG_WITH(ethtool,			[  --with-ethtool=</path/to/ethtool>        define path to ethtool (default:/sbin/ethtool)],ethtool=$ethtool,ethtool="/sbin/ethtool")
+fi
 AC_ARG_WITH(exec_open3,			[  --with-exec_open3=<0|1>                  use new exec method with function open3],exec_open3=$withval,exec_open3=0)
 AC_ARG_WITH(extinfo_in_status,		[  --with-extinfo_in_status=<0|1>           display check_multi output in status.cgi],extinfo_in_status=$withval,extinfo_in_status=0)
 AC_ARG_WITH(file_extension,		[  --with-file_extension=<ext>              default extension for check_multi command files (default:"cmd")],file_extension=$withval,file_extension="cmd")
@@ -92,6 +96,7 @@ AC_SUBST(collapse)
 AC_SUBST(cmdfile_update_interval)
 AC_SUBST(config_dir)
 AC_SUBST(extinfo_in_status)
+AC_SUBST(ethtool)
 AC_SUBST(exec_open3)
 AC_SUBST(file_extension)
 AC_SUBST(ignore_missing_cmd_file)
@@ -165,6 +170,8 @@ $PERL subst sample_config/nagiostats/nagiostats.cmd
 $PERL subst sample_config/nagiostats/nagiostats.php
 $PERL subst sample_config/start_process/Makefile
 $PERL subst sample_config/start_process/start_process.cmd
+$PERL subst sample_config/network_interface/Makefile
+$PERL subst sample_config/network_interface/network_interface.cmd
 
 #---
 #--- review options and show the user what he has broken ;)

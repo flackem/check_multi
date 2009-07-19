@@ -1,0 +1,23 @@
+#---
+#--- Makefile sample_config/network_interface
+#---
+#--- $Id$
+#---
+prefix=@prefix@
+HTMLDIR=@datarootdir@
+CGIDIR=@sbindir@
+CFGDIR=@config_dir@
+INSTALL=@INSTALL@
+INSTALL_OPTS=@INSTALL_OPTS@
+
+clean:
+	-rm -f network_interface.cmd
+
+distclean: clean
+	-rm -f Makefile
+
+devclean: distclean
+
+install-config: 
+	$(INSTALL) -m 755 $(INSTALL_OPTS) -d $(DESTDIR)${CFGDIR}
+	$(INSTALL) -m 755 $(INSTALL_OPTS) network_interface.cmd $(DESTDIR)${CFGDIR}

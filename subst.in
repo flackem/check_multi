@@ -40,6 +40,7 @@ while (my $f = shift @ARGV) {
 		s|\@cmdfile_update_interval\@|@cmdfile_update_interval@|g;
 		s|\@config_dir\@|$config_dir|g;
 		s|\$\{contrib_dir\}|@contrib_dir@|g;
+		s|\@ethtool\@|@ethtool@|g;
 		s|\@exec_open3\@|@exec_open3@|g;
 		s|\@extinfo_in_status\@|@extinfo_in_status@|g;
 		s|\@file_extension\@|@file_extension@|g;

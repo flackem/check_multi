@@ -624,6 +624,7 @@ SET_MAKE
 CP
 INSTALL
 PERL
+ETHTOOL
 client_perl
 action_mouseover
 action_url
@@ -633,6 +634,7 @@ collapse
 cmdfile_update_interval
 config_dir
 extinfo_in_status
+ethtool
 exec_open3
 file_extension
 ignore_missing_cmd_file
@@ -1245,6 +1247,7 @@ check_multi settings:
   --with-cmdfile_update_interval=<seconds> interval to update command file(s) (default:86400, one day)
   --with-collapse=<0|1>                    HTML javascript tree collapse option (default:1)
   --with-config_dir=<path>                 directory for check_multi configuration files (default:${prefix}/etc/multi)
+  --with-ethtool=</path/to/ethtool>        define path to ethtool (default:/sbin/ethtool)
   --with-exec_open3=<0|1>                  use new exec method with function open3
   --with-extinfo_in_status=<0|1>           display check_multi output in status.cgi
   --with-file_extension=<ext>              default extension for check_multi command files (default:"cmd")
@@ -1883,6 +1886,46 @@ echo "${ECHO_T}no" >&6; }
 fi
 
 
+# Extract the first word of "ethtool", so it can be a program name with args.
+set dummy ethtool; ac_word=$2
+{ echo "$as_me:$LINENO: checking for $ac_word" >&5
+echo $ECHO_N "checking for $ac_word... $ECHO_C" >&6; }
+if test "${ac_cv_path_ETHTOOL+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  case $ETHTOOL in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_ETHTOOL="$ETHTOOL" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+  for ac_exec_ext in '' $ac_executable_extensions; do
+  if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_test_x "$as_dir/$ac_word$ac_exec_ext"; }; then
+    ac_cv_path_ETHTOOL="$as_dir/$ac_word$ac_exec_ext"
+    echo "$as_me:$LINENO: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+ETHTOOL=$ac_cv_path_ETHTOOL
+if test -n "$ETHTOOL"; then
+  { echo "$as_me:$LINENO: result: $ETHTOOL" >&5
+echo "${ECHO_T}$ETHTOOL" >&6; }
+else
+  { echo "$as_me:$LINENO: result: no" >&5
+echo "${ECHO_T}no" >&6; }
+fi
+
+
 
 #--- too difficult to escape this - so define it as a variable before using it ;)
 ACTION_URL="style='color:#4444FF;line-height:0.1em;font-size:1.5em;cursor:crosshair'"
@@ -1978,6 +2021,16 @@ else
   config_dir="${prefix}/etc/multi"
 fi
 
+if test ethtool=""; then
+
+# Check whether --with-ethtool was given.
+if test "${with_ethtool+set}" = set; then
+  withval=$with_ethtool; ethtool=$ethtool
+else
+  ethtool="/sbin/ethtool"
+fi
+
+fi
 
 # Check whether --with-exec_open3 was given.
 if test "${with_exec_open3+set}" = set; then
@@ -2185,6 +2238,7 @@ if test "${with_nagios_name+set}" = set; then
 else
   nagios_name=nagios
 fi
+
 
 
 
@@ -2922,6 +2976,7 @@ SET_MAKE!$SET_MAKE$ac_delim
 CP!$CP$ac_delim
 INSTALL!$INSTALL$ac_delim
 PERL!$PERL$ac_delim
+ETHTOOL!$ETHTOOL$ac_delim
 client_perl!$client_perl$ac_delim
 action_mouseover!$action_mouseover$ac_delim
 action_url!$action_url$ac_delim
@@ -2931,6 +2986,7 @@ collapse!$collapse$ac_delim
 cmdfile_update_interval!$cmdfile_update_interval$ac_delim
 config_dir!$config_dir$ac_delim
 extinfo_in_status!$extinfo_in_status$ac_delim
+ethtool!$ethtool$ac_delim
 exec_open3!$exec_open3$ac_delim
 file_extension!$file_extension$ac_delim
 ignore_missing_cmd_file!$ignore_missing_cmd_file$ac_delim
@@ -2962,7 +3018,7 @@ LIBOBJS!$LIBOBJS$ac_delim
 LTLIBOBJS!$LTLIBOBJS$ac_delim
 _ACEOF
 
-  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 85; then
+  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 87; then
     break
   elif $ac_last_try; then
     { { echo "$as_me:$LINENO: error: could not make $CONFIG_STATUS" >&5
@@ -3317,6 +3373,8 @@ $PERL subst sample_config/nagiostats/nagiostats.cmd
 $PERL subst sample_config/nagiostats/nagiostats.php
 $PERL subst sample_config/start_process/Makefile
 $PERL subst sample_config/start_process/start_process.cmd
+$PERL subst sample_config/network_interface/Makefile
+$PERL subst sample_config/network_interface/network_interface.cmd
 
 #---
 #--- review options and show the user what he has broken ;)
