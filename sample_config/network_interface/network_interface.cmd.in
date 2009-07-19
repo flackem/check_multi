@@ -21,6 +21,5 @@ command [ autoneg ] = awk '/Auto-negotiation:/ {print $2}' /tmp/if_$def_gw$.txt
 # evaluate results
 state   [ UNKNOWN ] =  "$def_gw$"  eq "" || ethtool != OK
 state   [ WARNING ] = ("$speed$"   && "$speed$"   !~ /100/)   || \
-                      ("$duplex$"  && "$duplex$"  !~ /FULL/i) || \
-		      ("$autoneg$" && "$autoneg$" != "on")
+                      ("$duplex$"  && "$duplex$"  !~ /FULL/i)
 state   [ CRITICAL] =  "$link$"    && "$link$"    eq "no"
