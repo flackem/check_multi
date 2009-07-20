@@ -121,7 +121,7 @@ my %opt=(
 		#
 		service_definition_template => "@service_definition_template@",
 		# style of plus/minus char
-		style_plus_minus => "style='color:#4444FF;line-height:0.1em;font-size:1.5em;cursor:crosshair'",
+		style_plus_minus => "style='color:#4444FF;line-height:0.3em;font-size:1.5em;cursor:crosshair'",
 		# documentation URL to be added to child check tags
 		tag_notes_link	=> "@tag_notes_link@",
 		# frame target for action_url and notes_url
