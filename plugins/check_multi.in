@@ -1348,7 +1348,7 @@ sub report_html {
 			my $pnp_path=substitute_macros($opt{set}{pnp_path});
 			my $image_path=substitute_macros($opt{set}{image_path});
 			$output.=sprintf "<td nowrap>%s</td>", 
-				"<A TARGET=\'$opt{set}{target}\'> HREF=\'$pnp_path/index.php?host=${hostname}&srv=$cmds[$no]{name}\' " . 
+				"<A TARGET=\'$opt{set}{target}\' HREF=\'$pnp_path/index.php?host=${hostname}&srv=$cmds[$no]{name}\'> " . 
 				"<img src=\'$image_path/action.gif\' width=20 height=20 border=0 align=top alt='Show performance chart for $hostname / $cmds[$no]{plugin}'></A>";
 		#--- Action url (mouseover version)
 		} elsif (($opt{set}{report} & $DETAIL_PERFORMANCE) &&
