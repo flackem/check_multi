@@ -1158,6 +1158,7 @@ sub substitute_states {
 	$input=~s/\bCOUNT\s*\(\s*(WARNING)\s*\)/$rc{count}[$WARNING]/ig;
 	$input=~s/\bCOUNT\s*\(\s*(CRITICAL)\s*\)/$rc{count}[$CRITICAL]/ig;
 	$input=~s/\bCOUNT\s*\(\s*(UNKNOWN)\s*\)/$rc{count}[$UNKNOWN]/ig;
+	$input=~s/\bCOUNT\s*\(\s*(ALL)\s*\)/$#cmds/ig;
 
 	#--- 2. replace all STATES (OK)
 	$input=~s/\b(OK)\b/$OK/ig;
@@ -1781,6 +1782,7 @@ sub error_in_perfdata {
 #---    mostly needed for 'check_multi_feeds_passive'
 sub report_service_definition {
 	my @tpl="";
+	#--- use template for service definition
 	if (! -f "$opt{set}{service_definition_template}") {
 		add_error("service definition template file \'$opt{set}{service_definition_template}\' not found");
 		return 1;
@@ -1791,15 +1793,6 @@ sub report_service_definition {
 		@tpl=<DEF>;
 		close DEF;
 	}
-#        foreach my $no (sort numerically keys %cmds) {
-#		my $line="$opt{set}{service_description}";
-#	print ">>>opt{set}{service_description}:$opt{set}{service_description}\n";
-#		print ">>>line1:$line\n";
-#		$line=substitute_macros($line);
-#		print ">>>line2:$line\n";
-#		print $line;
-#	}
-#	return;
 	my $output="";
         for($no=1;$no<=$#cmds;$no++) {
 		next if ($cmds[$no]{type} eq "eval");
