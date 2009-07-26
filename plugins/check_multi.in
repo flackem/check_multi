@@ -33,7 +33,7 @@ $MYSELF %cmds $returncode %def %rc $no $VERSION $tmp_stdout $tmp_stderr $xml $ch
 $OK $WARNING $CRITICAL $UNKNOWN
 $DETAIL_LIST $DETAIL_LIST_FULL $DETAIL_HTML $DETAIL_STDERR $DETAIL_PERFORMANCE
 $DETAIL_PERFORMANCE_CLASSIC $DETAIL_STATUS $DETAIL_PERFORMANCE_LINK $DETAIL_XML $DETAIL_NAGIOS2
-$DETAIL_NOTES_LINK $DETAIL_SERVICE_DEFINITION
+$DETAIL_NOTES_LINK $DETAIL_SERVICE_DEFINITION $DETAIL_SEND_NSCA
 *DEBUG1 *DEBUG2 *DEBUG3
 );
 #-------------------------------------------------------------------------------
@@ -61,6 +61,7 @@ $DETAIL_XML=256;
 $DETAIL_NAGIOS2=512;
 $DETAIL_NOTES_LINK=1024;
 $DETAIL_SERVICE_DEFINITION=2048;
+$DETAIL_SEND_NSCA=4096;
 #
 #--- vars
 $no=0;
@@ -112,6 +113,12 @@ my %opt=(
 		no_checks_rc	=> @no_checks_rc@,
 		# see tag_notes_link: URL to be added
 		notes_url	=> "@notes_url@",
+		#--- send_nsca: path to send_nsca binary
+		send_nsca	=> "/usr/local/nagios/sbin/send_nsca",
+		#--- send_nsca_cfg: path to send_nsca cfg file
+		send_nsca_cfg	=> "/usr/local/nagios/etc/send_nsca.cfg",
+		#--- send_nsca_opts: options to provide to send_nsca
+		send_nsca_opts	=> "-H localhost -p 5667 -to 10 -d ';'",
 		# create persistent data
 		persistent	=> @persistent@,
 		# path to PNP cgis
@@ -1257,6 +1264,10 @@ sub report_all {
 	if ($opt{set}{report} & $DETAIL_XML) {
 		&report_xml;
 	}
+	#--- report to nsca (send_nsca wrapper)
+	if ($opt{set}{report} & $DETAIL_SEND_NSCA) {
+		&report_send_nsca;
+	}
 	
 	#--- at last: perfdata
 	&report_perfdata;
@@ -1806,6 +1817,75 @@ sub report_service_definition {
 		}
         }
 	print $output;
+}
+
+
+
+sub report_send_nsca {
+	# 
+	# NSCA Client 2.5
+	# Copyright (c) 2000-2006 Ethan Galstad (www.nagios.org)
+	# Last Modified: 01-21-2006
+	# License: GPL v2
+	# Encryption Routines: NOT AVAILABLE
+	# 
+	# Usage: /usr/local/nagios/sbin/send_nsca -H <host_address> [-p port] [-to to_sec] [-d delim] [-c config_file]
+	# 
+	# Options:
+	#  <host_address> = The IP address of the host running the NSCA daemon
+	#  [port]         = The port on which the daemon is running - default is 5667
+	#  [to_sec]       = Number of seconds before connection attempt times out.
+	#                   (default timeout is 10 seconds)
+	#  [delim]        = Delimiter to use when parsing input (defaults to a tab)
+	#  [config_file]  = Name of config file to use
+	# 
+	# Note:
+	# This utility is used to send passive check results to the NSCA daemon.  Host and
+	# Service check data that is to be sent to the NSCA daemon is read from standard
+	# input. Input should be provided in the following format (tab-delimited unless
+	# overriden with -d command line argument, one entry per line):
+	# 
+	# Service Checks:
+	# <host_name>[tab]<svc_description>[tab]<return_code>[tab]<plugin_output>[newline]
+	# 
+	# Host Checks:
+	# <host_name>[tab]<return_code>[tab]<plugin_output>[newline]
+	#
+	my $sent=0;
+
+	if (! -x "$opt{set}{send_nsca}") {
+		add_error("report_send_nsca: $opt{set}{send_nsca} not found or not executable:$!");
+		return $sent;
+	}
+	if (! -f "$opt{set}{send_nsca_cfg}") {
+		add_error("report_send_nsca: $opt{set}{send_nsca_cfg} not found or not readable for UID $>:$!");
+		return $sent;
+	}
+	if (-z "$opt{set}{send_nsca_opts}") {
+		add_error("report_send_nsca: \$opt{set}{send_nsca_opts} options empty");
+		return $sent;
+	}
+	my $hostname=($ENV{NAGIOS_HOSTNAME}) ? $ENV{NAGIOS_HOSTNAME} : `uname -n`; chomp($hostname);
+	for (my $i=1; $i<=$#cmds; $i++) {
+		DEBUG1("report_send_nsca: commandline is \'$opt{set}{send_nsca} $opt{set}{send_nsca_opts} -c $opt{set}{send_nsca_cfg}\'");
+		if (!open(SEND_NSCA, "|$opt{set}{send_nsca} $opt{set}{send_nsca_opts} -c $opt{set}{send_nsca_cfg} >/dev/null")) {
+			add_error("report_send_nsca: error calling command line " . 
+				"\'$opt{set}{send_nsca} $opt{set}{send_nsca_opts} -c $opt{set}{send_nsca_cfg}\'");
+			return $sent;
+		}
+		printf SEND_NSCA "%s;%s;%s;%s\n",
+			$hostname,
+			$cmds[$i]{name},
+			$cmds[$i]{rc},
+			$cmds[$i]{output};
+		if ($?) {
+			add_error("report_send_nsca: error sending data to nsca:$?");
+		} else {
+			$sent++;
+		}
+		close SEND_NSCA;
+	}
+	return $sent;
 }
 
 #-------------------------------------------------------------------------------
