@@ -1927,6 +1927,11 @@ fi
 
 
 
+#---
+if test "${exec_prefix}" = "NONE"; then
+	exec_prefix="${prefix}"
+fi
+
 #--- too difficult to escape this - so define it as a variable before using it ;)
 ACTION_URL="style='color:#4444FF;line-height:0.1em;font-size:1.5em;cursor:crosshair'"
 

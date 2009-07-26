@@ -1,5 +1,6 @@
 
 ===== Changelog =====
+	* added 'service [ tag ] = host:service' to read service states from status.dat
 	* again some fixes for configure
 	* option action_mouseover now allows PNP popups in extinfo, thx to Amit Mor
 	* added example section in documentation - find these examples in sample-config

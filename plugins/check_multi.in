@@ -120,6 +120,8 @@ my %opt=(
 		report		=> @report@,
 		#
 		service_definition_template => "@service_definition_template@",
+		# path to status.dat 
+		status_dat => "@prefix@/var/status.dat",
 		# style of plus/minus char
 		style_plus_minus => "style='color:#4444FF;line-height:0.3em;font-size:1.5em;cursor:crosshair'",
 		# documentation URL to be added to child check tags
@@ -726,10 +728,10 @@ sub parse_files {
 #---
 sub parse_lines {
 	my @lines=@_;
-	my ($line,$cmd,$type,$name,$plugin,$pplugin,$expr,$lineno,$i);
+	my ($line,$cmd,$type,$name,$plugin,$pplugin,$expr,$lineno,$i,$host,$service);
 
 	$lineno=0;	# count sourcefile lines
-	while ($line=shift(@lines)) {
+	LINE: while ($line=shift(@lines)) {
 		chomp($line);
 		#--- remove unwanted characters from input line
 		$line=~s/$opt{set}{illegal_chars}//g;
@@ -747,7 +749,8 @@ sub parse_lines {
 		#--- format: 'command [ tag[::plugin] ] = plugin command line'
 		#--- format: 'eval    [ tag[::plugin] ] = expression'
 		#--- format: 'eeval   [ tag[::plugin] ] = expression'
-		if ($line=~/\s*(command|eval|eeval)\s*\[\s*([^:\s]+)[:]*(\S*)\s*\]\s*=\s*(.*)\s*/i) {
+		#--- format: 'service [ tag[::plugin] ] = host, service'
+		if ($line=~/\s*(command|eval|eeval|service)\s*\[\s*([^:\s]+)[:]*(\S*)\s*\]\s*=\s*(.*)\s*/i) {
 			$type=lc($1);
 			$name=$2;
 			$pplugin=$3;
@@ -765,14 +768,23 @@ sub parse_lines {
 				}
 				next;
 			}
+			
+			#--- service: split host and service from command, format: host:service
+			if ($type eq "service") {
+				if ($cmd=~/\s*([^,]*)\s*\:\s*(.*)\s*/) {
+					$host=$1;
+					$service=$2;
+				} else {
+					add_error("parse_lines: Invalid host or service in service line \'$line\', format should be \'service [ name ] = host:service\'"); 
+					next LINE;
+				}
+			}
 
 			#--- overloading: find plugin with same name
-			if ($type eq "command" || $type=~/eval$/) {
-				#MF printf STDERR "before %d\n", $#cmds;
+			if ($type eq "command" || $type=~/eval$/ || $type=~/service/) {
 				for ($i=1; $i<=$#cmds;$i++) {
 					last if ($cmds[$i]{name} eq $name);
 				}
-				#MF printf STDERR "after %d\n", $#cmds;
 				if ($cmds[$i]{command}) {
 					DEBUG2("parse_lines: overloaded $name with $type \'$cmd\'");
 				} else {
@@ -789,6 +801,10 @@ sub parse_lines {
 			$cmds[$i]{output}="";
 			$cmds[$i]{error}="";
 			$cmds[$i]{runtime}=0;
+			if ($type eq "service") {
+				$cmds[$i]{host}=$host;
+				$cmds[$i]{service}=$service;
+			}
 			if ($opt{set}{suppress_perfdata} && 
 			    $opt{set}{suppress_perfdata}=~/\b$name\b/i) {
 				$cmds[$i]{process_perfdata}=0;
@@ -1007,6 +1023,14 @@ sub exec_command {
 		$cmds[$no]{runtime}=time-$cmd_start;
 		alarm(0);
 		return $cmds[$no]{rc};
+	} elsif ($cmds[$no]{type} eq "service") {
+		alarm($opt{set}{timeout});
+                ($cmds[$no]{rc},$cmds[$no]{output})=get_status_dat_service($opt{set}{status_dat},$cmds[$no]{host},$cmds[$no]{service});
+		if ($cmds[$no]{rc} == -1) {
+			add_error("service $cmds[$no]{name}: cannot find service \'$cmds[$no]{service}\' on host \'$cmds[$no]{host}\' in \'$opt{set}{status_dat}\'");
+			$cmds[$no]{rc}=$UNKNOWN;
+		}
+		$ENV{"MULTI_".$cmds[$no]{name}}="$cmds[$no]{output}";
 	}
 	$cmds[$no]{runtime}=time-$cmd_start;
 	
@@ -1037,6 +1061,68 @@ sub exec_command {
 		}
 	}
 	return $cmds[$no]{rc};
+}
+
+sub get_status_dat_service {
+	my ($statusdat, $host_name, $service_description)=@_;
+
+
+	if (!$host_name || !$service_description) {
+		add_error("get_status_dat_service: empty host_name=$host_name or service_description=$service_description specified");
+		return (-1,"");
+	}
+
+	DEBUG2("get_status_dat_service: searching for host_name=$host_name and service_description=$service_description");
+	if (!open(DAT,$statusdat)) {
+		add_error("get_status_dat_service: cannot open $statusdat:$!");
+		return (-1,"");
+	}
+
+	#--- outer loop: look for type ${type}status
+	while (<DAT>) {
+		#--- read only services
+		if (/^servicestatus\s+\{/) {
+			my $plugin_output="";
+			my $long_plugin_output="";
+			my $current_state=0;
+	
+			while (<DAT>) {
+				NEXT: if (/\thost_name=(.+)$/) {
+					last if ($1 ne "$host_name");
+				} elsif (/\tservice_description=(.+)$/) {
+					last if ($1 ne "$service_description");
+				} elsif (/\tcurrent_state=(.*)/) {
+					$current_state=$1;
+				} elsif (/\tplugin_output=(.*)/) {
+					$plugin_output=$1;
+				} elsif (/\tlong_plugin_output=(.*)/) {
+					chomp($long_plugin_output=$1);
+					while (<DAT>) {
+						if (/^\t/) {
+							goto NEXT;
+						} else {
+							chomp;
+							$long_plugin_output.="\n$_";
+						}
+					}
+				} elsif (/^\t\}$/) {
+					close DAT;
+					DEBUG2("get_status_dat_service: found RC $current_state and output $plugin_output, long_output $long_plugin_output");
+					return ($current_state, "$plugin_output\n$long_plugin_output");
+				}
+			}
+		#--- skip other records
+		} else {
+			next;
+		}
+
+		#--- skip rest of record
+		while (<DAT>) {
+			last if (/^\t\}$/);
+		}
+	}
+	close DAT;
+	return (-1,"");
 }
 
 sub eval_result {

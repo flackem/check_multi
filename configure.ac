@@ -42,6 +42,11 @@ AC_SUBST(INSTALL)
 AC_PATH_PROG(PERL,perl)
 AC_PATH_PROG(ETHTOOL,ethtool)
 
+#---
+if test "${exec_prefix}" = "NONE"; then
+	exec_prefix="${prefix}"
+fi
+
 #--- too difficult to escape this - so define it as a variable before using it ;)
 ACTION_URL="style='color:#4444FF;line-height:0.1em;font-size:1.5em;cursor:crosshair'"
 AC_ARG_WITH(action_url,		[  
