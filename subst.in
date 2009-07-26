@@ -2,11 +2,16 @@
 
 my ${prefix}="@prefix@";
 my ${exec_prefix}="@exec_prefix@";
-my ${LIBEXECDIR}="@prefix@/libexec";
+my ${libexecdir}="@prefix@/libexec";
 my ${sbindir}="@sbindir@";
 my ${datarootdir}="@datarootdir@";
 my ${localstatedir}="@localstatedir@";
 my ${config_dir}="@config_dir@";
+my $libdir="@libdir@";
+my $sysconfdir="@sysconfdir@";
+my $bindir="@bindir@";
+my $srcdir="@srcdir@";
+
 my ${image_path}="@image_path@";
 my ${pnp_path}="@pnp_path@";
 my ${service_definition_template}="@service_definition_template@";
@@ -44,6 +49,7 @@ while (my $f = shift @ARGV) {
 		s|\@exec_open3\@|@exec_open3@|g;
 		s|\@extinfo_in_status\@|@extinfo_in_status@|g;
 		s|\@file_extension\@|@file_extension@|g;
+		s|\@findbin\@|@findbin@|g;
 		s|\@ignore_missing_cmd_file\@|@ignore_missing_cmd_file@|g;
 		s|\@illegal_chars\@|@illegal_chars@|g;
 		s|\@indent_label\@|@indent_label@|g;
@@ -64,13 +70,12 @@ while (my $f = shift @ARGV) {
 		s|\@tmp_dir_permissions\@|@tmp_dir_permissions@|g;
 		s|\@parent_timeout\@|@parent_timeout@|g;
 		s|\@verbose\@|@verbose@|g;
-		s|\@exec_prefix\@|$exec_prefix|g;	# 
-		s|\@prefix\@|@prefix@|g;		# 
 		s|\@sbindir\@|$sbindir|g;		# put all --with-vars before directories
-		s|\@datarootdir\@|$datarootdir|g;	# put all --with-vars before directories
-		s|\@image_path\@|$image_path|g;		# put all --with-vars before directories
-		s|\@localstatedir\@|$localstatedir|g;	# put all --with-vars before directories
-		s|\@LIBEXECDIR\@|$LIBEXECDIR|g;		# put all --with-vars before directories
+		s|\@sysconfdir\@|$sysconfdir|g;
+		s|\@datarootdir\@|$datarootdir|g;
+		s|\@image_path\@|$image_path|g;		
+		s|\@localstatedir\@|$localstatedir|g;
+		s|\@libexecdir\@|$libexecdir|g;	
 		s|\$\{exec_prefix\}|$exec_prefix|g;	# must be next to last
 		s|\$\{prefix\}|@prefix@|g;		# must be last
 		print OUT $_;

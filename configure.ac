@@ -62,12 +62,13 @@ if test client_perl=no; then
 fi
 AC_ARG_WITH(cmdfile_update_interval,	[  --with-cmdfile_update_interval=<seconds> interval to update command file(s) (default:86400, one day)],cmdfile_update_interval=$withval,cmdfile_update_interval=86400)
 AC_ARG_WITH(collapse,			[  --with-collapse=<0|1>                    HTML javascript tree collapse option (default:1)],collapse=$withval,collapse="1")
-AC_ARG_WITH(config_dir,			[  --with-config_dir=<path>                 directory for check_multi configuration files (default:${prefix}/etc/multi)],config_dir=$withval,config_dir="${prefix}/etc/multi")
+AC_ARG_WITH(config_dir,			[  --with-config_dir=<path>                 directory for check_multi configuration files (default:${sysconfdir}/multi)],config_dir=$withval,config_dir="${sysconfdir}/multi")
 if test ethtool=""; then
 	AC_ARG_WITH(ethtool,			[  --with-ethtool=</path/to/ethtool>        define path to ethtool (default:/sbin/ethtool)],ethtool=$ethtool,ethtool="/sbin/ethtool")
 fi
 AC_ARG_WITH(exec_open3,			[  --with-exec_open3=<0|1>                  use new exec method with function open3],exec_open3=$withval,exec_open3=0)
 AC_ARG_WITH(extinfo_in_status,		[  --with-extinfo_in_status=<0|1>           display check_multi output in status.cgi],extinfo_in_status=$withval,extinfo_in_status=0)
+AC_ARG_WITH(findbin,			[  --with-findbin=<0|1>                     use Perl module FindBin for addressing plugins (default:1)],findbin=$withval,findbin=1)
 AC_ARG_WITH(file_extension,		[  --with-file_extension=<ext>              default extension for check_multi command files (default:"cmd")],file_extension=$withval,file_extension="cmd")
 AC_ARG_WITH(ignore_missing_cmd_file,	[  --with-ignore_missing_cmd_file=<0|1>     if missing cmd files should be ignored (default:0)],ignore_missing_cmd_file=$withval,ignore_missing_cmd_file="0")
 AC_ARG_WITH(illegal_chars,		[  --with-illegal_chars=<chars>             characters to be stripped from command files (default:"\r")],illegal_chars=$withval,illegal_chars="\r")
@@ -103,6 +104,7 @@ AC_SUBST(config_dir)
 AC_SUBST(extinfo_in_status)
 AC_SUBST(ethtool)
 AC_SUBST(exec_open3)
+AC_SUBST(findbin)
 AC_SUBST(file_extension)
 AC_SUBST(ignore_missing_cmd_file)
 AC_SUBST(illegal_chars)

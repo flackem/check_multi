@@ -636,6 +636,7 @@ config_dir
 extinfo_in_status
 ethtool
 exec_open3
+findbin
 file_extension
 ignore_missing_cmd_file
 illegal_chars
@@ -1246,10 +1247,11 @@ check_multi settings:
   --with-client_perl=<perl path>           sets perl cmdline / path (e.g. #!/usr/bin/perl)
   --with-cmdfile_update_interval=<seconds> interval to update command file(s) (default:86400, one day)
   --with-collapse=<0|1>                    HTML javascript tree collapse option (default:1)
-  --with-config_dir=<path>                 directory for check_multi configuration files (default:${prefix}/etc/multi)
+  --with-config_dir=<path>                 directory for check_multi configuration files (default:${sysconfdir}/multi)
   --with-ethtool=</path/to/ethtool>        define path to ethtool (default:/sbin/ethtool)
   --with-exec_open3=<0|1>                  use new exec method with function open3
   --with-extinfo_in_status=<0|1>           display check_multi output in status.cgi
+  --with-findbin=<0|1>                     use Perl module FindBin for addressing plugins (default:1)
   --with-file_extension=<ext>              default extension for check_multi command files (default:"cmd")
   --with-ignore_missing_cmd_file=<0|1>     if missing cmd files should be ignored (default:0)
   --with-illegal_chars=<chars>             characters to be stripped from command files (default:"\r")
@@ -2023,7 +2025,7 @@ fi
 if test "${with_config_dir+set}" = set; then
   withval=$with_config_dir; config_dir=$withval
 else
-  config_dir="${prefix}/etc/multi"
+  config_dir="${sysconfdir}/multi"
 fi
 
 if test ethtool=""; then
@@ -2050,6 +2052,14 @@ if test "${with_extinfo_in_status+set}" = set; then
   withval=$with_extinfo_in_status; extinfo_in_status=$withval
 else
   extinfo_in_status=0
+fi
+
+
+# Check whether --with-findbin was given.
+if test "${with_findbin+set}" = set; then
+  withval=$with_findbin; findbin=$withval
+else
+  findbin=1
 fi
 
 
@@ -2243,6 +2253,7 @@ if test "${with_nagios_name+set}" = set; then
 else
   nagios_name=nagios
 fi
+
 
 
 
@@ -2993,6 +3004,7 @@ config_dir!$config_dir$ac_delim
 extinfo_in_status!$extinfo_in_status$ac_delim
 ethtool!$ethtool$ac_delim
 exec_open3!$exec_open3$ac_delim
+findbin!$findbin$ac_delim
 file_extension!$file_extension$ac_delim
 ignore_missing_cmd_file!$ignore_missing_cmd_file$ac_delim
 illegal_chars!$illegal_chars$ac_delim
@@ -3023,7 +3035,7 @@ LIBOBJS!$LIBOBJS$ac_delim
 LTLIBOBJS!$LTLIBOBJS$ac_delim
 _ACEOF
 
-  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 87; then
+  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 88; then
     break
   elif $ac_last_try; then
     { { echo "$as_me:$LINENO: error: could not make $CONFIG_STATUS" >&5
