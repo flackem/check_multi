@@ -87,6 +87,7 @@ $tmp_stderr="";
 my %opt=(
 	"execute"	=> [],
 	"filename"	=> [],
+	"help"		=> 0,
 	"set"		=> {
 		# mouse_over & action_url: shows PNP chart popup triggered by mouse
 		action_mouseover => @action_mouseover@,
@@ -217,7 +218,7 @@ sub process_parameters {
 
 	if (! GetOptions(
 		"f|filename=s"	=> \@{$opt{filename}},
-		"h|help"	=> \$opt{help},
+		"h|help:+"	=> \$opt{help},
 		"l|libexec=s"	=> \$opt{set}{libexec},
 		"n|name=s"	=> \$opt{set}{name},
 		"r|report:i"	=> \$opt{set}{report},
@@ -247,10 +248,16 @@ sub process_parameters {
 		return $UNKNOWN;
 	}
 
-	#--- -h/--help shows long usage
-	if ($opt{help}) {
+	#--- -h/--help shows long usage, -hh extended usage
+	DEBUG1("opt{help}=$opt{help}");
+	if ($opt{help} == 1) {
 		short_usage();
 		long_usage();
+		return $UNKNOWN;
+	} elsif ($opt{help} >= 2) {
+		short_usage();
+		long_usage();
+		extended_usage();
 		return $UNKNOWN;
 	}
 
@@ -506,6 +513,7 @@ sub process_parameters {
 #---
 sub short_usage {
 print <<SHORTEOF;
+Usage:
 $MYSELF -f <config file> [-n name] [-t timeout] [-T TIMEOUT] 
 	[-r level] [-l libexec_path] [-s option=value]
 $MYSELF [-h | --help]
@@ -522,21 +530,55 @@ SHORTEOF
 #---
 sub long_usage {
 print <<LONGEOF;
-Options:
+Common options:
 -f, --filename
    config file which contains commands to be executed
    multiple files can be specified serially
    if filename is a directory, all '.cmd' files will be taken
    (file format follows nrpe style: command[tag]=plugin command line)
 -n, --name
-   multi plugin name (shown in output), default: $opt{set}{name}
--t, --timeout
-   timeout for one command, default: $opt{set}{timeout}
--T, --TIMEOUT
-   TIMEOUT for all commands, default: $opt{set}{TIMEOUT}
+   multi plugin name (shown in output), default:$opt{set}{name}
 -r, --report <level>
    specify level of details in output (level is binary coded, just sum up all options)
-   default: $opt{set}{report}
+   default:$opt{set}{report}
+   see more details with extended help option -hh
+-s, --set <option>=<value>
+   <KEY>=<VALUE> - set multi variable \$<KEY>\$ to <VALUE>
+   see more details with extended help option -hh
+-t, --timeout
+   timeout for one command, default:$opt{set}{timeout}
+-T, --TIMEOUT
+   TIMEOUT for all commands, default:$opt{set}{TIMEOUT}
+-l, --libexec
+   path to plugins, default:$opt{set}{libexec}
+-h, --help
+   print detailed help screen (extended help with -hh)
+-v, --verbose
+   prints debug output (multiple -v extend debug level) 
+-V, --version
+   print version information
+
+Extended command line - command file options also available on command line:
+-x, --execute "command [ tag ] = check_xyz"
+-w, --warning  <expression>
+-c, --critical <expression>
+-u, --unknown  <expression>
+-o, --ok       <expression>
+
+LONGEOF
+
+}
+
+#---
+#--- extended usage - flood the user with details ;)
+#---
+sub extended_usage {
+
+print <<EXTENDED_EOF;
+Extended options:
+-r, --report <level>
+   specify level of details in output (level is binary coded, just sum up all options)
+   default:$opt{set}{report}
         1: mention service names in plugin_output, e.g.
            "24 plugins checked, 1 critical (http), 0 warning, 0 unknown, 23 ok"
         2: add HTML coloring of output for extinfo
@@ -549,35 +591,50 @@ Options:
       256: XML: print structured XML output
       512: Nagios 2 compatibility: one summary line of output only
      1024: show notes_url
+     2048: print Nagios service definition for passive check feeded by check_multi
+     4096: send_nsca: all child checks will be reported to Nagios via send_nsca
 -s, --set <option>=<value>
    <KEY>=<VALUE> - set multi variable \$<KEY>\$ to <VALUE>
-   extinfo_in_status=(0|1) - show child checks also in Nagios status view (HTML)
-   file_extension=<ext> - standard file extension for config files
-   ignore_missing_cmd_file=(0|1) - don't complain if config file missing
-   image_path=/path/to/Nagios/imagefiles
-   indent_label=(0|1) - indentation width is label (HTML)
+   action_mouseover=<PNP URL> - mouse triggers PNP popup chart
+   cmdfile_update_interval=<seconds> - update config file (if HTTP/FTP/...), default:$opt{set}{cmdfile_update_interval}
+   collapse=<0|1> - should check_multi collapse child check_multi checks? default:$opt{set}{collapse}
+   config_dir=</path/to/config_dir> - path to check_multi config directory, default:$opt{set}{config_dir}
+   exec_open3=<0|1> - use open3 method to exec child checks (to be tested though), default:$opt{set}{exec_open3}
+   extinfo_in_status=<0|1> - show child checks also in Nagios status.cgi (HTML), default:$opt{set}{extinfo_in_status}
+   file_extension=<ext> - standard file extension for config files, default:$opt{set}{file_extension}
+   ignore_missing_cmd_file=<0|1> - don't complain if config file missing, default:$opt{set}{ignore_missing_cmd_file}
+   illegal_chars=<characters> - specify characters to cleanup from command files
+   image_path=</path/to/imagefiles> - relative path to Nagios imagefiles: default:$opt{set}{image_path}
+   indent=<characters> - string to indent child checks, default:$opt{set}{indent}
+   indent_label=<0|1> - indentation width is child check label width (HTML), default:$opt{set}{indent_label}
+   libexec=</path/to/plugins> - directory to be added to search path: default:$opt{set}{libexec}
+   name=<string> - label to be shown in output: <name> OK, default:$opt{set}{name}
    no_checks_rc=<RC> - which RC should be returned if no checks are defined, default:$opt{set}{no_checks_rc}
-   notes_url=<URL> - see Nagios notes_url
-   pnp_path=/path/to/PNP/CGIs
+   notes_url=<URL> - URL to be added to child check, see Nagios notes_url
+   persistent=<0|1> - run check_multi in persistent mode, default:$opt{set}{persistent}
+   pnp_path=</path/to/PNP-CGIs> - specify path to PNP cgi scripts, default:$opt{set}{pnp_path}
+   report=<number> - binary coded report option, default:$opt{set}{report}
+   send_nsca=<path/to/send_nsca> - path to send_nsca binary, default:$opt{set}{send_nsca}
+   send_nsca_cfg=</path/to/send_nsca.cfg> -  path to send_nsca cfg file, default:$opt{set}{send_nsca_cfg}
+   send_nsca_srv=<NSCA server> - server to send NSCA messages to, default:$opt{set}{send_nsca_srv}
+   send_nsca_port=<port number> - port where NSCA daemon runs on NSCA server, default:$opt{set}{send_nsca_port}
+   send_nsca_timeout=<seconds> -  timeout for send_nsca, default:$opt{set}{send_nsca_timeout}
+   send_nsca_delim=<string> - delimiter characters to separate NSCA fields, default:$opt{set}{send_nsca_delim}
+   service_definition_template=</path/to/template> - template for passive service definition
+   status_dat=</path/to/status.dat> - where is Nagios status.dat? default:$opt{set}{status_dat}
+   style_plus_minus=<HTML style> - style of HTML plus/minus characters
    suppress_perfdata=<tag1>[,<tag2>][,...] - don't provide perfdata for check tag1,tag2...
-   target=<target> - frame target for action_url and notes_url
-   tmp_dir=<directory> - path for temporary files
--l, --libexec
-   path to plugins, default: $opt{set}{libexec}
--h, --help
-   print detailed help screen
--v, --verbose
-   prints debug output (multiple -v extend debug level) 
--V, --version
-   print version information
+   tag_notes_link=<URL> - notes URL be added to child checks, default:$opt{set}{tag_notes_link}
+   target=<target> - frame target for action_url and notes_url, default:$opt{set}{target}
+   timeout=<seconds> - child check timeout (small t), default:$opt{set}{timeout}
+   TIMEOUT=<seconds> - global check_multi timeout (BIG T), default:$opt{set}{TIMEOUT}
+   tmp_dir=<directory> - path for temporary files, default:$opt{set}{tmp_dir}
+   tmp_dir_permissions=<octal> - permissions of temporary directory, default:$opt{set}{tmp_dir_permissions}
+   tmp_etc=<directory> - path for local copies of command files, default:$opt{set}{tmp_etc}
+   verbose=<0|1|2> - level of verbosity, from 1 (less verbose) to 3 (much verbose), default:$opt{set}{verbose}
+   xml_elements=<string> - elements to be added to XML structure
 
-Extended mode - specify extra settings for threshold interpretation:
--x, --execute "command [ tag ] = check_xyz"
--w, --warning  <expression>
--c, --critical <expression>
--u, --unknown  <expression>
--o, --ok       <expression>
-LONGEOF
+EXTENDED_EOF
 
 }
 
