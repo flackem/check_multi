@@ -1,5 +1,6 @@
 
 ===== Changelog =====
+	* added caching for 'service [ tag ]'
 	* added send_nsca report option 4096, it sends child results to NSCA master
 	* added COUNT(ALL) to provide cluster rules like this one\\ state [ CRITICAL ] = COUNT(CRITICAL) < COUNT(ALL)-1
 	* added 'service [ tag ] = host:service' to read service states from status.dat

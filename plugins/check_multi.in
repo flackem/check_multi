@@ -26,6 +26,7 @@ use strict;
 use Getopt::Long qw(:config no_ignore_case bundling);
 use vars qw(
 $MYSELF %cmds %opt $returncode %def %rc $no $VERSION $tmp_stdout $tmp_stderr $xml $check_multi
+$status_dat
 $OK $WARNING $CRITICAL $UNKNOWN
 $DETAIL_LIST $DETAIL_LIST_FULL $DETAIL_HTML $DETAIL_STDERR $DETAIL_PERFORMANCE
 $DETAIL_PERFORMANCE_CLASSIC $DETAIL_STATUS $DETAIL_PERFORMANCE_LINK $DETAIL_XML $DETAIL_NAGIOS2
@@ -74,6 +75,7 @@ $DETAIL_SEND_NSCA=4096;
 #--- vars
 $no=0;
 $returncode=0;
+$status_dat=undef;
 $tmp_stdout="";
 $tmp_stderr="";
 %def=(
@@ -1142,17 +1144,41 @@ sub exec_command {
 }
 
 sub get_status_dat_service {
-	my ($statusdat, $host_name, $service_description)=@_;
+        my ($statusdat_path, $host_name, $service_description)=@_;
 
 
 	if (!$host_name || !$service_description) {
 		add_error("get_status_dat_service: empty host_name=$host_name or service_description=$service_description specified");
 		return (-1,"");
 	}
+	if (!$status_dat) {
+		DEBUG2("get_status_dat_service: 1st read, creating service tree");
+		$status_dat=read_status_dat($statusdat_path);
+		if (!$status_dat) {
+			add_error("get_status_dat_service: could not read $statusdat_path");
+			return (-1,"");
+		}
+	} else {
+		DEBUG2("get_status_dat_service: subsequent read, reading from service tree");
+	}
+	if (! defined($status_dat->{$host_name}->{$service_description})) {
+		DEBUG2("get_status_dat_service: did not found RC and output for $host_name:$service_description");
+		return (-1,"");
+	} else {
+		DEBUG2("get_status_dat_service: found data for $host_name:$service_description: RC $status_dat->{$host_name}->{$service_description}->{current_state} and output \'$status_dat->{$host_name}->{$service_description}->{plugin_output}\', long_output \'$status_dat->{$host_name}->{$service_description}->{long_plugin_output}\'");
+        	return (
+			$status_dat->{$host_name}->{$service_description}->{current_state}, 
+			$status_dat->{$host_name}->{$service_description}->{plugin_output}."\n".
+			$status_dat->{$host_name}->{$service_description}->{long_plugin_output}
+		);
+	}
+}
 
-	DEBUG2("get_status_dat_service: searching for host_name=$host_name and service_description=$service_description");
-	if (!open(DAT,$statusdat)) {
-		add_error("get_status_dat_service: cannot open $statusdat:$!");
+sub read_status_dat {
+	my ($statusdat_path)=@_;
+
+	if (!open(DAT,$statusdat_path)) {
+		add_error("read_status_dat: cannot open $statusdat_path:$!");
 		return (-1,"");
 	}
 
@@ -1163,12 +1189,14 @@ sub get_status_dat_service {
 			my $plugin_output="";
 			my $long_plugin_output="";
 			my $current_state=0;
-	
+			my $host_name="";
+			my $service_description="";
+
 			while (<DAT>) {
 				NEXT: if (/\thost_name=(.+)$/) {
-					last if ($1 ne "$host_name");
+					$host_name=$1;
 				} elsif (/\tservice_description=(.+)$/) {
-					last if ($1 ne "$service_description");
+					$service_description=$1;
 				} elsif (/\tcurrent_state=(.*)/) {
 					$current_state=$1;
 				} elsif (/\tplugin_output=(.*)/) {
@@ -1184,23 +1212,19 @@ sub get_status_dat_service {
 						}
 					}
 				} elsif (/^\t\}$/) {
-					close DAT;
-					DEBUG2("get_status_dat_service: found RC $current_state and output $plugin_output, long_output $long_plugin_output");
-					return ($current_state, "$plugin_output\n$long_plugin_output");
+					$status_dat->{$host_name}->{$service_description}->{current_state}=$current_state;
+					$status_dat->{$host_name}->{$service_description}->{plugin_output}=$plugin_output;
+					$status_dat->{$host_name}->{$service_description}->{long_plugin_output}=$long_plugin_output;
+					last;
 				}
 			}
 		#--- skip other records
 		} else {
 			next;
 		}
-
-		#--- skip rest of record
-		while (<DAT>) {
-			last if (/^\t\}$/);
-		}
 	}
 	close DAT;
-	return (-1,"");
+	return $status_dat;
 }
 
 sub eval_result {
