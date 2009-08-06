@@ -4,7 +4,6 @@
 #--- $Id$
 #---
 prefix=@prefix@
-LIBEXECDIR=@LIBEXECDIR@
 HTMLDIR=@datarootdir@
 INSTALL=@INSTALL@
 INSTALL_OPTS=@INSTALL_OPTS@

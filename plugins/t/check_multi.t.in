@@ -11,7 +11,7 @@ use NPTest;
 my $t;
 
 #--- add $libexec_dir to PATH to be sure that plugins will be called from libexec_dir
-my $libexec_dir="/usr/local/nagios/libexec";
+my $libexec_dir="@libexecdir@";
 $ENV{PATH}="$libexec_dir:$ENV{PATH}";
 
 #--- check needed plugins for tests

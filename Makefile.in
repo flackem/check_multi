@@ -16,7 +16,7 @@ SRC_CONFIG=@srcdir@/sample_config
 prefix=@prefix@
 exec_prefix=@exec_prefix@
 CFGDIR=@sysconfdir@
-LIBEXECDIR=@LIBEXECDIR@
+LIBEXECDIR=@libexecdir@
 DATAROOTDIR=@datarootdir@
 CGIDIR=@sbindir@
 
