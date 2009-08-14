@@ -228,7 +228,7 @@ sub process_parameters {
 		"h|help:+"	=> \$opt{help},
 		"l|libexec=s"	=> \$opt{set}{libexec},
 		"n|name=s"	=> \$opt{set}{name},
-		"r|report:i"	=> \$opt{set}{report},
+		"r|report=s"	=> \$opt{set}{report},
 		"s|set=s"	=> \%{$opt{set}},
 		"t|timeout=i"	=> \$opt{set}{timeout},
 		"T|TIMEOUT=i"	=> \$opt{set}{TIMEOUT},
@@ -368,6 +368,20 @@ sub process_parameters {
 		}
 	}
 
+	#--- report candy - allow '1+2+4+8' strings
+	if ($opt{set}{report}=~/[0-9+]/) {
+		my $sum=0;
+		for (split(/\+/,$opt{set}{report})) {
+			$sum+=$_;
+		}
+		DEBUG2("process_parameters: reportstring $opt{set}{report} converted into numerical value $sum");
+		$opt{set}{report}=$sum;
+	} elsif ($opt{set}{report}=~/[0-9]/) {
+		# normal numeric value - do nothing
+	} else {
+		print "$MYSELF error: report option \'$opt{set}{report}\' contains invalid characters, allowed are numbers or 0-9+\n";
+		return $UNKNOWN;
+	}
 	#--- report options - name
 	if ($opt{set}{report} & $DETAIL_PERFORMANCE_LINK && !$opt{set}{name}) {
 		$opt{set}{name}=$MYSELF;
