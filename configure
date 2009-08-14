@@ -630,6 +630,7 @@ action_mouseover
 action_url
 child_timeout
 contrib_dir
+checkresults_dir
 collapse
 cmdfile_update_interval
 config_dir
@@ -1247,6 +1248,7 @@ check_multi settings:
   --with-client_perl=<perl path>           sets perl cmdline / path (e.g. #!/usr/bin/perl)
   --with-cmdfile_update_interval=<seconds> interval to update command file(s) (default:86400, one day)
   --with-collapse=<0|1>                    HTML javascript tree collapse option (default:1)
+  --with-checkresults_dir=<path>           directory for Nagios checkresults (default:${localstatedir}/spool/checkresults)
   --with-config_dir=<path>                 directory for check_multi configuration files (default:${sysconfdir}/multi)
   --with-ethtool=</path/to/ethtool>        define path to ethtool (default:/sbin/ethtool)
   --with-exec_open3=<0|1>                  use new exec method with function open3
@@ -2021,6 +2023,14 @@ else
 fi
 
 
+# Check whether --with-checkresults_dir was given.
+if test "${with_checkresults_dir+set}" = set; then
+  withval=$with_checkresults_dir; checkresults_dir=$withval
+else
+  checkresults_dir="${localstatedir}/spool/checkresults"
+fi
+
+
 # Check whether --with-config_dir was given.
 if test "${with_config_dir+set}" = set; then
   withval=$with_config_dir; config_dir=$withval
@@ -2253,6 +2263,7 @@ if test "${with_nagios_name+set}" = set; then
 else
   nagios_name=nagios
 fi
+
 
 
 
@@ -2998,6 +3009,7 @@ action_mouseover!$action_mouseover$ac_delim
 action_url!$action_url$ac_delim
 child_timeout!$child_timeout$ac_delim
 contrib_dir!$contrib_dir$ac_delim
+checkresults_dir!$checkresults_dir$ac_delim
 collapse!$collapse$ac_delim
 cmdfile_update_interval!$cmdfile_update_interval$ac_delim
 config_dir!$config_dir$ac_delim
@@ -3035,7 +3047,7 @@ LIBOBJS!$LIBOBJS$ac_delim
 LTLIBOBJS!$LTLIBOBJS$ac_delim
 _ACEOF
 
-  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 88; then
+  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 89; then
     break
   elif $ac_last_try; then
     { { echo "$as_me:$LINENO: error: could not make $CONFIG_STATUS" >&5

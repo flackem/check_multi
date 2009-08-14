@@ -30,7 +30,7 @@ $status_dat
 $OK $WARNING $CRITICAL $UNKNOWN
 $DETAIL_LIST $DETAIL_LIST_FULL $DETAIL_HTML $DETAIL_STDERR $DETAIL_PERFORMANCE
 $DETAIL_PERFORMANCE_CLASSIC $DETAIL_STATUS $DETAIL_PERFORMANCE_LINK $DETAIL_XML $DETAIL_NAGIOS2
-$DETAIL_NOTES_LINK $DETAIL_SERVICE_DEFINITION $DETAIL_SEND_NSCA
+$DETAIL_NOTES_LINK $DETAIL_SERVICE_DEFINITION $DETAIL_SEND_NSCA $DETAIL_FEED_PASSIVE
 *DEBUG1 *DEBUG2 *DEBUG3
 );
 BEGIN {
@@ -71,6 +71,7 @@ $DETAIL_NAGIOS2=512;
 $DETAIL_NOTES_LINK=1024;
 $DETAIL_SERVICE_DEFINITION=2048;
 $DETAIL_SEND_NSCA=4096;
+$DETAIL_FEED_PASSIVE=8192;
 #
 #--- vars
 $no=0;
@@ -93,6 +94,8 @@ my %opt=(
 	"set"		=> {
 		# mouse_over & action_url: shows PNP chart popup triggered by mouse
 		action_mouseover => @action_mouseover@,
+		# checkresults_dir
+		checkresults_dir => "@checkresults_dir@",
 		# update config file (if HTTP/FTP/etc) once a day (in seconds)
 		cmdfile_update_interval	=> @cmdfile_update_interval@,
 		# should check_multi collapse child check_multi checks per default?
@@ -106,6 +109,8 @@ my %opt=(
 		# standard extension of check_multi command files, 
 		# to be searched in directories
 		file_extension	=> "@file_extension@",
+		# hostname, either determined from Nagios environment, or specified
+		HOSTNAME	=> $ENV{NAGIOS_HOSTNAME},
 		# if set, return UNKNOWN if command file is not found
 		ignore_missing_cmd_file => @ignore_missing_cmd_file@,
 		# characters to cleanup from command files
@@ -422,6 +427,12 @@ sub process_parameters {
 	if ($opt{set}{timeout} && $opt{set}{TIMEOUT} && $opt{set}{timeout} > $opt{set}{TIMEOUT}) {
 		print "$MYSELF: error - child timeout $opt{set}{timeout}s must not be greater than parent timeout $opt{set}{TIMEOUT}s\n";
 		return $UNKNOWN;
+	}
+
+	#--- determine hostname
+	if (!$opt{set}{HOSTNAME}) {
+		$opt{set}{HOSTNAME}=`uname -n`;
+		chomp($opt{set}{HOSTNAME});
 	}
 	
 	#--- add all set options as environment variables, so client scripts can use it
@@ -943,10 +954,10 @@ sub exec_command {
 
 	#--- at runtime: substitute $MACRO$ macros and states
 	$cmds[$no]{command}=substitute_macros($cmds[$no]{command});
+	$ENV{"MULTI_${no}_NAME"}=$cmds[$no]{name};
 
 	#--- measure command runtime;
-	my $cmd_start=time;
-	$ENV{"MULTI_${no}_NAME"}=$cmds[$no]{name};
+	$cmds[$no]{starttime}=time;
 
 	if ($cmds[$no]{type} eq "command") {
 
@@ -1100,7 +1111,8 @@ sub exec_command {
 			}
 			DEBUG2("exec_command: environment var MULTI_$cmds[$no]{name}=$cmds[$no]{output}");
 		}
-		$cmds[$no]{runtime}=time-$cmd_start;
+		$cmds[$no]{endtime}=time;
+		$cmds[$no]{runtime}=$cmds[$no]{endtime}-$cmds[$no]{starttime};
 		alarm(0);
 		return $cmds[$no]{rc};
 	} elsif ($cmds[$no]{type} eq "service") {
@@ -1112,7 +1124,8 @@ sub exec_command {
 		}
 		$ENV{"MULTI_".$cmds[$no]{name}}="$cmds[$no]{output}";
 	}
-	$cmds[$no]{runtime}=time-$cmd_start;
+	$cmds[$no]{endtime}=time;
+	$cmds[$no]{runtime}=$cmds[$no]{endtime}-$cmds[$no]{starttime};
 	
 	#--- any oddities during command execution?
 	if ($@) {
@@ -1362,6 +1375,10 @@ sub report_all {
 	#--- report to nsca (send_nsca wrapper)
 	if ($opt{set}{report} & $DETAIL_SEND_NSCA) {
 		&report_send_nsca;
+	}
+	#--- report to nsca (send_nsca wrapper)
+	if ($opt{set}{report} & $DETAIL_FEED_PASSIVE) {
+		&report_checkresult_file;
 	}
 	
 	#--- at last: perfdata
@@ -1983,6 +2000,56 @@ sub report_send_nsca {
 		close SEND_NSCA;
 	}
 	return $sent;
+}
+
+#---
+#--- report child checks as check_result files
+#---
+sub report_checkresult_file {
+
+	#--- use File::Temp for generation of temp file, its available in standard perl
+	unless (eval "use File::Temp qw/tempfile/;1") {
+		add_error("report_checkresult_file error: check_multi needs module File::Temp");
+		return 0;
+	} else {
+		DEBUG2("report_checkresult_file: File::Temp module loaded");
+	}
+
+	# loop over child checks
+	for (my $i=1; $i<=$#cmds; $i++) {
+
+		#--- create checkresults file
+		my ($th,$tf)=File::Temp::tempfile("cXXXXXX",DIR=>"$opt{set}{checkresults_dir}");
+		my $content=
+		"### check_multi passive check result file $tf ###\n".
+		"file_time=".int(time)."\n\n".
+		"### child check result ###\n".
+		"# Time: ".scalar(localtime($cmds[$i]{starttime}))."\n" .
+		"host_name=".$opt{set}{HOSTNAME}."\n".
+		"service_description=$cmds[$i]{name}\n".
+		"check_type=1\n".
+		"check_options=0\n".
+		"scheduled_check=0\n".
+		"reschedule_check=0\n".
+		"latency=0\n".
+		"start_time=".$cmds[$i]{starttime}."\n".
+		"finish_time=".$cmds[$i]{endtime}."\n".
+		"early_timeout=0\n".
+		"exited_ok=1\n".
+		"return_code=".$cmds[$i]{rc}."\n".
+		"output=".$cmds[$i]{output}."\n";
+		print $th $content;
+		close $th;
+
+		#--- write OK file
+		if (!open(OKFILE, ">$tf.ok")) {
+			 add_error("report_checkresult_file: Cannot write OK file to $tf.ok:$!");
+		} else {
+			DEBUG2("report_checkresult_file: $tf.ok written");
+			close OKFILE;
+		}
+	}
+
 }
 
 #-------------------------------------------------------------------------------

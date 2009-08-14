@@ -1,5 +1,6 @@
 
 ===== Changelog =====
+	* new report mode 'report_checkresults_file' added for direct injection of child checks as passive service check results
 	* added caching for 'service [ tag ]'
 	* added send_nsca report option 4096, it sends child results to NSCA master
 	* added COUNT(ALL) to provide cluster rules like this one\\ state [ CRITICAL ] = COUNT(CRITICAL) < COUNT(ALL)-1

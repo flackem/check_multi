@@ -62,6 +62,7 @@ if test client_perl=no; then
 fi
 AC_ARG_WITH(cmdfile_update_interval,	[  --with-cmdfile_update_interval=<seconds> interval to update command file(s) (default:86400, one day)],cmdfile_update_interval=$withval,cmdfile_update_interval=86400)
 AC_ARG_WITH(collapse,			[  --with-collapse=<0|1>                    HTML javascript tree collapse option (default:1)],collapse=$withval,collapse="1")
+AC_ARG_WITH(checkresults_dir,		[  --with-checkresults_dir=<path>           directory for Nagios checkresults (default:${localstatedir}/spool/checkresults)],checkresults_dir=$withval,checkresults_dir="${localstatedir}/spool/checkresults")
 AC_ARG_WITH(config_dir,			[  --with-config_dir=<path>                 directory for check_multi configuration files (default:${sysconfdir}/multi)],config_dir=$withval,config_dir="${sysconfdir}/multi")
 if test ethtool=""; then
 	AC_ARG_WITH(ethtool,			[  --with-ethtool=</path/to/ethtool>        define path to ethtool (default:/sbin/ethtool)],ethtool=$ethtool,ethtool="/sbin/ethtool")
@@ -98,6 +99,7 @@ AC_SUBST(action_mouseover)
 AC_SUBST(action_url)
 AC_SUBST(child_timeout)
 AC_SUBST(contrib_dir)
+AC_SUBST(checkresults_dir)
 AC_SUBST(collapse)
 AC_SUBST(cmdfile_update_interval)
 AC_SUBST(config_dir)
