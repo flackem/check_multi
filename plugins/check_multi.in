@@ -700,6 +700,7 @@ Extended options:
    status_dat=</path/to/status.dat> - where is Nagios status.dat? default:$opt{set}{status_dat}
    style_plus_minus=<HTML style> - style of HTML plus/minus characters
    suppress_perfdata=<tag1>[,<tag2>][,...] - don't provide perfdata for check tag1,tag2...
+   suppress_service=<tag1>[,<tag2>][,...] - don't report service data for check tag1,tag2...
    tag_notes_link=<URL> - notes URL be added to child checks, default:$opt{set}{tag_notes_link}
    target=<target> - frame target for action_url and notes_url, default:$opt{set}{target}
    timeout=<seconds> - child check timeout (small t), default:$opt{set}{timeout}
@@ -2046,8 +2047,17 @@ sub report_send_nsca {
 		"-to $opt{set}{send_nsca_timeout} " .
 		"-d \'$opt{set}{send_nsca_delim}\' " .
 		"-c $opt{set}{send_nsca_cfg}";
-	DEBUG1("report_send_nsca: cmdline is \'$nsca_cmdline\;");
+	DEBUG1("report_send_nsca: cmdline is \'$nsca_cmdline\'");
 	for (my $i=1; $i<=$#cmds; $i++) {
+
+		#--- service will be suppressed if its mentioned in '-s suppress_service=<service1>,<service2>,...
+		if ($opt{set}{suppress_service} && 
+		    $opt{set}{suppress_service}=~/\b$cmds[$i]{name}\b/i) {
+			DEBUG2("report_send_nsca: checkresult file of [ $cmds[$i]{name} ] will be suppressed");
+			next;
+		}
+		
+		#--- call send_ncsa
 		if (!open(SEND_NSCA, "|$nsca_cmdline >/dev/null")) {
 			add_error("report_send_nsca: error calling command line $nsca_cmdline");
 			return $sent;
@@ -2083,6 +2093,12 @@ sub report_checkresult_file {
 	# loop over child checks
 	for (my $i=1; $i<=$#cmds; $i++) {
 
+		#--- service will be suppressed if its mentioned in '-s suppress_service=<service1>,<service2>,...
+		if ($opt{set}{suppress_service} && 
+		    $opt{set}{suppress_service}=~/\b$cmds[$i]{name}\b/i) {
+			DEBUG2("report_checkresult_file: checkresult file of [ $cmds[$i]{name} ] will be suppressed");
+			next;
+		}
 		#--- create checkresults file
 		my ($th,$tf)=File::Temp::tempfile("cXXXXXX",DIR=>"$opt{set}{checkresults_dir}");
 		my $content=
