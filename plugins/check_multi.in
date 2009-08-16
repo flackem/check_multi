@@ -172,7 +172,7 @@ my %opt=(
 		# verbosity, from 1 (less verbose) to 3 (much verbose)
 		verbose		=> @verbose@,
 		# elements to be added to XML structure
-		xml_elements	=> "name,rc,output,error,plugin,command,performance,runtime",
+		xml_elements	=> "name,rc,output,error,plugin,command,performance,starttime,endtime,runtime,type",
 	},
 
 	"ok"		=> undef,
@@ -212,9 +212,9 @@ my $check_multi={
 
 
 #---
-#--- process command line parameters
+#--- process command line parameters and STDIN (if any)
 #---
-sub process_parameters {
+sub process_input {
 
 	my @SAVEARGV=@ARGV;
 	#--- check version of modules
@@ -268,6 +268,55 @@ sub process_parameters {
 		return $UNKNOWN;
 	}
 
+	#--- only read STDIN if feeded by a PIPE, otherwise it would block when empty
+	my $stdin="";
+	if (-p STDIN) {
+		while (<STDIN>) { $stdin.=$_; }
+	}
+	if ($stdin) { 
+		DEBUG1("process_input: found <STDIN> >$stdin<");
+
+		#--- do we have input from check_multi XML report mode? (check_multi as filter)
+		if ($stdin=~/check_multi_xml/) {
+			#--- try to load module XML::Simple
+			$opt{set}{use_xml_simple} = 1;
+			unless (eval "require XML::Simple;1") {
+				$opt{set}{use_xml_simple} = 0;
+				DEBUG1("process_input: XML::Simple not available:$@");
+			}
+	
+			#--- read in XML data and feed cmds structure
+			if ($opt{set}{use_xml_simple}) {
+				my $in=XML::Simple::XMLin(
+					$stdin,
+					KeyAttr=>["CHILD"=>"no"],	# index: child no
+					ForceArray=>["CHILD"],		# force array also for one child
+					SuppressEmpty=>"",		# if empty, add "" instead of {} empty hash
+				);
+				
+                        	unless (eval "use Data::Dumper;1") {
+                                	$opt{set}{test}=0;
+                                	DEBUG3("process_input: Data::Dumper not available");
+                        	} else {
+                                	DEBUG3("process_input: Data::Dumper available");
+					DEBUG3("XML input:\n" . Dumper($in));
+                        	}
+				for my $i (keys %{$in->{PARENT}->{CHILD}}) {
+					#print "key $i\n";
+					$cmds[$i]{no}=$i;	# index itself as 'no'
+					$cmds[$i]{feeded}=1;	# mark this cmd as feeded
+					foreach my $att (keys %{$in->{PARENT}->{CHILD}->{$i}}) {
+						#print " att $att -> $in->{PARENT}->{CHILD}->{$i}->{$att}\n";
+						$cmds[$i]{$att}=$in->{PARENT}->{CHILD}->{$i}->{$att};
+					}
+				}
+				DEBUG3("\@cmds after filling from XML input\n" . Dumper(\@cmds));
+			}
+		}
+	} else {
+		DEBUG3("process_input: no <STDIN> found");
+	}
+
 	#--- check_multi uses a temporary directory, per default /tmp/check_multi
 	#--- 1. create if not yet done
 	if (! -d "$opt{set}{tmp_dir}") {
@@ -288,7 +337,7 @@ sub process_parameters {
 	#--- getting commands - either per command file or per command parameter
 
 	#--- none of them? return UNKNOWN
-	if (! $opt{filename}[0] && ! $opt{execute}[0]) {
+	if (! $opt{filename}[0] && ! $opt{execute}[0] && !$stdin) {
 		print "$MYSELF error: no config file(s) or command parameters specified\n";
 		short_usage();
 		return $UNKNOWN;
@@ -301,7 +350,7 @@ sub process_parameters {
 			return $UNKNOWN;
 		} else {
 			$opt{set}{use_lwp_simple}=1;
-			DEBUG2("process_parameters: LWP::Simple loaded");
+			DEBUG2("process_input: LWP::Simple loaded");
 		}
 	}
 
@@ -374,7 +423,7 @@ sub process_parameters {
 		for (split(/\+/,$opt{set}{report})) {
 			$sum+=$_;
 		}
-		DEBUG2("process_parameters: reportstring $opt{set}{report} converted into numerical value $sum");
+		DEBUG2("process_input: reportstring $opt{set}{report} converted into numerical value $sum");
 		$opt{set}{report}=$sum;
 	} elsif ($opt{set}{report}=~/[0-9]/) {
 		# normal numeric value - do nothing
@@ -385,13 +434,13 @@ sub process_parameters {
 	#--- report options - name
 	if ($opt{set}{report} & $DETAIL_PERFORMANCE_LINK && !$opt{set}{name}) {
 		$opt{set}{name}=$MYSELF;
-		DEBUG2("process_parameters: performance report option set and no name defined: taking $MYSELF as name");
+		DEBUG2("process_input: performance report option set and no name defined: taking $MYSELF as name");
 	}
 
 	#--- report option - notes_url
 	if ($opt{set}{report} & $DETAIL_NOTES_LINK && !$opt{set}{notes_url}) {
 		$opt{set}{notes_url}=$ENV{NAGIOS_SERVICENOTESURL};
-		DEBUG2("process_parameters: notes report option set - taking Nagios SERVICENOTESURL $ENV{NAGIOS_SERVICENOTESURL}");
+		DEBUG2("process_input: notes report option set - taking Nagios SERVICENOTESURL $ENV{NAGIOS_SERVICENOTESURL}");
 	}
 
 	#--- if no module HTML::Entities available - set var
@@ -399,7 +448,7 @@ sub process_parameters {
 		$opt{set}{use_html_entities} = 1;
 		unless (eval "require HTML::Entities;1") {
 			$opt{set}{use_html_entities} = 0;
-			DEBUG2("process_parameters: HTML::Entities not available");
+			DEBUG2("process_input: HTML::Entities not available");
 		}
 	}
 
@@ -407,15 +456,15 @@ sub process_parameters {
 	if ($opt{set}{exec_open3}) {
 		unless (eval "use IPC::Open3;1") {
 			$opt{set}{exec_open3}=0;
-			DEBUG2("process_parameters: IPC::Open3 not available");
+			DEBUG2("process_input: IPC::Open3 not available");
 		}
 	}
 	if ($opt{set}{exec_open3}) {
 		unless (eval "use IO::Select;1") {
 			$opt{set}{exec_open3}=0;
-			DEBUG2("process_parameters: IO::Select not available");
+			DEBUG2("process_input: IO::Select not available");
 		}
-		DEBUG2("process_parameters: IPC::Open3 and IO::Select modules loaded");
+		DEBUG2("process_input: IPC::Open3 and IO::Select modules loaded");
 	}
 
 	#--- set libexec-dir at the beginning of PATH var
@@ -467,7 +516,7 @@ sub process_parameters {
 		$opt{set}{use_xml_simple} = 1;
 		unless (eval "require XML::Simple;1") {
 			$opt{set}{use_xml_simple} = 0;
-			DEBUG1("process_parameters: XML::Simple not available:$@");
+			DEBUG1("process_input: XML::Simple not available:$@");
 		}
 
 		#--- successful load? 
@@ -479,31 +528,31 @@ sub process_parameters {
 			} elsif ($ENV{NAGIOS_HOSTNAME} && $ENV{NAGIOS_SERVICEDESC}) {
 				$cmds[0]{key}="$ENV{NAGIOS_HOSTNAME}-$ENV{NAGIOS_SERVICEDESC}";
 			} else {
-				print "process_parameters: need HOSTNAME and SERVICEDESC for persistent mode.\nPlease specify -s HOSTNAME=<hostname> -s SERVICEDESC=<service description>\n";
+				print "process_input: need HOSTNAME and SERVICEDESC for persistent mode.\nPlease specify -s HOSTNAME=<hostname> -s SERVICEDESC=<service description>\n";
 				return $UNKNOWN;
 			}
 
 			#--- replace whitechar with underscore
 			$cmds[0]{key}=~s/\s+/_/g;
-         DEBUG2("process_parameters: command key: $cmds[0]{key}");
+			DEBUG2("process_input: command key: $cmds[0]{key}");
 
 			#--- read persistent data 
 			my $in;
 			if (-f "$opt{set}{tmp_dir}/${MYSELF}_$cmds[0]{key}.xml") {
-				DEBUG2("process_parameters: reading file $opt{set}{tmp_dir}/${MYSELF}_$cmds[0]{key}.xml");
+				DEBUG2("process_input: reading file $opt{set}{tmp_dir}/${MYSELF}_$cmds[0]{key}.xml");
 				$in=XML::Simple::XMLin("$opt{set}{tmp_dir}/${MYSELF}_$cmds[0]{key}.xml",KeyAttr => [ ]);
 			} else {
-				DEBUG1("process_parameters: persistency file $opt{set}{tmp_dir}/${MYSELF}_$cmds[0]{key}.xml not found.");
+				DEBUG1("process_input: persistency file $opt{set}{tmp_dir}/${MYSELF}_$cmds[0]{key}.xml not found.");
 			}
 
 			#--- debug output per Data::Dumper
 			unless (eval "use Data::Dumper;1") {
 				$opt{set}{test}=0;
-				DEBUG2("process_parameters: Data::Dumper not available");
+				DEBUG2("process_input: Data::Dumper not available");
 			} else {
-				DEBUG2("process_parameters: Data::Dumper module loaded");
+				DEBUG2("process_input: Data::Dumper module loaded");
 				#DEBUG2("report_all:" . Dumper(\@cmds));
-				DEBUG2("process_parameters: loaded persistent data:");
+				DEBUG2("process_input: loaded persistent data:");
 				DEBUG2(Dumper($in));
 			}
 		}
@@ -526,10 +575,10 @@ sub process_parameters {
 
 	#--- just debugging: print options
 	foreach my $option (sort keys(%opt)) {
-		DEBUG3("process_parameters: \$opt{$option}=$opt{$option}") if (defined($opt{$option}));
+		DEBUG3("process_input: \$opt{$option}=$opt{$option}") if (defined($opt{$option}));
 	}
 	foreach my $option (sort keys(%{$opt{set}})) {
-		DEBUG3("process_parameters: \$opt{set}{$option}=$opt{set}{$option}") if (defined($opt{set}{$option}));
+		DEBUG3("process_input: \$opt{set}{$option}=$opt{set}{$option}") if (defined($opt{set}{$option}));
 	}
 
 	return $OK;
@@ -1733,7 +1782,9 @@ sub report_xml {
 	$xmlstr.="<PARENT>\n";
 	$xmlstr.="\t<name>$cmds[0]{name}</name>\n";
 	$xmlstr.="\t<plugins>$cmds[0]{nchecks}</plugins>\n";
-	$xmlstr.="\t<time>$cmds[0]{runtime}</time>\n";
+	$xmlstr.="\t<starttime>$cmds[0]{starttime}</starttime>\n";
+	$xmlstr.="\t<endtime>$cmds[0]{endtime}</endtime>\n";
+	$xmlstr.="\t<runtime>$cmds[0]{runtime}</runtime>\n";
 	$xmlstr.="\t<output>";
 	#--- print header line (2): summary for particular states 
 	if ($opt{set}{report} & $DETAIL_LIST_FULL) {
@@ -2073,8 +2124,8 @@ sub report_checkresult_file {
 #--- take care against signals
 install_signal_handler(\install_signal_handler, "INT", "TERM", "QUIT", "HUP");
 
-#--- parse command line options
-exit $UNKNOWN if (&process_parameters != $OK);
+#--- parse command line options and STDIN
+exit $UNKNOWN if (&process_input != $OK);
 
 #--- don't run this as root ;-) 
 add_error("please don't run plugins as root!") if ($> == 0);
@@ -2105,6 +2156,8 @@ while ($no<=$#cmds) {
 		$cmds[$no]{output}="UNKNOWN - execution cancelled due to global timeout ($opt{set}{TIMEOUT}s)";
 		$cmds[$no]{rc}=$UNKNOWN;
 		$cmds[$no]{runtime}=0;
+	} elsif ($cmds[$no]{feeded}) {
+		# do nothing - this cmd has been feeded in via STDIN
 	} else {
 		#--- execute command
 		&exec_command($no);
@@ -2112,6 +2165,7 @@ while ($no<=$#cmds) {
 
 	$no++;
 }
+$cmds[0]{endtime}=time;
 
 #--- prepare output
 &result_rating;

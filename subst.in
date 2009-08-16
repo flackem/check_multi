@@ -33,9 +33,10 @@ while (my $f = shift @ARGV) {
 	open(OUT,">${TEMP}") || die "Cannot write to temporary file ${TEMP}:$!";
 
 	while (<IN>) {
-		s|\@PERL\@|@PERL@|g;
+		s|\@CHMOD\@|@CHMOD@|g;
 		s|\@INSTALL\@|@INSTALL@|g;
 		s|\@INSTALL_OPTS\@|@INSTALL_OPTS@|g;
+		s|\@PERL\@|@PERL@|g;
 		s|\@action_mouseover\@|@action_mouseover@|g;
 		s|\@action_url\@|@action_url@|g;
 		s|\@client_perl\@|@client_perl@|g;

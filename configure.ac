@@ -36,6 +36,7 @@ AC_SUBST(PKG_ID)
 #--- checks for programs
 AC_PROG_MAKE_SET
 #AC_PATH_PROG([STRIP],[strip],[true])
+AC_PATH_PROG(CHMOD,chmod)
 AC_PATH_PROG(CP,cp)
 AC_PATH_PROG(INSTALL,install)
 AC_SUBST(INSTALL)

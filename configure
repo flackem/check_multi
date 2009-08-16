@@ -621,6 +621,7 @@ PKG_HOME_URL
 PKG_REL_DATE
 PKG_ID
 SET_MAKE
+CHMOD
 CP
 INSTALL
 PERL
@@ -1769,6 +1770,46 @@ echo "${ECHO_T}no" >&6; }
 fi
 
 #AC_PATH_PROG([STRIP],[strip],[true])
+# Extract the first word of "chmod", so it can be a program name with args.
+set dummy chmod; ac_word=$2
+{ echo "$as_me:$LINENO: checking for $ac_word" >&5
+echo $ECHO_N "checking for $ac_word... $ECHO_C" >&6; }
+if test "${ac_cv_path_CHMOD+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  case $CHMOD in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_CHMOD="$CHMOD" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+  for ac_exec_ext in '' $ac_executable_extensions; do
+  if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_test_x "$as_dir/$ac_word$ac_exec_ext"; }; then
+    ac_cv_path_CHMOD="$as_dir/$ac_word$ac_exec_ext"
+    echo "$as_me:$LINENO: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+CHMOD=$ac_cv_path_CHMOD
+if test -n "$CHMOD"; then
+  { echo "$as_me:$LINENO: result: $CHMOD" >&5
+echo "${ECHO_T}$CHMOD" >&6; }
+else
+  { echo "$as_me:$LINENO: result: no" >&5
+echo "${ECHO_T}no" >&6; }
+fi
+
+
 # Extract the first word of "cp", so it can be a program name with args.
 set dummy cp; ac_word=$2
 { echo "$as_me:$LINENO: checking for $ac_word" >&5
@@ -3000,6 +3041,7 @@ PKG_HOME_URL!$PKG_HOME_URL$ac_delim
 PKG_REL_DATE!$PKG_REL_DATE$ac_delim
 PKG_ID!$PKG_ID$ac_delim
 SET_MAKE!$SET_MAKE$ac_delim
+CHMOD!$CHMOD$ac_delim
 CP!$CP$ac_delim
 INSTALL!$INSTALL$ac_delim
 PERL!$PERL$ac_delim
@@ -3047,7 +3089,7 @@ LIBOBJS!$LIBOBJS$ac_delim
 LTLIBOBJS!$LTLIBOBJS$ac_delim
 _ACEOF
 
-  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 89; then
+  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 90; then
     break
   elif $ac_last_try; then
     { { echo "$as_me:$LINENO: error: could not make $CONFIG_STATUS" >&5

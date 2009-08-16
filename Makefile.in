@@ -104,6 +104,7 @@ clean:
 	cd $(SRC_CONFIG)  && $(MAKE) $@
 	#-rm -f *.cfg core
 	#-rm -f *~ *.*~ */*~ */*.*~
+	-rm -rf autom4te.cache
 	$(MAKE) distclean
 
 distclean: 

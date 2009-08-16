@@ -4,12 +4,14 @@
 #--- $Id$
 #---
 prefix=@prefix@
-LIBEXECDIR=@libexecdir@
+CHMOD=@CHMOD@
 HTMLDIR=@datarootdir@
 INSTALL=@INSTALL@
 INSTALL_OPTS=@INSTALL_OPTS@
+LIBEXECDIR=@libexecdir@
 
 all:
+	$(CHMOD) 755 check_multi
 
 
 clean:
