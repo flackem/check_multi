@@ -1,0 +1,32 @@
+#---
+#--- Makefile sample_config/feed_passive
+#---
+#--- $Id$
+#---
+prefix=@prefix@
+HTMLDIR=@datarootdir@
+CGIDIR=@sbindir@
+CFGDIR=@config_dir@
+INSTALL=@INSTALL@
+INSTALL_OPTS=@INSTALL_OPTS@
+CHMOD=@CHMOD@
+PERL=@PERL@
+
+all:
+
+clean:	
+	-rm -f README gencfg feed_passive.cmd feed_passive.cfg service_definition.tpl addhosts.cfg addhosts.cfg.old
+
+distclean: clean
+	-rm -f Makefile
+
+devclean: distclean
+
+install-config: 
+	$(PERL) gencfg 10
+	$(INSTALL) -m 755 $(INSTALL_OPTS) -d ${CFGDIR}/feed_passive
+	$(INSTALL) -m 755 $(INSTALL_OPTS) addhosts.cfg ${CFGDIR}/feed_passive
+	$(INSTALL) -m 755 $(INSTALL_OPTS) gencfg ${CFGDIR}/feed_passive
+	$(INSTALL) -m 755 $(INSTALL_OPTS) feed_passive.cmd ${CFGDIR}/feed_passive
+	$(INSTALL) -m 755 $(INSTALL_OPTS) feed_passive.cfg ${CFGDIR}/feed_passive
+	$(INSTALL) -m 755 $(INSTALL_OPTS) service_definition.tpl ${CFGDIR}/feed_passive

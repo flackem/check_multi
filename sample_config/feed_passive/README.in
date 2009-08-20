@@ -1,0 +1,17 @@
+
+
+--------------------------------------------------------------------------
+--- check_multi feed_passive demo ----------------------------------------
+--------------------------------------------------------------------------
+
+see also: http://www.my-plugin.de/wiki/projects/check_multi/feed_passive
+
+Necessary steps:
+
+1. add the following line to your nagios.cfg:
+
+cfg_dir=@config_dir@/feed_passive
+
+2. reload nagios
+
+/etc/init.d/nagios reload

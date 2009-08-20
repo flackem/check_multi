@@ -1,0 +1,11 @@
+
+#--- service $THIS_NAME$ for host $HOSTNAME$
+define service {
+	service_description	$THIS_NAME$
+	host_name		$HOSTNAME$
+	passive_checks_enabled	1
+	active_checks_enabled	0
+	check_command		check_dummy_4p!0 "passive check"
+	servicegroups		passive_feeded_services
+	use			local-service
+}

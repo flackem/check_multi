@@ -42,6 +42,7 @@ AC_PATH_PROG(INSTALL,install)
 AC_SUBST(INSTALL)
 AC_PATH_PROG(PERL,perl)
 AC_PATH_PROG(ETHTOOL,ethtool)
+AC_PATH_PROG(GUNZIP,gunzip)
 
 #---
 if test "${exec_prefix}" = "NONE"; then
@@ -64,7 +65,7 @@ fi
 AC_ARG_WITH(cmdfile_update_interval,	[  --with-cmdfile_update_interval=<seconds> interval to update command file(s) (default:86400, one day)],cmdfile_update_interval=$withval,cmdfile_update_interval=86400)
 AC_ARG_WITH(collapse,			[  --with-collapse=<0|1>                    HTML javascript tree collapse option (default:1)],collapse=$withval,collapse="1")
 AC_ARG_WITH(checkresults_dir,		[  --with-checkresults_dir=<path>           directory for Nagios checkresults (default:${localstatedir}/spool/checkresults)],checkresults_dir=$withval,checkresults_dir="${localstatedir}/spool/checkresults")
-AC_ARG_WITH(config_dir,			[  --with-config_dir=<path>                 directory for check_multi configuration files (default:${sysconfdir}/multi)],config_dir=$withval,config_dir="${sysconfdir}/multi")
+AC_ARG_WITH(config_dir,			[  --with-config_dir=<path>                 directory for check_multi configuration files (default:${sysconfdir}/multi)],config_dir=$withval,config_dir="${sysconfdir}/check_multi")
 if test ethtool=""; then
 	AC_ARG_WITH(ethtool,			[  --with-ethtool=</path/to/ethtool>        define path to ethtool (default:/sbin/ethtool)],ethtool=$ethtool,ethtool="/sbin/ethtool")
 fi
@@ -109,6 +110,7 @@ AC_SUBST(ethtool)
 AC_SUBST(exec_open3)
 AC_SUBST(findbin)
 AC_SUBST(file_extension)
+AC_SUBST(gunzip)
 AC_SUBST(ignore_missing_cmd_file)
 AC_SUBST(illegal_chars)
 AC_SUBST(image_path)
@@ -182,6 +184,12 @@ $PERL subst sample_config/start_process/Makefile
 $PERL subst sample_config/start_process/start_process.cmd
 $PERL subst sample_config/network_interface/Makefile
 $PERL subst sample_config/network_interface/network_interface.cmd
+$PERL subst sample_config/feed_passive/Makefile
+$PERL subst sample_config/feed_passive/README
+$PERL subst sample_config/feed_passive/gencfg
+$PERL subst sample_config/feed_passive/feed_passive.cmd
+$PERL subst sample_config/feed_passive/feed_passive.cfg
+$PERL subst sample_config/feed_passive/service_definition.tpl
 
 #---
 #--- review options and show the user what he has broken ;)

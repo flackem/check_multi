@@ -1,0 +1,41 @@
+#!/usr/bin/perl
+#
+# create more than 1 host config to put some load into passive feeding
+#
+#
+my $hostsfile="addhosts.cfg";
+my $myself=`basename $0`; chomp $myself;
+#
+my $nhosts=shift(@ARGV);
+if (!$nhosts) {
+	print STDERR "\nusage: $myself <number of hosts>\n"; 
+	print STDERR "\tfor <n> hosts host and service definitions will be created\n";
+	print STDERR "\tand written to file $hostsfile\n\n";
+	exit 1;
+}
+#
+`rm -f ${hostsfile}.old` if (-f "${hostsfile}.old");
+`mv ${hostsfile} ${hostsfile}.old` if (-f "${hostsfile}");
+open(HOSTS,">${hostsfile}") || die "Cannot open ${hostsfile} for writing:$!\n";
+#
+for (my $i=1;$i<=$nhosts;$i++) {
+
+	#--- 1. host definition
+	print HOSTS<<EOF;
+
+#--- host definition for passive_$i
+define host {
+	host_name	passive_$i
+	hostgroups	passive_feeded_hosts
+	address		127.0.0.1
+	use		linux-server
+}
+EOF
+
+	#--- 2.  service definition
+	my $output=`../../plugins/check_multi -f feed_passive.cmd -r 2048 -s service_definition_template=service_definition.tpl -s HOSTNAME=passive_${i}`;
+        print HOSTS $output;
+
+	#--- 3. give some output (for the impatient :))
+	print STDERR '.';
+}

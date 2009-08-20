@@ -52,6 +52,7 @@ while (my $f = shift @ARGV) {
 		s|\@extinfo_in_status\@|@extinfo_in_status@|g;
 		s|\@file_extension\@|@file_extension@|g;
 		s|\@findbin\@|@findbin@|g;
+		s|\@gunzip\@|@gunzip@|g;
 		s|\@ignore_missing_cmd_file\@|@ignore_missing_cmd_file@|g;
 		s|\@illegal_chars\@|@illegal_chars@|g;
 		s|\@indent_label\@|@indent_label@|g;
@@ -80,6 +81,7 @@ while (my $f = shift @ARGV) {
 		s|\@localstatedir\@|$localstatedir|g;
 		s|\@libexecdir\@|$libexecdir|g;	
 		s|\$\{exec_prefix\}|$exec_prefix|g;	# must be next to last
+		s|\@prefix\@|@prefix@|g;		# must be last
 		s|\$\{prefix\}|@prefix@|g;		# must be last
 		print OUT $_;
 	}

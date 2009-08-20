@@ -1,0 +1,32 @@
+#
+# sample config to demonstrate check_multi feed_passive feature
+# M.Flacke, 8/2009
+#
+#
+
+#--- feeding service (report option 8192)
+define service {
+        service_description	multi
+        hostgroup_name		passive_feeded_hosts
+	check_command		check_multi_4p!-f @config_dir@/feed_passive/feed_passive.cmd -r 8192 -s HOSTNAME=$HOSTNAME$
+	notifications_enabled	0
+        use			local-service
+}
+
+#--- nice to have but not mandatory
+define hostgroup {
+	hostgroup_name		passive_feeded_hosts
+}
+define servicegroup {
+	servicegroup_name	passive_feeded_services
+}
+
+#--- command definitions, naming is special to avoid collisions ;)
+define command{
+	command_name		check_multi_4p
+	command_line		$USER1$/check_multi $ARG1$ $ARG2$ $ARG3$ $ARG4$ $ARG5$
+}
+define command{
+	command_name		check_dummy_4p
+	command_line		$USER1$/check_dummy $ARG1$ $ARG2$ $ARG3$ $ARG4$ $ARG5$
+}

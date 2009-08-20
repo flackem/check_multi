@@ -1,0 +1,11 @@
+#--- feed_passive example command file - feed_passive.cmd
+command [ system_disk  ] = check_disk  -w 5% -c 2% -p /
+command [ system_load  ] = check_load  -w 10,8,6 -c 20,18,16
+command [ system_swap  ] = check_swap  -w 90 -c 80
+command [ system_users ] = check_users -w 5 -c 10
+command [ procs_num    ] = check_procs
+command [ procs_cpu    ] = check_procs -w 10 -c 20 --metric=CPU -v
+command [ procs_mem    ] = check_procs -w 100000 -c 2000000 --metric=RSS -v
+command [ procs_zombie ] = check_procs -w 1 -c 2 -s Z
+command [ proc_cron    ] = check_procs -c 1: -C cron
+command [ proc_syslogd ] = check_procs -c 1: -C syslogd
