@@ -13,6 +13,7 @@ CHMOD=@CHMOD@
 PERL=@PERL@
 
 all:
+	$(CHMOD) 755 gencfg
 
 clean:	
 	-rm -f README gencfg feed_passive.cmd feed_passive.cfg service_definition.tpl addhosts.cfg addhosts.cfg.old

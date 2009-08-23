@@ -262,10 +262,16 @@ sub process_input {
 		short_usage();
 		long_usage();
 		return $UNKNOWN;
-	} elsif ($opt{help} >= 2) {
+	} elsif ($opt{help} == 2) {
 		short_usage();
 		long_usage();
 		extended_usage();
+		return $UNKNOWN;
+	} elsif ($opt{help} > 2) {
+		short_usage();
+		long_usage();
+		extended_usage();
+		detailed_usage();
 		return $UNKNOWN;
 	}
 
@@ -592,7 +598,7 @@ print <<SHORTEOF;
 Usage:
 $MYSELF -f <config file> [-n name] [-t timeout] [-T TIMEOUT] 
 	[-r level] [-l libexec_path] [-s option=value]
-$MYSELF [-h | --help]
+$MYSELF [-h | --help] [-hh extended help] [-hhh complete help]
 $MYSELF [-v | --verbose]
 $MYSELF [-V | --version]
 
@@ -620,7 +626,7 @@ Common options:
    see more details with extended help option -hh
 -s, --set <option>=<value>
    <KEY>=<VALUE> - set multi variable \$<KEY>\$ to <VALUE>
-   see more details with extended help option -hh
+   see more details with complete help option -hhh
 -t, --timeout
    timeout for one command, default:$opt{set}{timeout}
 -T, --TIMEOUT
@@ -628,7 +634,7 @@ Common options:
 -l, --libexec
    path to plugins, default:$opt{set}{libexec}
 -h, --help
-   print detailed help screen (extended help with -hh)
+   print detailed help screen (extended help with -hh, complete help with -hhh)
 -v, --verbose
    prints debug output (multiple -v extend debug level) 
 -V, --version
@@ -646,10 +652,9 @@ LONGEOF
 }
 
 #---
-#--- extended usage - flood the user with details ;)
+#--- extended usage - report options
 #---
 sub extended_usage {
-
 print <<EXTENDED_EOF;
 Extended options:
 -r, --report <level>
@@ -669,6 +674,17 @@ Extended options:
      1024: show notes_url
      2048: print Nagios service definition for passive check feeded by check_multi
      4096: send_nsca: all child checks will be reported to Nagios via send_nsca
+     8192: checkresults_file: all child checks are reported to Nagios via checkresults_file
+
+EXTENDED_EOF
+}
+
+#---
+#--- details for set options
+#---
+sub detailed_usage {
+print <<DETAILED_EOF;
+Set options:
 -s, --set <option>=<value>
    <KEY>=<VALUE> - set multi variable \$<KEY>\$ to <VALUE>
    action_mouseover=<PNP URL> - mouse triggers PNP popup chart
@@ -711,8 +727,7 @@ Extended options:
    verbose=<0|1|2> - level of verbosity, from 1 (less verbose) to 3 (much verbose), default:$opt{set}{verbose}
    xml_elements=<string> - elements to be added to XML structure
 
-EXTENDED_EOF
-
+DETAILED_EOF
 }
 
 #---
@@ -750,6 +765,33 @@ sub substitute_macros {
 			DEBUG3("substitute_macros: var NAGIOS_${var}/MULTI_${var} not defined: removed \$$var\$");
 		}
 	}
+	return $input;
+}
+
+#---
+#--- replaces keywords with real results
+#---
+sub substitute_states {
+	my ($input)=@_;
+	#--- 1. replace COUNT(WARNING)
+	$input=~s/\bCOUNT\s*\(\s*(OK)\s*\)/$rc{count}[$OK]/ig;
+	$input=~s/\bCOUNT\s*\(\s*(WARNING)\s*\)/$rc{count}[$WARNING]/ig;
+	$input=~s/\bCOUNT\s*\(\s*(CRITICAL)\s*\)/$rc{count}[$CRITICAL]/ig;
+	$input=~s/\bCOUNT\s*\(\s*(UNKNOWN)\s*\)/$rc{count}[$UNKNOWN]/ig;
+	$input=~s/\bCOUNT\s*\(\s*(ALL)\s*\)/$#cmds/ig;
+
+	#--- 2. replace all STATES (OK)
+	$input=~s/\b(OK)\b/$OK/ig;
+	$input=~s/\b(WARNING)\b/$WARNING/ig;
+	$input=~s/\b(CRITICAL)\b/$CRITICAL/ig;
+	$input=~s/\b(UNKNOWN)\b/$UNKNOWN/ig;
+
+	#--- 3. replace all vars with RC
+	for ($no=1;$no<=$#cmds;$no++) {
+		$input=~s/\b($cmds[$no]{name})\b/$cmds[$no]{rc}/ig;
+	}
+	#--- 4. replace IGNORE
+	$input=~s/\b(IGNORE)\b/(0==1)/ig;
 	return $input;
 }
 
@@ -1304,6 +1346,9 @@ sub read_status_dat {
 	return $status_dat;
 }
 
+#---
+#--- eval state rules 
+#---
 sub eval_result {
 	my ($input)=@_;
 	my $input_org=$input;
@@ -1330,28 +1375,94 @@ sub eval_result {
 	}
 }
 
-sub substitute_states {
-	my ($input)=@_;
-	#--- 1. replace COUNT(WARNING)
-	$input=~s/\bCOUNT\s*\(\s*(OK)\s*\)/$rc{count}[$OK]/ig;
-	$input=~s/\bCOUNT\s*\(\s*(WARNING)\s*\)/$rc{count}[$WARNING]/ig;
-	$input=~s/\bCOUNT\s*\(\s*(CRITICAL)\s*\)/$rc{count}[$CRITICAL]/ig;
-	$input=~s/\bCOUNT\s*\(\s*(UNKNOWN)\s*\)/$rc{count}[$UNKNOWN]/ig;
-	$input=~s/\bCOUNT\s*\(\s*(ALL)\s*\)/$#cmds/ig;
 
-	#--- 2. replace all STATES (OK)
-	$input=~s/\b(OK)\b/$OK/ig;
-	$input=~s/\b(WARNING)\b/$WARNING/ig;
-	$input=~s/\b(CRITICAL)\b/$CRITICAL/ig;
-	$input=~s/\b(UNKNOWN)\b/$UNKNOWN/ig;
+#---
+#--- split state string into token and return 
+#--- array of hashes with start,end,token
+#---
+sub get_state_token {
+	my ($state)=@_;
+	#
+	my @token=();
+	my $tno=0;
+	my $pos=0;
+	my $start=0;
+	my $end=0;
+	my $instring=0;
+	
+	#--- read string (and one char more for handling of last token)
+	for (my $pos=0; $pos<=length($state); $pos++) {
 
-	#--- 3. replace all vars with RC
-	for ($no=1;$no<=$#cmds;$no++) {
-		$input=~s/\b($cmds[$no]{name})\b/$cmds[$no]{rc}/ig;
+		my $char=substr($state,$pos,1);
+		my $nextchar=($pos<length($state)-1) ? substr($state,$pos+1,1) : "";
+		#print STDERR "pos:$pos char:>$char< nextchar:>$nextchar<\n";
+
+		#--- skip white characters ' ' and '()'
+		if ($char=~/[ ()]/) {
+			if (!$instring) {
+				$start++;
+			}
+			#print STDERR "whitechar found at $pos, start:$start end:$end\n";
+
+		#--- '||' or '&&' found: token end detected
+		} elsif (($char eq "|" && $nextchar eq "|") ||
+		 	($char eq "&" && $nextchar eq "&") ||
+		 	($char eq ""  && $nextchar eq "" )) {
+			$token[$tno]{start}=$start;
+			$token[$tno]{end}=$end;
+			$token[$tno]{token}=substr($state,$start,$end-$start+1);
+			$token[$tno]{substituted}=substitute_macros($token[$tno]{token});
+			$token[$tno]{substituted}=substitute_states($token[$tno]{substituted});
+			($token[$tno]{substate},$token[$tno]{message})=eval_result($token[$tno]{substituted});
+
+			#print STDERR "instring NO: Token $tno: start:$start end:$end token:$token[$tno]{token} state:$token[$tno]{state}\n";
+			$tno++;
+			$pos+=2;
+			$start=$pos;
+			$end=$pos;
+			$instring=0;
+
+		#--- normal token char
+		} else {
+			#--- token init
+			if (!$instring) {
+				#print STDERR "instring NO: token init\n";
+				$instring=1;
+				$start=$pos;
+				$end=$pos;
+			} else {
+				$end=$pos;
+				#print STDERR "instring YES: start:$start end:$end\n";
+			}
+		}
 	}
-	#--- 4. replace IGNORE
-	$input=~s/\b(IGNORE)\b/(0==1)/ig;
-	return $input;
+	#--- debugging
+	my $output="\n" . "0123456789" x 8 ."\n$state\n\n";
+	$output.=sprintf "%3s %5s %5s   %s\n", "No", "Start", "End", "Token";
+	for ($tno=0;$tno<=$#token;$tno++) {
+		$output.=sprintf "%3d %5d %5d   >%s<\n", 
+			$tno, 
+			$token[$tno]{start},
+			$token[$tno]{end},
+			$token[$tno]{token};
+	}
+	DEBUG3($output);
+
+	#--- return array
+	@token;
+}
+	
+sub state_string_ascii {
+	my ($state)=@_;
+	my $output="";
+	my @token=get_state_token($state);
+	for (my $tno=0;$tno<=$#token;$tno++) {
+		$output.=sprintf "%11s. %-52s %s\n", 
+			chr(97+$tno), 	# 'a'+$tno
+			"'".$token[$tno]{token}."'" . " -> " .  "'".$token[$tno]{substituted}."'",
+			($token[$tno]{substate}) ? "TRUE" : "FALSE";
+	}
+	$output;
 }
 
 #---
@@ -1545,6 +1656,7 @@ sub report_ascii {
 	DEBUG1("-" x 80);
 	foreach my $s (sort numerically keys %{$def{s2r}}) {
 		DEBUG1(sprintf "%-8s %-55s %s", $def{label}{$def{s2r}{$s}}, $rc{expr}[$def{s2r}{$s}], ($rc{match}[$def{s2r}{$s}]) ? "TRUE" : "FALSE");
+		DEBUG2(state_string_ascii($rc{expr}[$def{s2r}{$s}]));
 	}
 	DEBUG1("-" x 80);
 	DEBUG1(sprintf "%8s %55s %s", "", "Overall state =>", $def{label}{$rc{top}});

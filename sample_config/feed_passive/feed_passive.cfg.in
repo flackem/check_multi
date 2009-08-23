@@ -8,7 +8,7 @@
 define service {
         service_description	multi
         hostgroup_name		passive_feeded_hosts
-	check_command		check_multi_4p!-f @config_dir@/feed_passive/feed_passive.cmd -r 8192 -s HOSTNAME=$HOSTNAME$
+	check_command		check_multi_4p!-f @config_dir@/feed_passive/feed_passive.cmd -r 8192+2+4 -s HOSTNAME=$HOSTNAME$
 	notifications_enabled	0
         use			local-service
 }
