@@ -1395,14 +1395,12 @@ sub get_state_token {
 
 		my $char=substr($state,$pos,1);
 		my $nextchar=($pos<length($state)-1) ? substr($state,$pos+1,1) : "";
-		#print STDERR "pos:$pos char:>$char< nextchar:>$nextchar<\n";
 
 		#--- skip white characters ' ' and '()'
 		if ($char=~/[ ()]/) {
 			if (!$instring) {
 				$start++;
 			}
-			#print STDERR "whitechar found at $pos, start:$start end:$end\n";
 
 		#--- '||' or '&&' found: token end detected
 		} elsif (($char eq "|" && $nextchar eq "|") ||
@@ -1415,7 +1413,6 @@ sub get_state_token {
 			$token[$tno]{substituted}=substitute_states($token[$tno]{substituted});
 			($token[$tno]{substate},$token[$tno]{message})=eval_result($token[$tno]{substituted});
 
-			#print STDERR "instring NO: Token $tno: start:$start end:$end token:$token[$tno]{token} state:$token[$tno]{state}\n";
 			$tno++;
 			$pos+=2;
 			$start=$pos;
@@ -1426,13 +1423,11 @@ sub get_state_token {
 		} else {
 			#--- token init
 			if (!$instring) {
-				#print STDERR "instring NO: token init\n";
 				$instring=1;
 				$start=$pos;
 				$end=$pos;
 			} else {
 				$end=$pos;
-				#print STDERR "instring YES: start:$start end:$end\n";
 			}
 		}
 	}
