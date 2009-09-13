@@ -946,8 +946,8 @@ sub parse_lines {
 		#--- format: 'command [ tag[::plugin] ] = plugin command line'
 		#--- format: 'eval    [ tag[::plugin] ] = expression'
 		#--- format: 'eeval   [ tag[::plugin] ] = expression'
-		#--- format: 'service [ tag[::plugin] ] = host, service'
-		if ($line=~/\s*(command|eval|eeval|service)\s*\[\s*([^:\s]+)[:]*(\S*)\s*\]\s*=\s*(.*)\s*/i) {
+		#--- format: 'statusdat [ tag[::plugin] ] = host, service'
+		if ($line=~/\s*(command|eval|eeval|statusdat)\s*\[\s*([^:\s]+)[:]*(\S*)\s*\]\s*=\s*(.*)\s*/i) {
 			$type=lc($1);
 			$name=$2;
 			$pplugin=$3;
@@ -966,19 +966,19 @@ sub parse_lines {
 				next;
 			}
 			
-			#--- service: split host and service from command, format: host:service
-			if ($type eq "service") {
+			#--- statusdat: split host and service from command, format: host:service
+			if ($type eq "statusdat") {
 				if ($cmd=~/\s*([^,]*)\s*\:\s*(.*)\s*/) {
 					$host=$1;
 					$service=$2;
 				} else {
-					add_error("parse_lines: Invalid host or service in service line \'$line\', format should be \'service [ name ] = host:service\'"); 
+					add_error("parse_lines: Invalid host or service in statusdat line \'$line\', format should be \'statusdat [ name ] = host:service\'"); 
 					next LINE;
 				}
 			}
 
 			#--- overloading: find plugin with same name
-			if ($type eq "command" || $type=~/eval$/ || $type=~/service/) {
+			if ($type eq "command" || $type=~/eval$/ || $type=~/statusdat/) {
 				for ($i=1; $i<=$#cmds;$i++) {
 					last if ($cmds[$i]{name} eq $name);
 				}
@@ -998,7 +998,7 @@ sub parse_lines {
 			$cmds[$i]{output}="";
 			$cmds[$i]{error}="";
 			$cmds[$i]{runtime}=0;
-			if ($type eq "service") {
+			if ($type eq "statusdat") {
 				$cmds[$i]{host}=$host;
 				$cmds[$i]{service}=$service;
 			}
@@ -1221,11 +1221,11 @@ sub exec_command {
 		$cmds[$no]{runtime}=$cmds[$no]{endtime}-$cmds[$no]{starttime};
 		alarm(0);
 		return $cmds[$no]{rc};
-	} elsif ($cmds[$no]{type} eq "service") {
+	} elsif ($cmds[$no]{type} eq "statusdat") {
 		alarm($opt{set}{timeout});
                 ($cmds[$no]{rc},$cmds[$no]{output})=get_status_dat_service($opt{set}{status_dat},$cmds[$no]{host},$cmds[$no]{service});
 		if ($cmds[$no]{rc} == -1) {
-			add_error("service $cmds[$no]{name}: cannot find service \'$cmds[$no]{service}\' on host \'$cmds[$no]{host}\' in \'$opt{set}{status_dat}\'");
+			add_error("statusdat $cmds[$no]{name}: cannot find service \'$cmds[$no]{service}\' on host \'$cmds[$no]{host}\' in \'$opt{set}{status_dat}\'");
 			$cmds[$no]{rc}=$UNKNOWN;
 		}
 		$ENV{"MULTI_".$cmds[$no]{name}}="$cmds[$no]{output}";
