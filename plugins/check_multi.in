@@ -1724,7 +1724,16 @@ sub report_html {
 			$cmds[$no]{process_perfdata} &&
 			!$opt{set}{action_mouseover}) {
 
-			my $hostname=($ENV{NAGIOS_HOSTNAME}) ? $ENV{NAGIOS_HOSTNAME} : `uname -n`; chomp($hostname);
+			#--- determine hostname
+			my $hostname="";
+			if ($ENV{NAGIOS_HOSTNAME}) {
+				$hostname=$ENV{NAGIOS_HOSTNAME};
+			} elsif ($ENV{NAGIOS_HOSTADDRESS}) {
+				$hostname=$ENV{NAGIOS_HOSTADDRESS};
+			} else {
+				$hostname=`uname -n`;
+			}
+			chomp($hostname);
 			DEBUG3("report_html: hostname is $hostname");
 			my $pnp_path=substitute_macros($opt{set}{pnp_path});
 			my $image_path=substitute_macros($opt{set}{image_path});
