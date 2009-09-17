@@ -144,7 +144,7 @@ my %opt=(
 		# create persistent data
 		persistent	=> @persistent@,
 		# path to PNP cgis
-		pnp_path	=> "@pnp_path@",
+		pnp_cgi	=> "@pnp_cgi@",
 		# report option, binary coded as sum of detail options
 		report		=> @report@,
 		#
@@ -704,7 +704,7 @@ Set options:
    no_checks_rc=<RC> - which RC should be returned if no checks are defined, default:$opt{set}{no_checks_rc}
    notes_url=<URL> - URL to be added to child check, see Nagios notes_url
    persistent=<0|1> - run check_multi in persistent mode, default:$opt{set}{persistent}
-   pnp_path=</path/to/PNP-CGIs> - specify path to PNP cgi scripts, default:$opt{set}{pnp_path}
+   pnp_cgi=</path/to/PNP-CGIs> - specify path to PNP cgi scripts (including CGI), default:$opt{set}{pnp_cgi}
    report=<number> - binary coded report option, default:$opt{set}{report}
    send_nsca=<path/to/send_nsca> - path to send_nsca binary, default:$opt{set}{send_nsca}
    send_nsca_cfg=</path/to/send_nsca.cfg> -  path to send_nsca cfg file, default:$opt{set}{send_nsca_cfg}
@@ -957,7 +957,7 @@ sub parse_lines {
 
 			#--- invalid characters found?
 			$name=substitute_macros($name);
-			if ($name!~/^[\w:-\_]+$/) {
+			if ($name!~/^[\w:-]+$/) {
 				if ($name=~/\$([^\$]+)\$/) {
 					add_error("parse_lines: tag $name invalid - macro \$$1\$ not found");
 				} else {
@@ -1735,10 +1735,10 @@ sub report_html {
 			}
 			chomp($hostname);
 			DEBUG3("report_html: hostname is $hostname");
-			my $pnp_path=substitute_macros($opt{set}{pnp_path});
+			my $pnp_cgi=substitute_macros($opt{set}{pnp_cgi});
 			my $image_path=substitute_macros($opt{set}{image_path});
 			$output.=sprintf "<td nowrap>%s</td>", 
-				"<A TARGET=\'$opt{set}{target}\' HREF=\'$pnp_path/index.php?host=${hostname}&srv=$cmds[$no]{name}\'> " . 
+				"<A TARGET=\'$opt{set}{target}\' HREF=\'$pnp_cgi?host=${hostname}&srv=$cmds[$no]{name}\'> " . 
 				"<img src=\'$image_path/action.gif\' width=20 height=20 border=0 align=top alt='Show performance chart for $hostname / $cmds[$no]{plugin}'></A>";
 		#--- Action url (mouseover version)
 		} elsif (($opt{set}{report} & $DETAIL_PERFORMANCE) &&
@@ -1749,11 +1749,11 @@ sub report_html {
 
 			my $hostname=($ENV{NAGIOS_HOSTNAME}) ? $ENV{NAGIOS_HOSTNAME} : `uname -n`; chomp($hostname);
 			DEBUG3("report_html: hostname is $hostname");
-			my $pnp_path=substitute_macros($opt{set}{pnp_path});
+			my $pnp_cgi=substitute_macros($opt{set}{pnp_cgi});
 			my $image_path=substitute_macros($opt{set}{image_path});
-			DEBUG4(">>>$opt{set}{target}:$pnp_path:${hostname}:$cmds{$no}{name}:${hostname}:$cmds{$no}{name}:$image_path:$hostname:$cmds{$no}{name}<<<");
+			DEBUG4(">>>$opt{set}{target}:$pnp_cgi:${hostname}:$cmds{$no}{name}:${hostname}:$cmds{$no}{name}:$image_path:$hostname:$cmds{$no}{name}<<<");
 			$output.=sprintf "<td nowrap>%s</td>",
-				"<A TARGET=\'$opt{set}{target}\' HREF='/$pnp_path/index.php?host=${hostname}&srv=$cmds{$no}{name}' onmouseout='clear_g()' onmouseover=\"get_g(\'${hostname}\',\'$cmds{$no}{name}\')\">" .
+				"<A TARGET=\'$opt{set}{target}\' HREF='/$pnp_cgi/index.php?host=${hostname}&srv=$cmds{$no}{name}' onmouseout='clear_g()' onmouseover=\"get_g(\'${hostname}\',\'$cmds{$no}{name}\')\">" .
 				"<img src=\'$image_path/action.gif\' width=20 height=20 border=0 align=top alt='Show performance chart for $hostname / $cmds{$no}{name}'></A>";
 		} else {
 			$output.="<td></td>";

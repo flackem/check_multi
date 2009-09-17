@@ -14,7 +14,7 @@ my $bindir="@bindir@";
 my $srcdir="@srcdir@";
 
 my ${image_path}="@image_path@";
-my ${pnp_path}="@pnp_path@";
+my ${pnp_cgi}="@pnp_cgi@";
 my ${service_definition_template}="@service_definition_template@";
 my ${tmp_etc}="@tmp_etc@";
 
@@ -62,7 +62,7 @@ while (my $f = shift @ARGV) {
 		s|\@no_checks_rc\@|@no_checks_rc@|g;
 		s|\@notes_url\@|@notes_url@|g;
 		s|\@persistent\@|@persistent@|g;
-		s|\@pnp_path\@|$pnp_path|g;
+		s|\@pnp_cgi\@|$pnp_cgi|g;
 		s|\@report\@|@report@|g;
 		s|\@service_definition_template\@|$service_definition_template|g;
 		s|\@style_plus_minus\@|@style_plus_minus@|g;

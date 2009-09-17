@@ -1,5 +1,7 @@
 
 ===== Changelog =====
+	* replaced pnp_path by pnp_cgi with full path to PNP graph.php (PNP 0.6 coming soon)
+	* '-' as tag-char was broken, thx Hendrik
 	* added showcase / sample-config feed_passive to demonstrate feeding features
 	* added -s suppress_service=<service1>,<service2> to exclude services from report_send_nsca and report_checkresults_file
 	* added STDIN mode: check_multi now can report XML output feeded via STDIN
