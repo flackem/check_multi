@@ -2054,7 +2054,6 @@ sub error_in_perfdata {
 			$data=$2;
 			$perfdata=$3;
 			DEBUG4("error_in_perfdata: parsed perfdata - label:$1 data:$2 rest:$3");	
-		#--- invalid
 		} else {
 			DEBUG2("error_in_perfdata: general parsing error - invalid perfdata");	
 			return "general error in '$perfdata'";
@@ -2068,6 +2067,15 @@ sub error_in_perfdata {
 			$value=$1;
 			$uom=$2;
 		}
+
+		#--- invalid perfdata with trailing ';' after max value
+		if (($data=~tr/;//)>=5) {
+			DEBUG2("error_in_perfdata: invalid ';' after max value $max");	
+			return "error in '$data': invalid ';' after max value $max";
+		} else {
+			DEBUG4("error_in_perfdata: number of ';' ok in $data: " . scalar($data=~tr/;//));	
+		}
+
 		$error.= "$label: bad value \'$value\' in data \'$data\' " if ($value && $value !~/^[-0-9.]+$/);
 		$error.= "$label: bad UOM \'$uom\' in data \'$data\' " if ($uom ne "" && ($uom!~/s$/ && $uom!~/%$/ && $uom!~/b$/i && $uom!~/c$/));
 		$error.= "$label: bad warning \'$warning\' in data \'$data\' " if ($warning && $warning !~/^[-0-9.:]+$/);
