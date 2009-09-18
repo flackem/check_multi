@@ -82,7 +82,7 @@ AC_ARG_WITH(name,			[  --with-name=<name>                       default name for
 AC_ARG_WITH(no_checks_rc,		[  --with-no_checks_rc=<RC>                 RC if no checks are specified (default:3-UNKNOWN)],no_checks_rc=$withval,no_checks_rc=3)
 AC_ARG_WITH(notes_url,			[  --with-notes_url=<URL>                   notes URL (default:"")],notes_url=$withval,notes_url="")
 AC_ARG_WITH(persistent,			[  --with-persistent=<0|1>                  persistency: saving of state data between two calls (default:0)],persisent=$withval,persistent=0)
-AC_ARG_WITH(pnp_cgi,			[  --with-pnp_cgi=<URL>                     relative URL to PNP (default:"/pnp4nagios/graph.cgi")],pnp_cgi=$withval,pnp_cgi="/pnp4nagios/graph.cgi")
+AC_ARG_WITH(pnp_cgi,			[  --with-pnp_cgi=<URL>                     relative URL to PNP (default:"/pnp4nagios/graph.php")],pnp_cgi=$withval,pnp_cgi="/pnp4nagios/graph.php")
 AC_ARG_WITH(report,			[  --with-report=<NN>                       default report option (default:13)],report=$withval,report="13")
 AC_ARG_WITH(style_plus_minus,		[  --with-style_plus_minus=<HTML code>      HTML style for plus/minus (default:$ACTION_URL)],style_plus_minus=$withval,style_plus_minus="$ACTION_URL")
 AC_ARG_WITH(tag_notes_link,		[  --with-tag_notes_link=<URL>              documentation URL for child checks (default:"")],tag_notes_link=$withval,tag_notes_link="")
