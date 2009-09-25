@@ -1184,6 +1184,9 @@ sub exec_command {
 			alarm(0);
 		};
 	} elsif ($cmds[$no]{type} eq "eval" || $cmds[$no]{type} eq "eeval") {
+		local $SIG{ALRM} = sub {
+			add_error("$cmds[$no]{name}: timeout after $opt{set}{timeout}s");
+		};
 		alarm($opt{set}{timeout});
 		$cmds[$no]{output}=eval($cmds[$no]{command});
 		if ($cmds[$no]{type} eq "eeval") {
