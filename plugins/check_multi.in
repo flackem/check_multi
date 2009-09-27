@@ -81,7 +81,8 @@ $tmp_stdout="";
 $tmp_stderr="";
 %def=(
 	label	=> { $OK  => "OK", $WARNING  => "WARNING", $CRITICAL  => "CRITICAL", $UNKNOWN  => "UNKNOWN", },
-	code	=> { "OK" => $OK,  "WARNING" => $WARNING,  "CRITICAL" => $CRITICAL,  "UNKNOWN" => $UNKNOWN,  },
+	code	=> { "OK" => $OK,  "WARNING" => $WARNING,  "CRITICAL" => $CRITICAL,  "UNKNOWN" => $UNKNOWN,
+		     "ok" => $OK,  "warning" => $WARNING,  "critical" => $CRITICAL,  "unknown" => $UNKNOWN,  },
 	s2r	=> { 0    => $OK,  2         => $WARNING,  3          => $CRITICAL,  1         => $UNKNOWN,  },
 	r2s	=> { $OK  => 0,    $WARNING  => 2,         $CRITICAL  => 3,          $UNKNOWN  => 1,         },
 	color	=> { $OK => "#33FF00", $WARNING => "#FFFF00", $CRITICAL => "#F83838", $UNKNOWN => "#FF9900", },
@@ -749,8 +750,15 @@ sub mytrim {
 #---
 sub substitute_macros {
 	my ($input)=@_;
+
+	if (! $input) {
+		DEBUG3("substitute_macros: empty input - nothing to do");
+		return $input;
+	}
+
 	DEBUG3("substitute_macros: checking $input");
 	while ((my $var)=($input=~/\$([A-Za-z0-9_^\$]+)\$/)) {
+
 		#--- 1. check for MULTI var
 		if (defined($ENV{"MULTI_${var}"})) {
 			DEBUG3("substitute_macros: replacing env var MULTI_${var} with $ENV{\"MULTI_${var}\"}");
@@ -773,6 +781,13 @@ sub substitute_macros {
 #---
 sub substitute_states {
 	my ($input)=@_;
+
+	#--- empty input?
+	if (! $input) {
+		DEBUG3("substitute_states: empty input - nothing to do");
+		return $input;
+	}
+
 	#--- 1. replace COUNT(WARNING)
 	$input=~s/\bCOUNT\s*\(\s*(OK)\s*\)/$rc{count}[$OK]/ig;
 	$input=~s/\bCOUNT\s*\(\s*(WARNING)\s*\)/$rc{count}[$WARNING]/ig;
@@ -920,133 +935,230 @@ sub parse_files {
 	return $#cmds+1;
 }
 
+
 #---
 #--- parse command array and fill %cmds structure
 #---
 sub parse_lines {
 	my @lines=@_;
-	my ($line,$cmd,$type,$name,$plugin,$pplugin,$expr,$lineno,$i,$host,$service);
+	my ($line,$cmd,$type,$name,$plugin,$pplugin,$expr,$lineno,$i,$last_command);
 
 	$lineno=0;	# count sourcefile lines
 	LINE: while ($line=shift(@lines)) {
-		chomp($line);
-		#--- remove unwanted characters from input line
-		$line=~s/$opt{set}{illegal_chars}//g;
+
+		#--- count lines
 		$lineno++;		
 
 		#--- skip empty lines and comments
-		next if ($line=~/^\s*$/);
-		next if ($line=~/^\s*#/);
-	
-		#--- check for continuation line with trailing '\'
-		if ($line =~ s/\\\s*$//) { 
-			$line .= shift(@lines); # add next line
-			redo unless ($#lines<=0);
+		next LINE if ($line=~/^\s*$/);
+		next LINE if ($line=~/^\s*#/);
+		
+		#--- remove unwanted characters from input line
+		if ($line=~/$opt{set}{illegal_chars}/) {
+			DEBUG2("Found illegal characters in line $lineno, removing them");
+			$line=~s/$opt{set}{illegal_chars}//g;
 		}
-		#--- format: 'command [ tag[::plugin] ] = plugin command line'
-		#--- format: 'eval    [ tag[::plugin] ] = expression'
-		#--- format: 'eeval   [ tag[::plugin] ] = expression'
-		#--- format: 'statusdat [ tag[::plugin] ] = host, service'
-		if ($line=~/\s*(command|eval|eeval|statusdat)\s*\[\s*([^:\s]+)[:]*(\S*)\s*\]\s*=\s*(.*)\s*/i) {
-			$type=lc($1);
-			$name=$2;
-			$pplugin=$3;
-			$cmd=$4;
-			$plugin=($type eq "command") ? (split(/\s+/,"$cmd"))[0] : "eval";
-			$plugin=~s/.*\///g; # basename(plugin) (thx Gerhard)
 
-			#--- invalid characters found?
+		#--- remove trailing backslash if any (compatibility mode)
+		$line=~s/\\\s*$// if ($line=~/\\\s*/);
+
+		#--- remove newline from line end
+		#chomp($line);
+
+		#--- header line (regex contains all allowed commands)
+		if (($type,$name,$cmd)=($line=~/^\s*(command|eval|eeval|statusdat|state|output)\s*\[\s*(\S+)\s*\]\s*=\s*(.*)\s*/i)) {
+
+			#--- all commands are allowed case insensitive, and converted to lower case
+			$name=lc($name);
+
+			#--- macros?
 			$name=substitute_macros($name);
+
+			#--- allowed characters: 'a-zA-Z0-9_:-'
 			if ($name!~/^[\w:-]+$/) {
+				#--- still macro '$' in name? then macro was not substituted
 				if ($name=~/\$([^\$]+)\$/) {
-					add_error("parse_lines: tag $name invalid - macro \$$1\$ not found");
+					add_error("parse_lines: tag \'$name\' invalid - macro \$$1\$ not found");
+				} elsif ($name eq "") {
+					add_error("parse_lines: empty tag \'\' invalid");
 				} else {
-					add_error("parse_lines: tag $name invalid - using non allowed characters");
+					add_error("parse_lines: tag \'$name\' invalid - using non allowed characters");
 				}
-				next;
-			}
-			
-			#--- statusdat: split host and service from command, format: host:service
-			if ($type eq "statusdat") {
-				if ($cmd=~/\s*([^,]*)\s*\:\s*(.*)\s*/) {
-					$host=$1;
-					$service=$2;
-				} else {
-					add_error("parse_lines: Invalid host or service in statusdat line \'$line\', format should be \'statusdat [ name ] = host:service\'"); 
-					next LINE;
-				}
+				next LINE;
 			}
 
-			#--- overloading: find plugin with same name
-			if ($type eq "command" || $type=~/eval$/ || $type=~/statusdat/) {
-				for ($i=1; $i<=$#cmds;$i++) {
-					last if ($cmds[$i]{name} eq $name);
-				}
-				if ($cmds[$i]{command}) {
-					DEBUG2("parse_lines: overloaded $name with $type \'$cmd\'");
-				} else {
-					DEBUG2("parse_lines: added $name with $type \'$cmd\'");
-				}
-			}
-			#--- store vars into cmds structure
-			$cmds[$i]{command}=$cmd;
-			$cmds[$i]{type}=$type;
-			$cmds[$i]{plugin}=$plugin;
-			$cmds[$i]{pplugin}=$pplugin;
-			$cmds[$i]{name}=$name;
-			$cmds[$i]{rc}=$UNKNOWN;
-			$cmds[$i]{output}="";
-			$cmds[$i]{error}="";
-			$cmds[$i]{runtime}=0;
-			if ($type eq "statusdat") {
-				$cmds[$i]{host}=$host;
-				$cmds[$i]{service}=$service;
-			}
-			if ($opt{set}{suppress_perfdata} && 
-			    $opt{set}{suppress_perfdata}=~/\b$name\b/i) {
-				$cmds[$i]{process_perfdata}=0;
-				DEBUG2("parse_lines: perfdata of [ $name ] will be suppressed");
-			} else {
-				$cmds[$i]{process_perfdata}=1;
-			}
-			DEBUG3("parse_lines: parsed $type [ $name ] = $cmd");
+			#--- store vars, last_command contains index of cmd or name of state
+			$last_command=parse_header($type,$name,$cmd,$lineno);
 
-		#--- format: 'state [ tag ] = (EXPR)
-		} elsif ($line=~/\s*state\s*\[\s*(\S+)\s*\]\s*=\s*(.*)\s*/i) {
-			$name=uc($1);
-			$expr=$2;
-			if (!defined($def{code}{$name})) {
-				add_error("parse_lines: invalid state code specified in line $lineno: $name");
-				next;
-			}
-			# store state expression only if NOT set via commandline
-			if (!defined($opt{lc($name)})) {
-				DEBUG3("parse_lines: added state{$def{code}{$name}} expression: $expr");
-				$rc{expr}[$def{code}{$name}]=$expr; 
-			} else {
-				DEBUG3("parse_lines: cmdline precedence over state expression. Using \$opt{$name}: $opt{$name}");
-			}
-		#--- format: 'output = (EXPR)
-		} elsif ($line=~/\s*output\s*\[\s*(\S+)\s*\]\s*=\s*(.*)\s*/i) {
-			$name=$1;
-			$expr=$2;
-			my $found=0;
-			for ($i=0; $found==0 && $i<=$#cmds;$i++) {
-				if ($cmds[$i]{name} eq $name) {
-					$cmds[$i]{fmtstr}=$expr;
-					$found=1;
-				}
-			}
-			if (!$found) {
-				add_error("parse_lines: invalid tag name specified in line $lineno: $name");
-				next;
-			}
-		#--- not yet matched? -> invalid format
+		#--- proper header line with invalid keyword
+		} elsif ($line=~/^\s*(\w+)\s*\[\s*\S+\s*\]\s*=.*/) {
+			add_error("Invalid keyword \'$1\' specified, allowed are command,eval,eeval,statusdat,state,output");
+			return;
+
+		#--- continuation line for previous command
 		} else {
-			add_error("parse_lines: invalid format in line $lineno: $line");
-			next;
+			if ($last_command=~/OK|UNKNOWN|WARNING|CRITICAL/i) {
+				$rc{expr}[$def{code}{lc($last_command)}].=$line;
+			} elsif ($last_command > 0) {
+				$cmds[$last_command]{command}.=$line;
+			} else {
+				add_error("parse_lines: invalid format in line $lineno: $line");
+				next LINE;
+			}
 		}
 	}
+}
+
+sub parse_header {
+	my ($type,$name,$cmd,$lineno)=@_;
+
+	my ($i,$host,$service);
+
+	#--- overloading: if plugin with same name exists, overload its attributes
+	if ($type eq "command" || $type=~/eval$/ || $type=~/statusdat/) {
+		for ($i=1; $i<=$#cmds;$i++) {
+			last if ($cmds[$i]{name} eq $name);
+		}
+		if ($cmds[$i]{command}) {
+			DEBUG2("parse_lines: overloaded \'$name\' with $type \'$cmd\'");
+		} else {
+			DEBUG2("parse_lines: added \'$name\' with $type \'$cmd\'");
+		}
+	}
+
+	#--- format: 'command [ tag[::plugin] ] = plugin command line'
+	if ($type eq "command") {
+
+		#--- normally the plugin name is the first token of $cmd
+		my $plugin="";
+		if ($cmd=~/\s+/) {
+			$plugin=(split(/\s+/,"$cmd"))[0];
+			$plugin=~s/.*\///g; 	# basename(plugin) (thx Gerhard)
+		} else {
+			$plugin=$cmd;
+		}
+		my $pplugin=$plugin;
+
+		#--- or it is specified in [ TAG::PLUGIN ]
+		if ($name=~/::/) {
+			($name,$pplugin)=split(/::/,$name);
+		}
+
+		$cmds[$i]{type}=$type;
+		$cmds[$i]{name}=$name;
+		$cmds[$i]{command}=$cmd;
+		$cmds[$i]{plugin}=$plugin;
+		$cmds[$i]{pplugin}=$pplugin;
+		$cmds[$i]{rc}=$UNKNOWN;
+		$cmds[$i]{output}="";
+		$cmds[$i]{error}="";
+		$cmds[$i]{runtime}=0;
+		if ($opt{set}{suppress_perfdata} && 
+			$opt{set}{suppress_perfdata}=~/\b$name\b/i) {
+			$cmds[$i]{process_perfdata}=0;
+			DEBUG2("parse_lines: perfdata of [ $name ] will be suppressed");
+		} else {
+			$cmds[$i]{process_perfdata}=1;
+		}
+
+	#--- format: 'eval    [ tag[::plugin] ] = expression'
+	} elsif ($type eq "eval") {
+		$cmds[$i]{type}=$type;
+		$cmds[$i]{name}=$name;
+		$cmds[$i]{command}=$cmd;
+		$cmds[$i]{plugin}="eval";
+		$cmds[$i]{pplugin}="eval";
+		$cmds[$i]{rc}=$UNKNOWN;
+		$cmds[$i]{output}="";
+		$cmds[$i]{error}="";
+		$cmds[$i]{runtime}=0;
+		if ($opt{set}{suppress_perfdata} && 
+			$opt{set}{suppress_perfdata}=~/\b$name\b/i) {
+			$cmds[$i]{process_perfdata}=0;
+			DEBUG2("parse_lines: perfdata of [ $name ] will be suppressed");
+		} else {
+			$cmds[$i]{process_perfdata}=1;
+		}
+
+	#--- format: 'eeval   [ tag[::plugin] ] = expression'
+	} elsif ($type eq "eeval") {
+		$cmds[$i]{type}=$type;
+		$cmds[$i]{name}=$name;
+		$cmds[$i]{command}=$cmd;
+		$cmds[$i]{plugin}="eval";
+		$cmds[$i]{pplugin}="eval";
+		$cmds[$i]{rc}=$UNKNOWN;
+		$cmds[$i]{output}="";
+		$cmds[$i]{error}="";
+		$cmds[$i]{runtime}=0;
+		if ($opt{set}{suppress_perfdata} && 
+			$opt{set}{suppress_perfdata}=~/\b$name\b/i) {
+			$cmds[$i]{process_perfdata}=0;
+			DEBUG2("parse_lines: perfdata of [ $name ] will be suppressed");
+		} else {
+			$cmds[$i]{process_perfdata}=1;
+		}
+
+	#--- format: 'statusdat [ tag[::plugin] ] = host, service'
+	} elsif ($type eq "statusdat") {
+		$cmds[$i]{type}=$type;
+		$cmds[$i]{name}=$name;
+		$cmds[$i]{command}=$cmd;
+		$cmds[$i]{plugin}=undef;
+		$cmds[$i]{pplugin}=undef;
+		$cmds[$i]{rc}=$UNKNOWN;
+		$cmds[$i]{output}="";
+		$cmds[$i]{error}="";
+		$cmds[$i]{runtime}=0;
+
+		#--- statusdat: split host and service from command, format: host:service
+		if ($type eq "statusdat") {
+			if ($cmd=~/\s*([^,]*)\s*\:\s*(.*)\s*/) {
+				$cmds[$i]{host}=$host;
+				$cmds[$i]{service}=$service;
+			} else {
+				add_error("parse_lines: Invalid host or service in statusdat line \'$lineno\', format should be \'statusdat [ name ] = host:service\'"); 
+				return -1;
+			}
+		}
+	#--- format: state [ {UNKNOWN,WARNING,CRITICAL,OK} ] = <perl expression>
+	} elsif ($type eq "state") {
+		#DEBUG1("def{code}{$name}:$def{code}{$name}");
+		if (!defined($def{code}{$name})) {
+			add_error("parse_lines: invalid state code specified in line $lineno: $cmd");
+			return -1;
+		}
+		#--- store state expression only if NOT set via commandline
+		if (!defined($opt{lc($name)})) {
+			DEBUG3("parse_lines: added state{$def{code}{$name}} expression: $cmd");
+			$rc{expr}[$def{code}{$name}]=$cmd; 
+		} else {
+			DEBUG3("parse_lines: command line precedence over state expression. Using \$opt{$name}: $opt{$name}");
+		}
+		$i=$name;
+
+	#--- format: output [ tag ] = formatstr, parm1, parm2, ...
+	} elsif ($type eq "output") {
+		my $found=0;
+		for ($i=0; $found==0 && $i<=$#cmds;$i++) {
+			if ($cmds[$i]{name} eq $name) {
+				$cmds[$i]{fmtstr}=$cmd;
+				$found=1;
+			}
+		}
+		if (!$found) {
+			add_error("parse_lines: invalid tag name specified in line $lineno: $name");
+			return -1;
+		}
+
+	#--- no type found? then its invalid
+	} else {
+		add_error("store_header: unknown command type \'$type\'");
+		return -1;
+	}
+
+	#--- return value: either number of changed command or name of state
+	return $i;
 }
 
 #---
@@ -1356,6 +1468,12 @@ sub eval_result {
 	my ($input)=@_;
 	my $input_org=$input;
 	my $message="";
+
+	#--- empty input?
+	if (! $input) {
+		DEBUG3("eval_result: empty input - nothing to do");
+		return ($UNKNOWN, "eval_result: invalid empty input");
+	}
 
  	#--- at runtime: substitute $MACRO$ macros and $STATES$
 	$input=substitute_macros($input);
