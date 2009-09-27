@@ -1112,15 +1112,14 @@ sub parse_header {
 		$cmds[$i]{runtime}=0;
 
 		#--- statusdat: split host and service from command, format: host:service
-		if ($type eq "statusdat") {
-			if ($cmd=~/\s*([^,]*)\s*\:\s*(.*)\s*/) {
-				$cmds[$i]{host}=$host;
-				$cmds[$i]{service}=$service;
-			} else {
-				add_error("parse_lines: Invalid host or service in statusdat line \'$lineno\', format should be \'statusdat [ name ] = host:service\'"); 
-				return -1;
-			}
+		if ($cmd=~/\s*([^,]*)\s*\:\s*(.*)\s*/) {
+			$cmds[$i]{host}=$1;
+			$cmds[$i]{service}=$2;
+		} else {
+			add_error("parse_lines: invalid host or service in statusdat line \'$lineno\', format should be \'statusdat [ name ] = host:service\'"); 
+			return -1;
 		}
+
 	#--- format: state [ {UNKNOWN,WARNING,CRITICAL,OK} ] = <perl expression>
 	} elsif ($type eq "state") {
 		#DEBUG1("def{code}{$name}:$def{code}{$name}");

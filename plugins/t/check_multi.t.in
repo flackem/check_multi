@@ -26,7 +26,7 @@ foreach my $plugin (@plugins) {
 		plan skip_all => "Skipping tests because component $plugin not found or not executable as \'$path_to_plugin\'";
 	}
 }
-plan tests => 24;
+plan tests => 22;
 
 my $result;
 
@@ -236,21 +236,5 @@ like(
 	$result->output,
 	'/^OK - 1 plugins checked, 1 ok \[eins perfdata discarded for eins: bad UOM \',\' in data \'1,1\' \]\n'.
 	'\[ 1\] eins eins\|check_multi::check_multi::plugins=1 time=\d+\.\d+ $/',
-	"output correct"
-);
-#-------------------------------------------------------------------------------
-#--- service not found ---------------------------------------------------------
-#-------------------------------------------------------------------------------
-$result = NPTest->testCmd(
-	"@PERL@ ../check_multi -x 'service [ eins ] = host_not_there:service_not_there'",
-);
-is(
-	$result->return_code, 
-	3, 
-	"check_multi skips unknown service in status.dat"
-);
-like(
-	$result->output,
-	'/UNKNOWN - 1 plugins checked, 1 unknown \(eins\) \[service eins: cannot find service \'service_not_there\' on host \'host_not_there\'/', 
 	"output correct"
 );

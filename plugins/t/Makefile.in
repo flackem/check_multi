@@ -12,6 +12,7 @@ all:
 
 clean:
 	-rm -f check_multi.t
+	-rm -f check_multi_statusdat.t
 
 distclean: clean
 	-rm -f Makefile
@@ -21,3 +22,10 @@ devclean: distclean
 test: 
 	@PERL@ check_multi.t
 
+test-statusdat:
+	@PERL@ check_multi_statusdat.t
+
+test-all:
+	@PERL@ check_multi.t
+	@PERL@ check_multi_statusdat.t
+	

@@ -161,6 +161,7 @@ $PERL subst plugins/Makefile
 $PERL subst plugins/check_multi
 $PERL subst plugins/t/Makefile
 $PERL subst plugins/t/check_multi.t
+$PERL subst plugins/t/check_multi_statusdat.t
 
 $PERL subst contrib/Makefile
 $PERL subst contrib/status_query/Makefile

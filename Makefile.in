@@ -76,6 +76,10 @@ config:
 
 test:
 	cd $(SRC_PL_TEST)  && $(MAKE) $@
+test-all:
+	cd $(SRC_PL_TEST)  && $(MAKE) $@
+test-statusdat:
+	cd $(SRC_PL_TEST)  && $(MAKE) $@
 
 #---
 #--- install sections
