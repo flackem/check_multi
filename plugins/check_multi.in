@@ -41,6 +41,7 @@ BEGIN {
 		eval("use FindBin");
 		if (! $@) {
 			$opt{set}{libexec}="$FindBin::Bin";
+			unshift @INC, "$FindBin::Bin";
 		}
 	}
 }
