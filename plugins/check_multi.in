@@ -969,9 +969,6 @@ sub parse_lines {
 		#--- header line (regex contains all allowed commands)
 		if (($type,$name,$cmd)=($line=~/^\s*(command|eval|eeval|statusdat|state|output)\s*\[\s*(\S+)\s*\]\s*=\s*(.*)\s*/i)) {
 
-			#--- all commands are allowed case insensitive, and converted to lower case
-			$name=lc($name);
-
 			#--- macros?
 			$name=substitute_macros($name);
 
