@@ -1169,7 +1169,9 @@ sub exec_command {
 
 	#--- at runtime: substitute $MACRO$ macros and states
 	$cmds[$no]{command}=substitute_macros($cmds[$no]{command});
+	chomp($cmds[$no]{command});
 	$ENV{"MULTI_${no}_NAME"}=$cmds[$no]{name};
+	DEBUG4("exec_command [ $no ] = >$cmds[$no]{command}<");
 
 	#--- measure command runtime;
 	$cmds[$no]{starttime}=time;
