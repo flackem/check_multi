@@ -1,5 +1,6 @@
 
 ===== Changelog =====
+	* added output [ TAG ] statement, it provides customizeable output everywhere, no more X plugins checked, Y plugins OK...
 	* rewritten parsing code - now trailing backslashes are not necessary any more
 	* replaced pnp_path by pnp_cgi with full path to PNP graph.php (PNP 0.6 coming soon)
 	* '-' as tag-char was broken, thx Hendrik

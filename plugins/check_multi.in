@@ -191,6 +191,8 @@ my @cmds=(
 		endtime => 0.0,		# end timestamp
 		runtime => 0.0,		# runtime in seconds
 		nchecks => 0,		# number of child checks
+		output	=> "",		# output
+		rc	=> $OK,		# return code
 	}
 );
 my %rc=(
@@ -198,7 +200,7 @@ my %rc=(
 	list	=> [ [],[],[],[], ],
 	expr	=> [ "1", "COUNT(WARNING)>0", "COUNT(CRITICAL)>0", "COUNT(UNKNOWN)>0" ],
 	match	=> [ 0, 0, 0, 0, ],
-	top	=> $OK,
+	head	=> $OK,
 );
 my $check_multi={
 	cmds	=> \@cmds,
@@ -426,7 +428,7 @@ sub process_input {
 		}
 	}
 
-	#--- report candy - allow '1+2+4+8' strings
+	#--- report option candy - allow speaking strings '1+2+4+8' instead of bare '15'
 	if ($opt{set}{report}=~/[0-9+]/) {
 		my $sum=0;
 		for (split(/\+/,$opt{set}{report})) {
@@ -811,6 +813,33 @@ sub substitute_states {
 	return $input;
 }
 
+
+#---
+#--- sets result environment variables
+#---
+sub set_env_vars {
+	my ($no)=@_;
+
+	my $name=($no==0)?"head":$cmds[$no]{name};
+
+	$ENV{"MULTI_$name"}="$cmds[$no]{output}";
+	$ENV{"MULTI_STATE_$name"}="$cmds[$no]{rc}";
+	$ENV{"MULTI_LABEL_$name"}="$def{label}{$cmds[$no]{rc}}";
+	$ENV{"MULTI_${no}"}="$cmds[$no]{output}";
+	$ENV{"MULTI_${no}_STATE"}="$cmds[$no]{rc}";
+	$ENV{"MULTI_${no}_LABEL"}="$def{label}{$cmds[$no]{rc}}";
+
+	DEBUG4("set_env_vars: 6 environment vars set\n" . 
+		"1. MULTI_$name=\n\t$cmds[$no]{output}\n" . 
+		"2. MULTI_STATE_$name=\n\t$cmds[$no]{rc}\n" .
+		"3. MULTI_LABEL_$name=\n\t$def{label}{$cmds[$no]{rc}}\n" . 
+		"4. MULTI_${no}=\n\t$cmds[$no]{output}\n" . 
+		"5. MULTI_${no}_STATE=\n\t$cmds[$no]{rc}\n" .
+		"6. MULTI_${no}_LABEL=\n\t$def{label}{$cmds[$no]{rc}}\n"
+	);
+
+}
+
 #---
 #--- print debug message (see Macro DEBUG)
 #---
@@ -846,7 +875,7 @@ sub signal_handler {
 
 	#--- cleanup end exit
 	unlink $tmp_stdout, $tmp_stderr if (!$opt{set}{exec_open3});
-	exit $rc{top};
+	exit $rc{head};
 }
 
 #---
@@ -919,7 +948,7 @@ sub parse_files {
 		if (!open(FILE, $filename)) {
 			next if ($opt{set}{ignore_missing_cmd_file});
 			add_error("parse_files: cannot open config file $filename: $!");
-			$rc{top}=$UNKNOWN;		# top RC to UNKNOWN
+			$rc{head}=$UNKNOWN;		# head RC to UNKNOWN
 			$rc{expr}[$OK]="0==1";	# OK: false
 			next;
 		} else {
@@ -1137,14 +1166,23 @@ sub parse_header {
 	#--- format: output [ tag ] = formatstr, parm1, parm2, ...
 	} elsif ($type eq "output") {
 		my $found=0;
-		for ($i=0; $found==0 && $i<=$#cmds;$i++) {
-			if ($cmds[$i]{name} eq $name) {
-				$cmds[$i]{fmtstr}=$cmd;
-				$found=1;
+		if ($name=~/^(\d+)$/ && $name<=$#cmds) {
+			($cmds[$1]{fmtstr},@{$cmds[$1]{parms}})=split(',',$cmd);
+			$found=1;
+		} elsif ($name=~/head/i) {
+			($cmds[0]{fmtstr},@{$cmds[0]{parms}})=split(',',$cmd);
+                        $found=1;
+		} else {
+			for ($i=0; $found==0 && $i<=$#cmds;$i++) {
+				if ($cmds[$i]{name} eq $name) {
+					($cmds[$i]{fmtstr},@{$cmds[$i]{parms}})=split(',',$cmd);
+					$found=1;
+				}
 			}
 		}
 		if (!$found) {
-			add_error("parse_lines: invalid tag name specified in line $lineno: $name");
+			add_error("parse_lines: invalid tag output [ $name ] specified in line $lineno, " .
+				"possible reason: defined output statement before command / eval statement");
 			return -1;
 		}
 
@@ -1206,6 +1244,7 @@ sub exec_command {
 				}
 				$cmds[$no]{rc}=$? >> 8;
 				$ENV{"MULTI_${no}_RC"}=$cmds[$no]{rc};
+				$ENV{"MULTI_${no}_RC_label"}=$def{label}{$cmds[$no]{rc}};
 	
 				#--- store stdout/stderr and cleanup tmpfiles
 				$cmds[$no]{output}=readfile($tmp_stdout);
@@ -1363,10 +1402,9 @@ sub exec_command {
 		}
 		unlink $tmp_stdout, $tmp_stderr;
 	} else {
-		$ENV{"MULTI_".$cmds[$no]{name}}="$cmds[$no]{output}";
-		DEBUG4("exec_command: environment var MULTI_$cmds[$no]{name}=$cmds[$no]{output}");
-		$ENV{"MULTI_STATE_".$cmds[$no]{name}}="$cmds[$no]{rc}";
-		DEBUG4("exec_command: environment var MULTI_STATE_$cmds[$no]{name}=$cmds[$no]{rc}");
+		#--- set environment variable states
+		set_env_vars($no);
+
 		#--- suppress_perfdata set? ignore perfdata
 		if ($cmds[$no]{process_perfdata} && $cmds[$no]{performance}) {
 			$ENV{"MULTI_PERFDATA_".$cmds[$no]{name}}="$cmds[$no]{performance}";
@@ -1551,16 +1589,21 @@ sub get_state_token {
 			}
 		}
 	}
-	#--- debugging
 	my $output="\n" . "0123456789" x 8 ."\n$state\n\n";
 	$output.=sprintf "%3s %5s %5s   %s\n", "No", "Start", "End", "Token";
+
 	for ($tno=0;$tno<=$#token;$tno++) {
+
+		#--- squeeze blanks to beautify output
+		$token[$tno]{token}=~s/  / /g;
+
 		$output.=sprintf "%3d %5d %5d   >%s<\n", 
 			$tno, 
 			$token[$tno]{start},
 			$token[$tno]{end},
 			$token[$tno]{token};
 	}
+	#--- debugging
 	DEBUG3($output);
 
 	#--- return array
@@ -1608,9 +1651,12 @@ sub result_rating {
 			add_error("result_rating: parsing error ($message)");
 		} else {
 			$rc{match}[$state]=1;
-			$rc{top}=$state;
+			$rc{head}=$state;
+
 		}
 	}
+	#--- set several environment vars for 'head'
+	set_env_vars(0);
 }
 
 #---
@@ -1691,13 +1737,19 @@ sub report_ascii {
 	DEBUG1("Plugin output");
 	DEBUG1("-" x 80);
 	
-	if ($opt{set}{report} & $DETAIL_NAGIOS2) {
+	if (defined($cmds[0]{fmtstr})) {
+		my $output="printf " . $cmds[0]{fmtstr};
+	 	$output.="," . join(",",@{$cmds[0]{parms}}) if (defined($cmds[0]{parms}));
+		$output=substitute_macros($output);
+		DEBUG4("report_ascii: output [ head ] = \'$output\'");
+		eval($output);
+	} elsif ($opt{set}{report} & $DETAIL_NAGIOS2) {
 		print "$opt{set}{name} " if $opt{set}{name};
-		print "$def{label}{$rc{top}}";
+		print "$def{label}{$rc{head}}";
 	} else {
 		#--- print header line (1): name, state, number of plugins
 		print "$opt{set}{name} " if $opt{set}{name};
-		print "$def{label}{$rc{top}} - $cmds[0]{nchecks} plugins checked, ";
+		print "$def{label}{$rc{head}} - $cmds[0]{nchecks} plugins checked, ";
 	
 		#--- print header line (2): summary for particular states 
 		if ($opt{set}{report} & $DETAIL_LIST_FULL) {
@@ -1724,6 +1776,16 @@ sub report_ascii {
 	
 	#--- loop over commands: report particular results for long plugin output
 	for ($no=1;$no<=$#cmds;$no++) {
+
+		#--- special output statement defined?
+		if (defined($cmds[$no]{fmtstr})) {
+			my $output="printf " . $cmds[$no]{fmtstr};
+	 		$output.="," . join(",",@{$cmds[$no]{parms}}) if (defined($cmds[$no]{parms}));
+			$output=substitute_macros($output);
+			DEBUG4("report_ascii: output [ $cmds[$no]{name} ] = \'$output\'");
+			eval($output);
+			next;
+		}
 
 		#--- skip eval
 		next if ($cmds[$no]{type} eq "eval");
@@ -1774,7 +1836,7 @@ sub report_ascii {
 		DEBUG2(state_string_ascii($rc{expr}[$def{s2r}{$s}]));
 	}
 	DEBUG1("-" x 80);
-	DEBUG1(sprintf "%8s %55s %s", "", "Overall state =>", $def{label}{$rc{top}});
+	DEBUG1(sprintf "%8s %55s %s", "", "Overall state =>", $def{label}{$rc{head}});
 	DEBUG1("-" x 80);
 }
 
@@ -1784,28 +1846,36 @@ sub report_ascii {
 sub report_html {
 	my $output="";
 	
-	#--- print header line (1): name, state, number of plugins
-	$output.="$opt{set}{name} " if $opt{set}{name};
-	$output.="$def{label}{$rc{top}} - $cmds[0]{nchecks} plugins checked, ";
-
-	#--- print header line (2): summary for particular states 
-	if ($opt{set}{report} & $DETAIL_LIST_FULL) {
-		$output.="$rc{count}[$CRITICAL] critical" . ((@{$rc{list}[$CRITICAL]}) ? " (" . join(', ',@{$rc{list}[$CRITICAL]}) . ')' : "") . ", " .
-			"$rc{count}[$WARNING] warning"   . ((@{$rc{list}[$WARNING]})  ? " (" . join(', ',@{$rc{list}[$WARNING]})  . ')' : "") . ", " .
-			"$rc{count}[$UNKNOWN] unknown"   . ((@{$rc{list}[$UNKNOWN]})  ? " (" . join(', ',@{$rc{list}[$UNKNOWN]})  . ')' : "") . ", " .
-			"$rc{count}[$OK] ok";
-	} elsif ($opt{set}{report} & $DETAIL_LIST) {
-		my @r=();
-		push @r, "$rc{count}[$CRITICAL] critical (" . join(', ',@{$rc{list}[$CRITICAL]}) . ")" if (@{$rc{list}[$CRITICAL]});
-		push @r, "$rc{count}[$WARNING] warning ("   . join(', ',@{$rc{list}[$WARNING]})  . ")" if (@{$rc{list}[$WARNING]});
-		push @r, "$rc{count}[$UNKNOWN] unknown ("   . join(', ',@{$rc{list}[$UNKNOWN]})  . ")" if (@{$rc{list}[$UNKNOWN]});
-		push @r, "$rc{count}[$OK] ok" if (@{$rc{list}[$OK]});
-		$output.=join(", ", @r);
+	if (defined($cmds[0]{fmtstr})) {
+		$output.="sprintf " . $cmds[0]{fmtstr};
+	 	$output.="," . join(",",@{$cmds[0]{parms}}) if (defined($cmds[0]{parms}));
+		$output=substitute_macros($output);
+		DEBUG4("report_html: output [ head ] =  \'$output\'");
+		$output=eval($output);
 	} else {
-		$output.="$rc{count}[$CRITICAL] critical, " .
-			"$rc{count}[$WARNING] warning, " .
-			"$rc{count}[$UNKNOWN] unknown, " .
-			"$rc{count}[$OK] ok";
+		#--- print header line (1): name, state, number of plugins
+		$output.="$opt{set}{name} " if $opt{set}{name};
+		$output.="$def{label}{$rc{head}} - $cmds[0]{nchecks} plugins checked, ";
+	
+		#--- print header line (2): summary for particular states 
+		if ($opt{set}{report} & $DETAIL_LIST_FULL) {
+			$output.="$rc{count}[$CRITICAL] critical" . ((@{$rc{list}[$CRITICAL]}) ? " (" . join(', ',@{$rc{list}[$CRITICAL]}) . ')' : "") . ", " .
+				"$rc{count}[$WARNING] warning"   . ((@{$rc{list}[$WARNING]})  ? " (" . join(', ',@{$rc{list}[$WARNING]})  . ')' : "") . ", " .
+				"$rc{count}[$UNKNOWN] unknown"   . ((@{$rc{list}[$UNKNOWN]})  ? " (" . join(', ',@{$rc{list}[$UNKNOWN]})  . ')' : "") . ", " .
+				"$rc{count}[$OK] ok";
+		} elsif ($opt{set}{report} & $DETAIL_LIST) {
+			my @r=();
+			push @r, "$rc{count}[$CRITICAL] critical (" . join(', ',@{$rc{list}[$CRITICAL]}) . ")" if (@{$rc{list}[$CRITICAL]});
+			push @r, "$rc{count}[$WARNING] warning ("   . join(', ',@{$rc{list}[$WARNING]})  . ")" if (@{$rc{list}[$WARNING]});
+			push @r, "$rc{count}[$UNKNOWN] unknown ("   . join(', ',@{$rc{list}[$UNKNOWN]})  . ")" if (@{$rc{list}[$UNKNOWN]});
+			push @r, "$rc{count}[$OK] ok" if (@{$rc{list}[$OK]});
+			$output.=join(", ", @r);
+		} else {
+			$output.="$rc{count}[$CRITICAL] critical, " .
+				"$rc{count}[$WARNING] warning, " .
+				"$rc{count}[$UNKNOWN] unknown, " .
+				"$rc{count}[$OK] ok";
+		}
 	}
 
 	#--- print general errors if any occured
@@ -1815,8 +1885,8 @@ sub report_html {
 	#--- collapse of contents with javascript
 	if ($opt{set}{collapse} == 1) {
 		$output.="<SCRIPT LANGUAGE='JavaScript'> function Toggle(node) { if (node.nextSibling.style.display == 'none') { if (node.childNodes.length > 0) { node.childNodes.item(0).replaceData(0,1,String.fromCharCode(8211)) } node.nextSibling.style.display = 'block' } else { if (node.childNodes.length > 0) { node.childNodes.item(0).replaceData(0,1,'+') } node.nextSibling.style.display = 'none' } } </SCRIPT>";
-		if (($rc{top} == $OK && $ENV{"MULTI_PPID"} != $$) ||
-		    ($rc{top} == $OK && $opt{set}{extinfo_in_status})) {
+		if (($rc{head} == $OK && $ENV{"MULTI_PPID"} != $$) ||
+		    ($rc{head} == $OK && $opt{set}{extinfo_in_status})) {
 			$output.="<A onClick='Toggle(this)' ".$opt{set}{style_plus_minus}.">+</A>";
 			$output.="<DIV style='display:none'>";
 		} else {
@@ -1899,12 +1969,26 @@ sub report_html {
 		}
 		DEBUG3("report_html output:$cmds[$no]{output}");
 		DEBUG3("HTML check_multi recursive levels: " . scalar ($cmds[$no]{output}=~s/multi_table/multi_table/g));
-		$output.=sprintf "<td>%s</td>", 
-				($cmds[$no]{output}=~/^([^\n]+)\n(.*)/is) 
-				? (($opt{set}{indent_label}) 
-					? "$1</td></tr><tr style='font-size:8pt'><td colspan='4'></td><td colspan='1'>$2"
-					: "$1</td></tr><tr><td></td><td colspan='5'>$2")
-				: $cmds[$no]{output};
+		if (defined($cmds[$no]{fmtstr})) {
+			my $tmp="sprintf " . $cmds[$no]{fmtstr};
+	 		$tmp.="," . join(",",@{$cmds[$no]{parms}}) if (defined($cmds[$no]{parms}));
+			$tmp=substitute_macros($tmp);
+			DEBUG4("report_html: output [ $cmds[$no]{name} ] = \'$tmp\'");
+			$tmp=eval($tmp);
+			$output.=sprintf "<td>%s</td>", 
+					($tmp=~/^([^\n]+)\n(.*)/is) 
+					? (($opt{set}{indent_label}) 
+						? "$1</td></tr><tr style='font-size:8pt'><td colspan='4'></td><td colspan='1'>$2"
+						: "$1</td></tr><tr><td></td><td colspan='5'>$2")
+					: $tmp;
+		} else {
+			$output.=sprintf "<td>%s</td>", 
+					($cmds[$no]{output}=~/^([^\n]+)\n(.*)/is) 
+					? (($opt{set}{indent_label}) 
+						? "$1</td></tr><tr style='font-size:8pt'><td colspan='4'></td><td colspan='1'>$2"
+						: "$1</td></tr><tr><td></td><td colspan='5'>$2")
+					: $cmds[$no]{output};
+		}
 		if (	defined($cmds[$no]{error}) && 
 			$cmds[$no]{error} ne "" && 
 			($opt{set}{report} & $DETAIL_STDERR)) {
@@ -1944,7 +2028,7 @@ sub report_html {
 			$output.=sprintf "<tr bgcolor='" . $colors[$flipflop] . "'><td>%s</td><td>%s</td><td>%s</td></tr>", $def{label}{$def{s2r}{$s}}, $rc{expr}[$def{s2r}{$s}], ($rc{match}[$def{s2r}{$s}]) ? "TRUE" : "FALSE";
 		}
 		$flipflop=!$flipflop;
-		$output.="<tr bgcolor='" . $colors[$flipflop] . "'><td></td><td style='text-align:right'>Overall state</td><td style='font-weight:bold'>$def{label}{$rc{top}}</td></tr>";
+		$output.="<tr bgcolor='" . $colors[$flipflop] . "'><td></td><td style='text-align:right'>Overall state</td><td style='font-weight:bold'>$def{label}{$rc{head}}</td></tr>";
 		$output.="</table></div>";
 	}
 
@@ -2023,24 +2107,32 @@ sub report_xml {
 	$xmlstr.="\t<endtime>$cmds[0]{endtime}</endtime>\n";
 	$xmlstr.="\t<runtime>$cmds[0]{runtime}</runtime>\n";
 	$xmlstr.="\t<output>";
-	#--- print header line (2): summary for particular states 
-	if ($opt{set}{report} & $DETAIL_LIST_FULL) {
-		$xmlstr.="$rc{count}[$CRITICAL] critical" . ((@{$rc{list}[$CRITICAL]}) ? " (" . join(', ',@{$rc{list}[$CRITICAL]}) . ')' : "") . ", " .
-			"$rc{count}[$WARNING] warning"   . ((@{$rc{list}[$WARNING]})  ? " (" . join(', ',@{$rc{list}[$WARNING]})  . ')' : "") . ", " .
-			"$rc{count}[$UNKNOWN] unknown"   . ((@{$rc{list}[$UNKNOWN]})  ? " (" . join(', ',@{$rc{list}[$UNKNOWN]})  . ')' : "") . ", " .
-			"$rc{count}[$OK] ok";
-	} elsif ($opt{set}{report} & $DETAIL_LIST) {
-		my @r=();
-		push @r, "$rc{count}[$CRITICAL] critical (" . join(', ',@{$rc{list}[$CRITICAL]}) . ")" if (@{$rc{list}[$CRITICAL]});
-		push @r, "$rc{count}[$WARNING] warning ("   . join(', ',@{$rc{list}[$WARNING]})  . ")" if (@{$rc{list}[$WARNING]});
-		push @r, "$rc{count}[$UNKNOWN] unknown ("   . join(', ',@{$rc{list}[$UNKNOWN]})  . ")" if (@{$rc{list}[$UNKNOWN]});
-		push @r, "$rc{count}[$OK] ok" if (@{$rc{list}[$OK]});
-		$xmlstr.=join(", ", @r);
+	if (defined($cmds[0]{fmtstr})) {
+		my $output="sprintf " . $cmds[0]{fmtstr};
+	 	$output.="," . join(",",@{$cmds[0]{parms}}) if (defined($cmds[0]{parms}));
+		$output=substitute_macros($output);
+		DEBUG4("report_xml: output [ head ] = \'$output\'");
+		$xmlstr.=eval($output);
 	} else {
-		$xmlstr.="$rc{count}[$CRITICAL] critical, " .
-			"$rc{count}[$WARNING] warning, " .
-			"$rc{count}[$UNKNOWN] unknown, " .
-			"$rc{count}[$OK] ok";
+		#--- print header line (2): summary for particular states 
+		if ($opt{set}{report} & $DETAIL_LIST_FULL) {
+			$xmlstr.="$rc{count}[$CRITICAL] critical" . ((@{$rc{list}[$CRITICAL]}) ? " (" . join(', ',@{$rc{list}[$CRITICAL]}) . ')' : "") . ", " .
+				"$rc{count}[$WARNING] warning"   . ((@{$rc{list}[$WARNING]})  ? " (" . join(', ',@{$rc{list}[$WARNING]})  . ')' : "") . ", " .
+				"$rc{count}[$UNKNOWN] unknown"   . ((@{$rc{list}[$UNKNOWN]})  ? " (" . join(', ',@{$rc{list}[$UNKNOWN]})  . ')' : "") . ", " .
+				"$rc{count}[$OK] ok";
+		} elsif ($opt{set}{report} & $DETAIL_LIST) {
+			my @r=();
+			push @r, "$rc{count}[$CRITICAL] critical (" . join(', ',@{$rc{list}[$CRITICAL]}) . ")" if (@{$rc{list}[$CRITICAL]});
+			push @r, "$rc{count}[$WARNING] warning ("   . join(', ',@{$rc{list}[$WARNING]})  . ")" if (@{$rc{list}[$WARNING]});
+			push @r, "$rc{count}[$UNKNOWN] unknown ("   . join(', ',@{$rc{list}[$UNKNOWN]})  . ")" if (@{$rc{list}[$UNKNOWN]});
+			push @r, "$rc{count}[$OK] ok" if (@{$rc{list}[$OK]});
+			$xmlstr.=join(", ", @r);
+		} else {
+			$xmlstr.="$rc{count}[$CRITICAL] critical, " .
+				"$rc{count}[$WARNING] warning, " .
+				"$rc{count}[$UNKNOWN] unknown, " .
+				"$rc{count}[$OK] ok";
+		}
 	}
 	$xmlstr.="</output>\n";
 	$xmlstr.="\t<error>" . join(", ",@{$cmds[0]{error}}) . "</error>\n" if (defined($cmds[0]{error}[0]));
@@ -2399,7 +2491,7 @@ add_error("please don't run plugins as root!") if ($> == 0);
 #--- no child checks defined yet? Throw UNKNOWN
 if ($#cmds<1) {
 	add_error("no checks defined");
-	$rc{top}=$opt{set}{no_checks_rc};
+	$rc{head}=$opt{set}{no_checks_rc};
 	$rc{expr}[$OK]="0==1" if ($opt{set}{no_checks_rc} != $OK);
 }
 
@@ -2434,4 +2526,4 @@ $cmds[0]{endtime}=time;
 &report_all;
 
 #--- return rc with highest severity
-exit $rc{top};
+exit $rc{head};
