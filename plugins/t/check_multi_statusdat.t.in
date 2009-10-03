@@ -23,7 +23,10 @@ my @plugins=(
 foreach my $plugin (@plugins) {
 	my $path_to_plugin=`which $plugin`; chomp $path_to_plugin;
 	if (! -x "$path_to_plugin") {
-		plan skip_all => "Skipping tests because component $plugin not found or not executable as \'$path_to_plugin\'";
+		plan skip_all => "tests because component $plugin not found or not executable as \'$path_to_plugin\'";
+	}
+	if (! -r "@localstatedir@/status.dat") {
+		plan skip_all => "tests because status.dat \'@localstatedir@/status.dat\' not found or not readable - is Nagios running?";
 	}
 }
 plan tests => 2;
