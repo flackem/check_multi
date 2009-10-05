@@ -2026,7 +2026,7 @@ sub report_html {
 	$output.="</div>" if ($opt{set}{collapse} == 1 && ! $opt{set}{extinfo_in_status});
 
 	#--- print state evaluation if verbose flag set
-        if ($opt{set}{verbose} >= 1) {
+        if ($opt{set}{verbose} >= 2) {
 		if ($ENV{"MULTI_PPID"} != $$) {
 			$output.="<A onClick='Toggle(this)' style='".$opt{set}{style_plus_minus}."'>+</A>";
 			$output.="<DIV style='display:none'><h4>Child check overview</h4>";
@@ -2058,7 +2058,7 @@ sub report_html {
 	}
 
 	#--- verbose mode - add some tables
-	if ($opt{set}{verbose} >=1) {
+	if ($opt{set}{verbose} >=2) {
 
 		if ($ENV{"MULTI_PPID"} != $$) {
 			$output.="<A onClick='Toggle(this)' style='".$opt{set}{style_plus_minus}."'>+</A>";
