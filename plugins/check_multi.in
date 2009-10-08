@@ -111,6 +111,8 @@ my %opt=(
 		# standard extension of check_multi command files, 
 		# to be searched in directories
 		file_extension	=> "@file_extension@",
+		# hostaddress, either determined from Nagios environment, or specified
+		HOSTADDRESS	=> $ENV{NAGIOS_HOSTADDRESS},
 		# hostname, either determined from Nagios environment, or specified
 		HOSTNAME	=> $ENV{NAGIOS_HOSTNAME},
 		# if set, return UNKNOWN if command file is not found
@@ -540,8 +542,8 @@ sub process_input {
 			#--- take filename to store persistent data from HOSTNAME-SERVICEDESC
 			if ($ENV{MULTI_HOSTNAME} && $ENV{MULTI_SERVICEDESC}) {
 				$cmds[0]{key}="$ENV{MULTI_HOSTNAME}-$ENV{MULTI_SERVICEDESC}";
-			} elsif ($ENV{NAGIOS_HOSTNAME} && $ENV{NAGIOS_SERVICEDESC}) {
-				$cmds[0]{key}="$ENV{NAGIOS_HOSTNAME}-$ENV{NAGIOS_SERVICEDESC}";
+			} elsif ($ENV{MULTI_HOSTNAME} && $ENV{NAGIOS_SERVICEDESC}) {
+				$cmds[0]{key}="$ENV{MULTI_HOSTNAME}-$ENV{NAGIOS_SERVICEDESC}";
 			} else {
 				print "process_input: need HOSTNAME and SERVICEDESC for persistent mode.\nPlease specify -s HOSTNAME=<hostname> -s SERVICEDESC=<service description>\n";
 				return $UNKNOWN;
@@ -1941,10 +1943,10 @@ sub report_html {
 
 			#--- determine hostname
 			my $hostname="";
-			if ($ENV{NAGIOS_HOSTNAME}) {
-				$hostname=$ENV{NAGIOS_HOSTNAME};
-			} elsif ($ENV{NAGIOS_HOSTADDRESS}) {
-				$hostname=$ENV{NAGIOS_HOSTADDRESS};
+			if ($ENV{MULTI_HOSTNAME}) {
+				$hostname=$ENV{MULTI_HOSTNAME};
+			} elsif ($ENV{MULTI_HOSTADDRESS}) {
+				$hostname=$ENV{MULTI_HOSTADDRESS};
 			} else {
 				$hostname=`uname -n`;
 			}
@@ -1962,7 +1964,16 @@ sub report_html {
 			$cmds[$no]{process_perfdata} &&
 			$opt{set}{action_mouseover}) {
 
-			my $hostname=($ENV{NAGIOS_HOSTNAME}) ? $ENV{NAGIOS_HOSTNAME} : `uname -n`; chomp($hostname);
+			#--- determine hostname
+			my $hostname="";
+			if ($ENV{MULTI_HOSTNAME}) {
+				$hostname=$ENV{MULTI_HOSTNAME};
+			} elsif ($ENV{MULTI_HOSTADDRESS}) {
+				$hostname=$ENV{MULTI_HOSTADDRESS};
+			} else {
+				$hostname=`uname -n`;
+			}
+			chomp($hostname);
 			DEBUG3("report_html: hostname is $hostname");
 			my $pnp_cgi=substitute_macros($opt{set}{pnp_cgi});
 			my $image_path=substitute_macros($opt{set}{image_path});
@@ -2400,7 +2411,16 @@ sub report_send_nsca {
 		add_error("report_send_nsca: $opt{set}{send_nsca_cfg} not found or not readable for UID $>:$!");
 		return $sent;
 	}
-	my $hostname=($ENV{NAGIOS_HOSTNAME}) ? $ENV{NAGIOS_HOSTNAME} : `uname -n`; chomp($hostname);
+	#--- determine hostname
+	my $hostname="";
+	if ($ENV{MULTI_HOSTNAME}) {
+		$hostname=$ENV{MULTI_HOSTNAME};
+	} elsif ($ENV{MULTI_HOSTADDRESS}) {
+		$hostname=$ENV{MULTI_HOSTADDRESS};
+	} else {
+		$hostname=`uname -n`;
+	}
+	chomp($hostname);
 	my $nsca_cmdline=
 		"$opt{set}{send_nsca} " . 
 		"-H $opt{set}{send_nsca_srv} " .
