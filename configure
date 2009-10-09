@@ -1267,7 +1267,7 @@ check_multi settings:
   --with-no_checks_rc=<RC>                 RC if no checks are specified (default:3-UNKNOWN)
   --with-notes_url=<URL>                   notes URL (default:"")
   --with-persistent=<0|1>                  persistency: saving of state data between two calls (default:0)
-  --with-pnp_cgi=<URL>                     relative URL to PNP (default:"/pnp4nagios/graph.php")
+  --with-pnp_cgi=<URL>                     relative URL to PNP (default for PNP 0.6:"/pnp4nagios/graph")
   --with-report=<NN>                       default report option (default:13)
   --with-style_plus_minus=<HTML code>      HTML style for plus/minus (default:$ACTION_URL)
   --with-tag_notes_link=<URL>              documentation URL for child checks (default:"")
@@ -2240,7 +2240,7 @@ fi
 if test "${with_pnp_cgi+set}" = set; then
   withval=$with_pnp_cgi; pnp_cgi=$withval
 else
-  pnp_cgi="/pnp4nagios/graph.php"
+  pnp_cgi="/pnp4nagios/graph"
 fi
 
 

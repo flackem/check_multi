@@ -1979,7 +1979,7 @@ sub report_html {
 			my $image_path=substitute_macros($opt{set}{image_path});
 			DEBUG4(">>>$opt{set}{target}:$pnp_cgi:${hostname}:$cmds{$no}{name}:${hostname}:$cmds{$no}{name}:$image_path:$hostname:$cmds{$no}{name}<<<");
 			$output.=sprintf "<td nowrap>%s</td>",
-				"<A TARGET=\'$opt{set}{target}\' HREF='/$pnp_cgi/index.php?host=${hostname}&srv=$cmds{$no}{name}' onmouseout='clear_g()' onmouseover=\"get_g(\'${hostname}\',\'$cmds{$no}{name}\')\">" .
+				"<A TARGET=\'$opt{set}{target}\' HREF='/$pnp_cgi?host=${hostname}&srv=$cmds{$no}{name}' onmouseout='clear_g()' onmouseover=\"get_g(\'${hostname}\',\'$cmds{$no}{name}\')\">" .
 				"<img src=\'$image_path/action.gif\' width=20 height=20 border=0 align=top alt='Show performance chart for $hostname / $cmds{$no}{name}'></A>";
 		} else {
 			$output.="<td></td>";
