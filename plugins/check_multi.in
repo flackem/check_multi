@@ -836,13 +836,12 @@ sub set_env_vars {
 	$ENV{"MULTI_${no}_LABEL"}="$def{label}{$cmds[$no]{rc}}";
 
 	DEBUG4("set_env_vars: 6 environment vars set\n" . 
-		"1. MULTI_$name=\n\t$cmds[$no]{output}\n" . 
-		"2. MULTI_STATE_$name=\n\t$cmds[$no]{rc}\n" .
-		"3. MULTI_LABEL_$name=\n\t$def{label}{$cmds[$no]{rc}}\n" . 
-		"4. MULTI_${no}=\n\t$cmds[$no]{output}\n" . 
-		"5. MULTI_${no}_STATE=\n\t$cmds[$no]{rc}\n" .
-		"6. MULTI_${no}_LABEL=\n\t$def{label}{$cmds[$no]{rc}}\n"
-	);
+		"1. MULTI_$name=\t$cmds[$no]{output}\n" . 
+		"2. MULTI_STATE_$name=\t$cmds[$no]{rc}\n" .
+		"3. MULTI_LABEL_$name=\t$def{label}{$cmds[$no]{rc}}\n" . 
+		"4. MULTI_${no}=\t$cmds[$no]{output}\n" . 
+		"5. MULTI_${no}_STATE=\t$cmds[$no]{rc}\n" .
+		"6. MULTI_${no}_LABEL=\t$def{label}{$cmds[$no]{rc}}");
 
 }
 
@@ -980,6 +979,7 @@ sub parse_lines {
 	my ($line,$cmd,$type,$name,$plugin,$pplugin,$expr,$lineno,$i,$last_command);
 
 	$lineno=0;	# count sourcefile lines
+	DEBUG4("parse_lines: starting with " . $#cmds . " command(s)");
 	LINE: while ($line=shift(@lines)) {
 
 		#--- count lines
@@ -997,9 +997,6 @@ sub parse_lines {
 
 		#--- remove trailing backslash if any (compatibility mode)
 		$line=~s/\\\s*$// if ($line=~/\\\s*/);
-
-		#--- remove newline from line end
-		#chomp($line);
 
 		#--- header line (regex contains all allowed commands)
 		if (($type,$name,$cmd)=($line=~/^\s*(command|eval|eeval|statusdat|state|output)\s*\[\s*(\S+)\s*\]\s*=\s*(.*)\s*/i)) {
@@ -1040,6 +1037,7 @@ sub parse_lines {
 			}
 		}
 	}
+	DEBUG4("parse_lines: end - now we have " . $#cmds . " command(s)");
 }
 
 sub parse_header {
@@ -1047,15 +1045,17 @@ sub parse_header {
 
 	my ($i,$host,$service);
 
-	#--- overloading: if plugin with same name exists, overload its attributes
+	#--- overloading: if child check with same name exists, 
+	#--- overload its attributes. Otherwise append new check
 	if ($type eq "command" || $type=~/eval$/ || $type=~/statusdat/) {
 		for ($i=1; $i<=$#cmds;$i++) {
 			last if ($cmds[$i]{name} eq $name);
 		}
-		if ($cmds[$i]{command}) {
-			DEBUG2("parse_lines: overloaded \'$name\' with $type \'$cmd\'");
-		} else {
-			DEBUG2("parse_lines: added \'$name\' with $type \'$cmd\'");
+		if (defined($cmds[$i])) { 
+			DEBUG2(defined($cmds[$i]{command})
+				? "parse_header: overloaded \'$name\' with $type \'$cmd\'" 
+				: "parse_header: added \'$name\' with $type \'$cmd\'"
+			);
 		}
 	}
 
@@ -1093,7 +1093,7 @@ sub parse_header {
 		if ($opt{set}{suppress_perfdata} && 
 			$opt{set}{suppress_perfdata}=~/\b$name\b/i) {
 			$cmds[$i]{process_perfdata}=0;
-			DEBUG2("parse_lines: perfdata of [ $name ] will be suppressed");
+			DEBUG2("parse_header: perfdata of [ $name ] will be suppressed");
 		} else {
 			$cmds[$i]{process_perfdata}=1;
 		}
@@ -1114,7 +1114,7 @@ sub parse_header {
 		if ($opt{set}{suppress_perfdata} && 
 			$opt{set}{suppress_perfdata}=~/\b$name\b/i) {
 			$cmds[$i]{process_perfdata}=0;
-			DEBUG2("parse_lines: perfdata of [ $name ] will be suppressed");
+			DEBUG2("parse_header: perfdata of [ $name ] will be suppressed");
 		} else {
 			$cmds[$i]{process_perfdata}=1;
 		}
@@ -1137,33 +1137,47 @@ sub parse_header {
 		if ($opt{set}{suppress_perfdata} && 
 			$opt{set}{suppress_perfdata}=~/\b$name\b/i) {
 			$cmds[$i]{process_perfdata}=0;
-			DEBUG2("parse_lines: perfdata of [ $name ] will be suppressed");
+			DEBUG2("parse_header: perfdata of [ $name ] will be suppressed");
 		} else {
 			$cmds[$i]{process_perfdata}=1;
 		}
 
 	#--- format: 'statusdat [ tag[::plugin] ] = host, service'
 	} elsif ($type eq "statusdat") {
-		$cmds[$i]{type}=$type;
-		$cmds[$i]{name}=$name;
-		$cmds[$i]{command}=$cmd;
-		$cmds[$i]{plugin}=undef;
-		$cmds[$i]{pplugin}=undef;
-		$cmds[$i]{rc}=$UNKNOWN;
-		$cmds[0]{nallchecks}++;
-		$cmds[0]{nchecks}++;
-		$cmds[$i]{number}=$cmds[0]{nchecks};
-		$cmds[$i]{displayed}=1;
-		$cmds[$i]{output}="";
-		$cmds[$i]{error}="";
-		$cmds[$i]{runtime}=0;
 
 		#--- statusdat: split host and service from command, format: host:service
-		if ($cmd=~/\s*([^,]*)\s*\:\s*(.*)\s*/) {
-			$cmds[$i]{host}=$1;
-			$cmds[$i]{service}=$2;
+		if ($cmd=~/\s*([^:]*)\s*\:\s*(.*)\s*/) {
+			DEBUG4("parse_header: expanding $1:$2");
+			my @result=expand_status_dat_service($opt{set}{status_dat}, $1, $2);
+			if (!defined($result[0])) {
+				add_error("Could not expand host:service $1:$2 from status_dat $opt{set}{status_dat}");
+				return -1;
+			}
+			while(@result) {
+				$cmds[$i]{type}=$type;
+				$cmds[$i]{command}=$cmd;
+				$cmds[$i]{plugin}=undef;
+				$cmds[$i]{pplugin}=undef;
+				$cmds[$i]{rc}=$UNKNOWN;
+				$cmds[0]{nallchecks}++;
+				$cmds[0]{nchecks}++;
+				$cmds[$i]{number}=$cmds[0]{nchecks};
+				$cmds[$i]{displayed}=1;
+				$cmds[$i]{output}="";
+				$cmds[$i]{error}="";
+				$cmds[$i]{runtime}=0;
+				$cmds[$i]{host}=shift(@result);
+				$cmds[$i]{service}=shift(@result);
+				if ($cmds[$i]{host} eq "-1") {
+					$cmds[$i]{host}="UNKNOWN";
+					$cmds[$i]{service}="UNKNOWN";
+				}
+				$cmds[$i]{name}="${name}_$cmds[$i]{host}_$cmds[$i]{service}";
+				DEBUG4("parse_header: added host:$cmds[$i]{host} / service:$cmds[$i]{service}");
+				$i++;
+			}
 		} else {
-			add_error("parse_lines: invalid host or service in statusdat line \'$lineno\', format should be \'statusdat [ name ] = host:service\'"); 
+			add_error("parse_header: invalid host or service in statusdat line \'$lineno\', format should be \'statusdat [ name ] = host:service\'"); 
 			return -1;
 		}
 
@@ -1171,15 +1185,15 @@ sub parse_header {
 	} elsif ($type eq "state") {
 		#DEBUG1("def{code}{$name}:$def{code}{$name}");
 		if (!defined($def{code}{$name})) {
-			add_error("parse_lines: invalid state code specified in line $lineno: $cmd");
+			add_error("parse_header: invalid state code specified in line $lineno: $cmd");
 			return -1;
 		}
 		#--- store state expression only if NOT set via commandline
 		if (!defined($opt{lc($name)})) {
-			DEBUG3("parse_lines: added state{$def{code}{$name}} expression: $cmd");
+			DEBUG3("parse_header: added state{$def{code}{$name}} expression: $cmd");
 			$rc{expr}[$def{code}{$name}]=$cmd; 
 		} else {
-			DEBUG3("parse_lines: command line precedence over state expression. Using \$opt{$name}: $opt{$name}");
+			DEBUG3("parse_header: command line precedence over state expression. Using \$opt{$name}: $opt{$name}");
 		}
 		$i=$name;
 
@@ -1201,7 +1215,7 @@ sub parse_header {
 			}
 		}
 		if (!$found) {
-			add_error("parse_lines: invalid tag output [ $name ] specified in line $lineno, " .
+			add_error("parse_header: invalid tag output [ $name ] specified in line $lineno, " .
 				"possible reason: defined output statement before command / eval statement");
 			return -1;
 		}
@@ -1437,7 +1451,6 @@ sub exec_command {
 sub get_status_dat_service {
         my ($statusdat_path, $host_name, $service_description)=@_;
 
-
 	if (!$host_name || !$service_description) {
 		add_error("get_status_dat_service: empty host_name=$host_name or service_description=$service_description specified");
 		return (-1,"");
@@ -1463,6 +1476,46 @@ sub get_status_dat_service {
 			$status_dat->{$host_name}->{$service_description}->{long_plugin_output}
 		);
 	}
+}
+
+sub expand_status_dat_service {
+        my ($statusdat_path, $host_name, $service_description)=@_;
+
+	DEBUG4("expand_status_dat_service: expanding $host_name:$service_description");
+	if (!$host_name || !$service_description) {
+		add_error("expand_status_dat_service: empty host_name=$host_name or service_description=$service_description specified");
+		return (undef,undef);
+	}
+	if (!$status_dat) {
+		DEBUG4("expand_status_dat_service: 1st read, creating service tree");
+		$status_dat=read_status_dat($statusdat_path);
+		if (!$status_dat) {
+			add_error("expand_status_dat_service: could not read $statusdat_path");
+			return (undef,undef);
+		}
+	} else {
+		DEBUG4("expand_status_dat_service: subsequent read, reading from service tree");
+	}
+
+	#--- expand simple tokens to REGEX, if necessary
+	$host_name=($host_name=~/\/(.*)\//)?$1:'^'.$host_name.'$';
+	$service_description=($service_description=~/\/(.*)\//)?$1:'^'.$service_description.'$';
+	DEBUG4("expand_status_dat_service: $host_name:$service_description after REGEX preparation");
+
+	my @result=();
+	foreach my $host (sort keys(%{$status_dat})) {
+		foreach my $service (sort keys(%{$status_dat->{$host}})) {
+			if ($host=~/$host_name/ && $service=~/$service_description/) {
+				push @result,$host;
+				push @result,$service;
+				DEBUG4("expand_status_dat_service: $host:$service matched $host_name:$service_description");
+			#} else {
+				#DEBUG4("expand_status_dat_service: $host:$service did not match $host_name:$service_description");
+			}
+		}
+	}
+	DEBUG4("expand_status_dat_service returns " . ($#result+1)/2 . " results");
+	return @result;
 }
 
 sub read_status_dat {
@@ -2538,6 +2591,8 @@ if ($#cmds<1) {
 	add_error("no checks defined");
 	$rc{head}=$opt{set}{no_checks_rc};
 	$rc{expr}[$OK]="0==1" if ($opt{set}{no_checks_rc} != $OK);
+} else {
+	DEBUG4("main: running " . ($#cmds - 1) . " child checks");
 }
 
 #--- initialize timer for overall timeout
