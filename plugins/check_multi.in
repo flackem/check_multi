@@ -517,7 +517,7 @@ sub process_input {
 	
 	#--- add all set options as environment variables, so client scripts can use it
 	foreach my $option (sort keys(%{$opt{set}})) {
-		$ENV{"MULTI_".$option}=$opt{set}{$option};
+		$ENV{"MULTI_".$option}=$opt{set}{$option} if defined($opt{set}{$option});
 	}
 
 	#--- add _the_ parent pid as indicator of the absolute first instance in a check_multi tree
