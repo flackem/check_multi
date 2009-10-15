@@ -766,7 +766,7 @@ sub substitute_macros {
 	}
 
 	DEBUG3("substitute_macros: checking $input");
-	while ((my $var)=($input=~/\$([A-Za-z0-9_^\$]+)\$/)) {
+	while ((my $var)=($input=~/\$([A-Za-z0-9_^\-\$]+)\$/)) {
 
 		#--- 1. check for MULTI var
 		if (defined($ENV{"MULTI_${var}"})) {
