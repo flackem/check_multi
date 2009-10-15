@@ -8,6 +8,7 @@ my ${datarootdir}="@datarootdir@";
 my ${localstatedir}="@localstatedir@";
 my ${checkresults_dir}="@checkresults_dir@";
 my ${config_dir}="@config_dir@";
+#my ${ac_configure_args}="@ac_configure_args@";
 my $libdir="@libdir@";
 my $sysconfdir="@sysconfdir@";
 my $bindir="@bindir@";
@@ -45,6 +46,7 @@ while (my $f = shift @ARGV) {
 		s|\@child_timeout\@|@child_timeout@|g;
 		s|\@collapse\@|@collapse@|g;
 		s|\@cmdfile_update_interval\@|@cmdfile_update_interval@|g;
+		s|\@configure_args\@|@ac_configure_args@|g;
 		s|\@config_dir\@|$config_dir|g;
 		s|\$\{contrib_dir\}|@contrib_dir@|g;
 		s|\@ethtool\@|@ethtool@|g;

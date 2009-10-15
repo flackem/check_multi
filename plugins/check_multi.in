@@ -50,7 +50,8 @@ use lib "@libexecdir@";
 #--- vars ----------------------------------------------------------------------
 #-------------------------------------------------------------------------------
 $MYSELF="check_multi";
-$VERSION='$Revision$ $Date$ $Author$';
+$VERSION='$Revision$ $Date$ $Author$'.
+	"\nconfigure @configure_args@";
 #
 #--- RC defines
 $OK=0;

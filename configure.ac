@@ -97,6 +97,7 @@ AC_ARG_WITH(nagios_user,		[  --with-nagios-user=<user>                user name 
 AC_ARG_WITH(nagios_group,		[  --with-nagios-group=<group>              group name to run plugin (default:nagios)],nagios_group=$withval,nagios_group=nagios)
 AC_ARG_WITH(nagios_name,		[  --with-nagios-name=<name>                set nagios name (there should some clones ;)) (default:nagios)],nagios_name=$withval,nagios_name=nagios)
 
+AC_SUBST(ac_configure_args)
 AC_SUBST(action_mouseover)
 AC_SUBST(action_url)
 AC_SUBST(child_timeout)
@@ -199,8 +200,9 @@ AC_MSG_RESULT([
  --- $PKG_NAME configure summary (SVN ${PKG_VERSION}) 
  -------------------------------------------------------------------
 ])
-echo " Release date ${PKG_REL_DATE}"
-echo " Author       ${PKG_AUTHOR}"
+echo " Release date   ${PKG_REL_DATE}"
+echo " Author         ${PKG_AUTHOR}"
+echo " Configure args :${ac_configure_args}"
 echo
 echo " --- Directories"
 echo " -------------------------------------------------------------------"
