@@ -1,5 +1,6 @@
 
 ===== Changelog =====
+	* fixed handling of non-existing signals, and non-existing RCs
 
 **0.20**	16.10.2009
 	* invisible checks (eval) will not be counted any more, since this confused some people :)

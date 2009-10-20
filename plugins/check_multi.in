@@ -343,7 +343,11 @@ sub process_input {
 			$opt{set}{win32}=0;
 			DEBUG2("process_input: Win32 not available");
 			$opt{set}{user}="unknown";
+			if (!$opt{set}{HOSTNAME}) {
+				$opt{set}{HOSTNAME}=$ENV{COMPUTERNAME};
+			}
 		} else {
+			$opt{set}{win32}=1;
 			DEBUG3("process_input: Win32 available");
 			$opt{set}{user}=&Win32::LoginName;
 			if (!$opt{set}{HOSTNAME}) {
@@ -889,7 +893,12 @@ sub debug_message {
 sub install_signal_handler {
 	my ($handler, @signals)=@_;
 	foreach my $signal (@signals) {
-		$SIG{$signal} = \&signal_handler;
+		if (grep "$signal", join(',',keys %SIG)) {
+			$SIG{$signal} = \&signal_handler;
+		} else {
+			add_error("install_signal_handler: signal $signal not existing");
+			DEBUG2("install_signal_handler: signal $signal not existing");
+		}
 	}
 }
 
@@ -1307,8 +1316,7 @@ sub exec_command {
 				}
 				$cmds[$no]{rc}=$? >> 8;
 				$ENV{"MULTI_${no}_RC"}=$cmds[$no]{rc};
-				$ENV{"MULTI_${no}_RC_label"}=$def{label}{$cmds[$no]{rc}};
-	
+				$ENV{"MULTI_${no}_RC_label"}=($cmds[$no]{rc}<=3)?$def{label}{$cmds[$no]{rc}}:"INVALID";
 				#--- store stdout/stderr and cleanup tmpfiles
 				$cmds[$no]{output}=readfile($tmp_stdout);
 				DEBUG3("exec_command: raw output >$cmds[$no]{output}<");
