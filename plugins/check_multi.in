@@ -105,6 +105,8 @@ my %opt=(
 		collapse	=> @collapse@,
 		# path to check_multi config directory
 		config_dir	=> "@config_dir@",
+		# how many rows should be displayed for cumulate statement?
+		cumulate_max_rows => 5,
 		# use open3 method to exec child checks
 		exec_open3	=> @exec_open3@,
 		# show child checks also in status view (only in HTML mode)
@@ -335,33 +337,6 @@ sub process_input {
 		DEBUG3("process_input: no <STDIN> found");
 	}
 
-	#--- determine some settings (user,hostname)
-	$opt{set}{uid}=$<;
-	if ($^O=~/Win32/) {
-		#--- Win32? then use Win32 module
-		unless (eval "use Win32;1") {
-			$opt{set}{win32}=0;
-			DEBUG2("process_input: Win32 not available");
-			$opt{set}{user}="unknown";
-			if (!$opt{set}{HOSTNAME}) {
-				$opt{set}{HOSTNAME}=$ENV{COMPUTERNAME};
-			}
-		} else {
-			$opt{set}{win32}=1;
-			DEBUG3("process_input: Win32 available");
-			$opt{set}{user}=&Win32::LoginName;
-			if (!$opt{set}{HOSTNAME}) {
-				$opt{set}{HOSTNAME}=&Win32::NodeName;
-			}
-		}
-	} else {
-		$opt{set}{user}=getpwuid($<);
-		if (!$opt{set}{HOSTNAME}) {
-			$opt{set}{HOSTNAME}=`uname -n`;
-			chomp($opt{set}{HOSTNAME});
-		}
-	}	
-
 	#--- check_multi uses a temporary directory, per default /tmp/check_multi
 	#--- 1. create if not yet done
 	if (! -d "$opt{set}{tmp_dir}") {
@@ -370,11 +345,11 @@ sub process_input {
 	}
 	#--- 2. check if tmp_dir is available
 	if (! -d "$opt{set}{tmp_dir}") {
-		print "Error: could not create tmp directory $opt{set}{tmp_dir} as user $opt{set}{user}\n";
+		print "Error: could not create tmp directory $opt{set}{tmp_dir} as user " . getpwuid($<) . "\n";
 		return $UNKNOWN;
 	#--- 3. and at last: it has to be writeable
 	} elsif (! -w "$opt{set}{tmp_dir}") {
-		print "Error: cannot write to tmp directory $opt{set}{tmp_dir} as user $opt{set}{user}\n";
+		print "Error: cannot write to tmp directory $opt{set}{tmp_dir} as user " . getpwuid($<) . "\n";
 		return $UNKNOWN;
 	}
 
@@ -537,6 +512,12 @@ sub process_input {
 		return $UNKNOWN;
 	}
 
+	#--- determine hostname
+	if (!$opt{set}{HOSTNAME}) {
+		$opt{set}{HOSTNAME}=`uname -n`;
+		chomp($opt{set}{HOSTNAME});
+	}
+	
 	#--- add all set options as environment variables, so client scripts can use it
 	foreach my $option (sort keys(%{$opt{set}})) {
 		$ENV{"MULTI_".$option}=$opt{set}{$option} if defined($opt{set}{$option});
@@ -864,18 +845,7 @@ sub set_env_vars {
 		"4. MULTI_${no}=\t$cmds[$no]{output}\n" . 
 		"5. MULTI_${no}_STATE=\t$cmds[$no]{rc}\n" .
 		"6. MULTI_${no}_LABEL=\t$def{label}{$cmds[$no]{rc}}");
-}
 
-#---
-#--- get environment vars
-#---
-sub get_env_vars {
-	my ($pattern)=@_;
-	my @result=();
-	foreach my $key (sort keys(%ENV)) {
-		push @result, "$key=$ENV{$key}" if ($key=~/$pattern/);
-	}
-	@result;
 }
 
 #---
@@ -893,12 +863,7 @@ sub debug_message {
 sub install_signal_handler {
 	my ($handler, @signals)=@_;
 	foreach my $signal (@signals) {
-		if (grep "$signal", join(',',keys %SIG)) {
-			$SIG{$signal} = \&signal_handler;
-		} else {
-			add_error("install_signal_handler: signal $signal not existing");
-			DEBUG2("install_signal_handler: signal $signal not existing");
-		}
+		$SIG{$signal} = \&signal_handler;
 	}
 }
 
@@ -1037,7 +1002,7 @@ sub parse_lines {
 		$line=~s/\\\s*$// if ($line=~/\\\s*/);
 
 		#--- header line (regex contains all allowed commands)
-		if (($type,$name,$cmd)=($line=~/^\s*(command|eval|eeval|statusdat|state|output)\s*\[\s*(\S+)\s*\]\s*=\s*(.*)\s*/i)) {
+		if (($type,$name,$cmd)=($line=~/^\s*(command|cumulate|eval|eeval|statusdat|state|output)\s*\[\s*(\S+)\s*\]\s*=\s*(.*)\s*/i)) {
 
 			#--- macros?
 			$name=substitute_macros($name);
@@ -1085,7 +1050,7 @@ sub parse_header {
 
 	#--- overloading: if child check with same name exists, 
 	#--- overload its attributes. Otherwise append new check
-	if ($type eq "command" || $type=~/eval$/ || $type=~/statusdat/) {
+	if ($type eq "command" || $type=~/eval$/ || $type=~/statusdat/ || $type eq "cumulate") {
 		for ($i=1; $i<=$#cmds;$i++) {
 			last if ($cmds[$i]{name} eq $name);
 		}
@@ -1128,6 +1093,29 @@ sub parse_header {
 		$cmds[$i]{output}="";
 		$cmds[$i]{error}="";
 		$cmds[$i]{runtime}=0;
+		if ($opt{set}{suppress_perfdata} && 
+			$opt{set}{suppress_perfdata}=~/\b$name\b/i) {
+			$cmds[$i]{process_perfdata}=0;
+			DEBUG2("parse_header: perfdata of [ $name ] will be suppressed");
+		} else {
+			$cmds[$i]{process_perfdata}=1;
+		}
+
+	#--- format: 'cumulate  [ tag[::plugin] ] = expression'
+	} elsif ($type eq "cumulate") {
+		$cmds[$i]{type}=$type;
+		$cmds[$i]{name}=$name;
+		$cmds[$i]{command}=$cmd;
+		$cmds[$i]{plugin}=$type;
+		$cmds[$i]{pplugin}="";
+		$cmds[$i]{rc}=$UNKNOWN;
+		$cmds[$i]{displayed}=1;
+		$cmds[$i]{output}="";
+		$cmds[$i]{error}="";
+		$cmds[$i]{runtime}=0;
+		$cmds[0]{nallchecks}++;
+		$cmds[0]{nchecks}++;
+		$cmds[$i]{number}=$cmds[0]{nchecks};
 		if ($opt{set}{suppress_perfdata} && 
 			$opt{set}{suppress_perfdata}=~/\b$name\b/i) {
 			$cmds[$i]{process_perfdata}=0;
@@ -1286,7 +1274,7 @@ sub exec_command {
 	#--- measure command runtime;
 	$cmds[$no]{starttime}=time;
 
-	if ($cmds[$no]{type} eq "command") {
+	if ($cmds[$no]{type} eq "command" || $cmds[$no]{type} eq "cumulate") {
 
 		eval {
 			alarm($opt{set}{timeout});
@@ -1316,7 +1304,8 @@ sub exec_command {
 				}
 				$cmds[$no]{rc}=$? >> 8;
 				$ENV{"MULTI_${no}_RC"}=$cmds[$no]{rc};
-				$ENV{"MULTI_${no}_RC_label"}=($cmds[$no]{rc}<=3)?$def{label}{$cmds[$no]{rc}}:"INVALID";
+				$ENV{"MULTI_${no}_RC_label"}=$def{label}{$cmds[$no]{rc}};
+	
 				#--- store stdout/stderr and cleanup tmpfiles
 				$cmds[$no]{output}=readfile($tmp_stdout);
 				DEBUG3("exec_command: raw output >$cmds[$no]{output}<");
@@ -1473,6 +1462,38 @@ sub exec_command {
 		}
 		unlink $tmp_stdout, $tmp_stderr;
 	} else {
+		#--- postprocessing for cumulate
+		if ($cmds[$no]{type} eq "cumulate") {
+			#--- now output contains rows of 'key value' pairs
+			#--- and some top rows will be placed into @top
+			my @top=get_cumulated_top($cmds[$no]{output},$opt{set}{cumulate_max_rows});
+			if ($#top<0) {
+				$cmds[$no]{output}="No output.";
+				$cmds[$no]{rc}=$UNKNOWN;
+			} else {
+				#--- fill new array members hashes
+				for (my $i=0;$i<=$#top;$i++) {
+					#--- name and output already set
+					$top[$i]{command}=$cmds[$no]{command};
+					$top[$i]{plugin}=$cmds[$no]{type};
+					$top[$i]{pplugin}=$cmds[$no]{name};
+					$top[$i]{rc}=$OK;
+					$top[$i]{number}=$no+$i;
+					$top[$i]{displayed}=1;
+					$top[$i]{error}="";
+					$top[$i]{feeded}=1;
+					$top[$i]{runtime}=0;
+					$top[$i]{type}=$cmds[$no]{type};
+					$top[$i]{process_perfdata}=1;
+					$top[$i]{performance}="$top[$i]{name}=$top[$i]{output}";
+				}
+				#--- replace original part with new array
+				splice(@cmds,$no,1,@top);
+				$cmds[0]{nallchecks}+=$#top;
+				$cmds[0]{nchecks}+=$#top;
+			}
+		}
+		
 		#--- set environment variable states
 		set_env_vars($no);
 
@@ -1483,6 +1504,31 @@ sub exec_command {
 		}
 	}
 	return $cmds[$no]{rc};
+}
+
+#---
+#--- read output and cumulate
+#---
+sub get_cumulated_top {
+	my ($output, $max_row)=@_;
+	my %c=();
+	foreach my $line (split('\n',$output)) {
+		if ($line=~/\s*(\S*)\s+(\d+)\s*/) {
+			$c{"$1"}+=$2;
+			DEBUG4("get_cumulated_top: $1 += $2 -> $c{$1}\n");
+		} else {
+			DEBUG2("get_cumulated_top: invalid line format: $line\n");
+		}
+	}
+	my @top_keys = sort { $c{$b}<=>$c{$a} } keys(%c);
+	my @result=();
+	foreach my $key (@top_keys) {
+		last if (--$max_row<0);
+		push @result, {};
+		$result[$#result]{name}=$key;
+		$result[$#result]{output}=$c{$key};
+	}
+	@result;
 }
 
 sub get_status_dat_service {
@@ -1782,8 +1828,8 @@ sub result_rating {
 sub report_all {
 
 	#--- some debugging first
-	DEBUG4("MULTI Environment (sorted):\n\t".join("\n\t",get_env_vars('^MULTI')));
-	DEBUG4("NAGIOS Environment (sorted):\n\t".join("\n\t",get_env_vars('^NAGIOS')));
+	DEBUG4("MULTI Environment (sorted):\n" . `env | grep '^MULTI' | sort | sed 's/^/   /g'`);
+	DEBUG4("NAGIOS Environment (sorted):\n" . `env | grep '^NAGIOS' | sort | sed 's/^/   /g'`);
 
 	#--- construction site for persistence
 	if ($opt{set}{persistent} && $opt{set}{use_xml_simple} && $cmds[0]{key}) {
@@ -2615,7 +2661,7 @@ install_signal_handler(\install_signal_handler, "INT", "TERM", "QUIT", "HUP");
 exit $UNKNOWN if (&process_input != $OK);
 
 #--- don't run this as root ;-) 
-add_error("please don't run plugins as root!") if ($opt{set}{user}=~/root/);
+add_error("please don't run plugins as root!") if ($> == 0);
 
 #--- parse command file (nrpe format)
 &parse_files($opt{filename});

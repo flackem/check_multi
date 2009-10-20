@@ -1,5 +1,6 @@
 
 ===== Changelog =====
+	* first version of new 'cumulate' function, which aggregates data a la 'top'
 	* fixed handling of non-existing signals, and non-existing RCs
 
 **0.20**	16.10.2009
