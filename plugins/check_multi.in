@@ -335,6 +335,29 @@ sub process_input {
 		DEBUG3("process_input: no <STDIN> found");
 	}
 
+	#--- determine some settings (user,hostname)
+	$opt{set}{uid}=$<;
+	if ($^O=~/Win32/) {
+		#--- Win32? then use Win32 module
+		unless (eval "use Win32;1") {
+			$opt{set}{win32}=0;
+			DEBUG2("process_input: Win32 not available");
+			$opt{set}{user}="unknown";
+		} else {
+			DEBUG3("process_input: Win32 available");
+			$opt{set}{user}=&Win32::LoginName;
+			if (!$opt{set}{HOSTNAME}) {
+				$opt{set}{HOSTNAME}=&Win32::NodeName;
+			}
+		}
+	} else {
+		$opt{set}{user}=getpwuid($<);
+		if (!$opt{set}{HOSTNAME}) {
+			$opt{set}{HOSTNAME}=`uname -n`;
+			chomp($opt{set}{HOSTNAME});
+		}
+	}	
+
 	#--- check_multi uses a temporary directory, per default /tmp/check_multi
 	#--- 1. create if not yet done
 	if (! -d "$opt{set}{tmp_dir}") {
@@ -343,11 +366,11 @@ sub process_input {
 	}
 	#--- 2. check if tmp_dir is available
 	if (! -d "$opt{set}{tmp_dir}") {
-		print "Error: could not create tmp directory $opt{set}{tmp_dir} as user " . getpwuid($<) . "\n";
+		print "Error: could not create tmp directory $opt{set}{tmp_dir} as user $opt{set}{user}\n";
 		return $UNKNOWN;
 	#--- 3. and at last: it has to be writeable
 	} elsif (! -w "$opt{set}{tmp_dir}") {
-		print "Error: cannot write to tmp directory $opt{set}{tmp_dir} as user " . getpwuid($<) . "\n";
+		print "Error: cannot write to tmp directory $opt{set}{tmp_dir} as user $opt{set}{user}\n";
 		return $UNKNOWN;
 	}
 
@@ -510,12 +533,6 @@ sub process_input {
 		return $UNKNOWN;
 	}
 
-	#--- determine hostname
-	if (!$opt{set}{HOSTNAME}) {
-		$opt{set}{HOSTNAME}=`uname -n`;
-		chomp($opt{set}{HOSTNAME});
-	}
-	
 	#--- add all set options as environment variables, so client scripts can use it
 	foreach my $option (sort keys(%{$opt{set}})) {
 		$ENV{"MULTI_".$option}=$opt{set}{$option} if defined($opt{set}{$option});
@@ -843,7 +860,18 @@ sub set_env_vars {
 		"4. MULTI_${no}=\t$cmds[$no]{output}\n" . 
 		"5. MULTI_${no}_STATE=\t$cmds[$no]{rc}\n" .
 		"6. MULTI_${no}_LABEL=\t$def{label}{$cmds[$no]{rc}}");
+}
 
+#---
+#--- get environment vars
+#---
+sub get_env_vars {
+	my ($pattern)=@_;
+	my @result=();
+	foreach my $key (sort keys(%ENV)) {
+		push @result, "$key=$ENV{$key}" if ($key=~/$pattern/);
+	}
+	@result;
 }
 
 #---
@@ -1746,8 +1774,8 @@ sub result_rating {
 sub report_all {
 
 	#--- some debugging first
-	DEBUG4("MULTI Environment (sorted):\n" . `env | grep '^MULTI' | sort | sed 's/^/   /g'`);
-	DEBUG4("NAGIOS Environment (sorted):\n" . `env | grep '^NAGIOS' | sort | sed 's/^/   /g'`);
+	DEBUG4("MULTI Environment (sorted):\n\t".join("\n\t",get_env_vars('^MULTI')));
+	DEBUG4("NAGIOS Environment (sorted):\n\t".join("\n\t",get_env_vars('^NAGIOS')));
 
 	#--- construction site for persistence
 	if ($opt{set}{persistent} && $opt{set}{use_xml_simple} && $cmds[0]{key}) {
@@ -2579,7 +2607,7 @@ install_signal_handler(\install_signal_handler, "INT", "TERM", "QUIT", "HUP");
 exit $UNKNOWN if (&process_input != $OK);
 
 #--- don't run this as root ;-) 
-add_error("please don't run plugins as root!") if ($> == 0);
+add_error("please don't run plugins as root!") if ($opt{set}{user}=~/root/);
 
 #--- parse command file (nrpe format)
 &parse_files($opt{filename});
