@@ -294,6 +294,8 @@ sub process_input {
 	my $stdin="";
 	if (-p STDIN) {
 		while (<STDIN>) { $stdin.=$_; }
+	} else {
+		DEBUG3("process_input: no STDIN pipe found");
 	}
 	if ($stdin) { 
 		DEBUG3("process_input: found <STDIN> >$stdin<");
@@ -304,7 +306,7 @@ sub process_input {
 			$opt{set}{use_xml_simple} = 1;
 			unless (eval "require XML::Simple;1") {
 				$opt{set}{use_xml_simple} = 0;
-				DEBUG2("process_input: XML::Simple not available:$@");
+				add_error("process_input: XML::Simple not available: $@");
 			}
 	
 			#--- read in XML data and feed cmds structure
@@ -316,15 +318,20 @@ sub process_input {
 					SuppressEmpty=>"",		# if empty, add "" instead of {} empty hash
 				);
 				
-                        	unless (eval "use Data::Dumper;1") {
-                                	$opt{set}{test}=0;
-                                	DEBUG2("process_input: Data::Dumper not available");
-                        	} else {
-                                	DEBUG3("process_input: Data::Dumper available");
-					DEBUG3("XML input:\n" . Dumper($in));
-                        	}
+				unless (eval "use Data::Dumper;1") {
+					$opt{set}{test}=0;
+					DEBUG2("process_input: Data::Dumper not available");
+				} else {
+					DEBUG3("process_input: Data::Dumper available");
+					DEBUG3("XML input after XMLin:\n" . Dumper($in));
+				}
+				#--- restore some values from parent
+				$cmds[0]{nchecks}=$in->{PARENT}->{nchecks};
+				$cmds[0]{nallchecks}=$in->{PARENT}->{nallchecks};
+
+				#--- child values
 				for my $i (keys %{$in->{PARENT}->{CHILD}}) {
-					#print "key $i\n";
+					#DEBUG4("key $i");
 					$cmds[$i]{no}=$i;	# index itself as 'no'
 					$cmds[$i]{feeded}=1;	# mark this cmd as feeded
 					foreach my $att (keys %{$in->{PARENT}->{CHILD}->{$i}}) {
@@ -2315,6 +2322,13 @@ sub report_xml {
 	$xmlstr.="<?xml version=\"1.0\"?>\n";
 	$xmlstr.="<?xml-stylesheet type=\"text/xsl\" href=\"extinfo.xsl\"?>\n";
 	$xmlstr.="<PARENT>\n";
+	foreach my $token (sort keys %{$cmds[0]}) {
+		if (defined($cmds[0]{$token})) {
+			$xmlstr.=sprintf "\t<%s>%s</%s>\n",$token,$cmds[0]{$token},$token;
+		} else {
+			add_error("report_xml: XML element $token not found");
+		}
+	}
 	$xmlstr.="\t<name>$cmds[0]{name}</name>\n";
 	$xmlstr.="\t<plugins>$cmds[0]{nchecks}</plugins>\n";
 	$xmlstr.="\t<starttime>$cmds[0]{starttime}</starttime>\n";
@@ -2354,7 +2368,8 @@ sub report_xml {
 	for ($no=1;$no<=$#cmds;$no++) {
 		$xmlstr.="\t<CHILD>\n";
 		$xmlstr.="\t\t<no>$no</no>\n";
-		foreach my $token (split(/,/,$opt{set}{xml_elements})) {
+		#foreach my $token (split(/,/,$opt{set}{xml_elements})) {
+		foreach my $token (sort keys %{$cmds[$no]}) {
 			if (defined($cmds[$no]{$token})) {
 				$xmlstr.=sprintf "\t\t<%s>%s</%s>\n",$token,$cmds[$no]{$token},$token;
 			} else {
