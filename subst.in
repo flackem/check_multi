@@ -2,7 +2,7 @@
 
 my ${prefix}="@prefix@";
 my ${exec_prefix}="@exec_prefix@";
-my ${libexecdir}="@prefix@/libexec";
+my ${libexecdir}="@libexecdir@";
 my ${sbindir}="@sbindir@";
 my ${datarootdir}="@datarootdir@";
 my ${localstatedir}="@localstatedir@";

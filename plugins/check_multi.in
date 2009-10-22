@@ -1079,7 +1079,10 @@ sub parse_lines {
 
 		#--- continuation line for previous command
 		} else {
-			if ($last_command=~/OK|UNKNOWN|WARNING|CRITICAL/i) {
+			if (!defined($last_command)) {
+				add_error("parse_lines: invalid format in line $lineno: $line");
+				next LINE;
+			} elsif ($last_command=~/OK|UNKNOWN|WARNING|CRITICAL/i) {
 				$rc{expr}[$def{code}{lc($last_command)}].=$line;
 			} elsif ($last_command > 0) {
 				$cmds[$last_command]{command}.=$line;
