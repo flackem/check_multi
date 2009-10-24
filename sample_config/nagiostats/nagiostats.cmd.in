@@ -5,7 +5,7 @@
 #
 # Copyright (c) 2008-2009 Matthias Flacke (matthias.flacke at gmx.de)
 #
-# Call: check_multi -f nagiosperf.cmd -s NSTATS=/path/to/nagiostats
+# Call: check_multi -f nagiostats.cmd -s NSTATS=/path/to/nagiostats
 #
 #
 # 1. check correct parameter passing for NSTAT binary
@@ -14,7 +14,7 @@ eeval   [ NSTATS_defined                ] = \
                 print "No '-s NSTATS=/path/to/nagiostats' defined\n"; \
                 exit 3; \
         } else { \
-                print "OK"; \
+                "OK"; \
         }
 # 2. check if passed binary is available and executable
 eeval   [ nagiostats_executable         ] = \
@@ -22,7 +22,7 @@ eeval   [ nagiostats_executable         ] = \
                 print "No nagiostats executable $NSTATS$ found\n"; \
                 exit 3; \
         } else { \
-                print "$NSTATS$"; \
+                "$NSTATS$"; \
         }
 # 3. checks
 command [ host_number                   ] = $NSTATS$ -m -d NUMHOSTS
@@ -42,7 +42,7 @@ command [ service_latency_ms            ] = $NSTATS$ -m -d AVGACTSVCLAT
 command [ service_execution_time_ms     ] = $NSTATS$ -m -d AVGACTSVCEXT
  
 # 4. performance data
-command [ perfdata::nagiostats          ] = /bin/echo "OK|nagiostats::nagiostats::host_number=$host_number$ host_checks_5min_all=$host_checks_5min_all$ host_checks_5min_scheduled=$host_checks_5min_scheduled$ host_checks_5min_ondemand=$host_checks_5min_ondemand$ service_number=$service_number$ service_checks_5min_all=$service_checks_5min_all$ service_checks_5min_scheduled=$service_checks_5min_scheduled$ service_checks_5min_ondemand=$service_checks_5min_ondemand$ host_latency_ms=$host_latency_ms$ host_execution_time_ms=$host_execution_time_ms$ service_latency_ms=$service_latency_ms$ service_execution_time_ms=$service_execution_time_ms$"
+command [ perfdata::nagiostats          ] = /bin/echo "OK|host_number=$host_number$ host_checks_5min_all=$host_checks_5min_all$ host_checks_5min_scheduled=$host_checks_5min_scheduled$ host_checks_5min_ondemand=$host_checks_5min_ondemand$ service_number=$service_number$ service_checks_5min_all=$service_checks_5min_all$ service_checks_5min_scheduled=$service_checks_5min_scheduled$ service_checks_5min_ondemand=$service_checks_5min_ondemand$ host_latency_ms=$host_latency_ms$ host_execution_time_ms=$host_execution_time_ms$ service_latency_ms=$service_latency_ms$ service_execution_time_ms=$service_execution_time_ms$"
  
 # 5. state definitions
 state [ WARNING ] = $host_number$               >   500 || \
