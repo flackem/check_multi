@@ -60,6 +60,7 @@ while (my $f = shift @ARGV) {
 		s|\@indent_label\@|@indent_label@|g;
 		s|\@indent\@|@indent@|g;
 		s|\@localstatedir\@|@localstatedir@|g;
+		s|\@mouseover_type\@|@mouseover_type@|g;
 		s|\@name\@|@name@|g;
 		s|\@no_checks_rc\@|@no_checks_rc@|g;
 		s|\@notes_url\@|@notes_url@|g;

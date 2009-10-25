@@ -648,6 +648,7 @@ illegal_chars
 image_path
 indent_label
 indent
+mouseover_type
 name
 no_checks_rc
 notes_url
@@ -1264,6 +1265,7 @@ check_multi settings:
   --with-image_path=<URL>                  relative URL to nagios images (default:"/nagios/images")
   --with-indent=<char>                     ASCII output indent character (default:" ")
   --with-indent_label=<0|1>                indentation of child checks? (default:1)
+  --with-mouseover_type=<pnp6|pnp4>        mouseover type (default:PNP 0.6 format)
   --with-name=<name>                       default name for check_multi label (default:"")
   --with-no_checks_rc=<RC>                 RC if no checks are specified (default:3-UNKNOWN)
   --with-notes_url=<URL>                   notes URL (default:"")
@@ -2039,7 +2041,7 @@ else
 fi
 
 #--- too difficult to escape this - so define it as a variable before using it ;)
-client_perL=no
+client_perl=no
 
 # Check whether --with-client_perl was given.
 if test "${with_client_perl+set}" = set; then
@@ -2205,6 +2207,14 @@ else
 fi
 
 
+# Check whether --with-mouseover_type was given.
+if test "${with_mouseover_type+set}" = set; then
+  withval=$with_mouseover_type; mouseover_type=$withval
+else
+  mouseover_type="pnp6"
+fi
+
+
 # Check whether --with-name was given.
 if test "${with_name+set}" = set; then
   withval=$with_name; name=$withval
@@ -2347,6 +2357,7 @@ if test "${with_nagios_name+set}" = set; then
 else
   nagios_name=nagios
 fi
+
 
 
 
@@ -3113,6 +3124,7 @@ illegal_chars!$illegal_chars$ac_delim
 image_path!$image_path$ac_delim
 indent_label!$indent_label$ac_delim
 indent!$indent$ac_delim
+mouseover_type!$mouseover_type$ac_delim
 name!$name$ac_delim
 no_checks_rc!$no_checks_rc$ac_delim
 notes_url!$notes_url$ac_delim
@@ -3137,7 +3149,7 @@ LIBOBJS!$LIBOBJS$ac_delim
 LTLIBOBJS!$LTLIBOBJS$ac_delim
 _ACEOF
 
-  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 93; then
+  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 94; then
     break
   elif $ac_last_try; then
     { { echo "$as_me:$LINENO: error: could not make $CONFIG_STATUS" >&5
@@ -3549,8 +3561,8 @@ echo "${ECHO_T} Nagios user/group         $nagios_user,$nagios_group" >&6; }
 echo "${ECHO_T} Nagios name               $nagios_name" >&6; }
 { echo "$as_me:$LINENO: result:  RC if no checks defined   $no_checks_rc" >&5
 echo "${ECHO_T} RC if no checks defined   $no_checks_rc" >&6; }
-{ echo "$as_me:$LINENO: result:  default file extension    $file_extension" >&5
-echo "${ECHO_T} default file extension    $file_extension" >&6; }
+{ echo "$as_me:$LINENO: result:  default cmdfile extension $file_extension" >&5
+echo "${ECHO_T} default cmdfile extension $file_extension" >&6; }
 { echo "$as_me:$LINENO: result:  ignore missing cmd file?  $ignore_missing_cmd_file" >&5
 echo "${ECHO_T} ignore missing cmd file?  $ignore_missing_cmd_file" >&6; }
 { echo "$as_me:$LINENO: result:  Client perl path          $client_perl" >&5
@@ -3576,8 +3588,12 @@ echo "${ECHO_T} Collapse plus style       $style_plus_minus" >&6; }
 echo "${ECHO_T} Extinfo in status.cgi?    $extinfo_in_status" >&6; }
 { echo "$as_me:$LINENO: result:  Verbosity level default   $verbose" >&5
 echo "${ECHO_T} Verbosity level default   $verbose" >&6; }
+{ echo "$as_me:$LINENO: result:  PNP cgi path              $pnp_cgi" >&5
+echo "${ECHO_T} PNP cgi path              $pnp_cgi" >&6; }
 { echo "$as_me:$LINENO: result:  PNP chart with mouseover  $action_mouseover" >&5
 echo "${ECHO_T} PNP chart with mouseover  $action_mouseover" >&6; }
+{ echo "$as_me:$LINENO: result:  mouseover type            $mouseover_type" >&5
+echo "${ECHO_T} mouseover type            $mouseover_type" >&6; }
 echo
 echo " --- Links"
 echo " -------------------------------------------------------------------"
@@ -3590,12 +3606,12 @@ echo "${ECHO_T} documentation URL        '$tag_notes_link'" >&6; }
 echo
 echo " --- Advanced Options"
 echo " -------------------------------------------------------------------"
-{ echo "$as_me:$LINENO: result:  cmdfile update interval  $cmdfile_update_interval" >&5
-echo "${ECHO_T} cmdfile update interval  $cmdfile_update_interval" >&6; }
 { echo "$as_me:$LINENO: result:  illegal chars in cmdfile $illegal_chars" >&5
 echo "${ECHO_T} illegal chars in cmdfile $illegal_chars" >&6; }
 { echo "$as_me:$LINENO: result:  check_multi persistent?  $persistent" >&5
 echo "${ECHO_T} check_multi persistent?  $persistent" >&6; }
+{ echo "$as_me:$LINENO: result:  cmdfile update interval  $cmdfile_update_interval" >&5
+echo "${ECHO_T} cmdfile update interval  $cmdfile_update_interval" >&6; }
 echo
 echo
 echo "*** Next step:  type 'make all'. ***"

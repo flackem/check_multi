@@ -57,7 +57,7 @@ check_multi settings:
   --with-action_url=<URL>                  action URL (default:"")],action_url=$withval,action_url="")
 AC_ARG_WITH(action_mouseover,           [  --with-action_mouseover=<0|1>            show PNP chart popup triggered by mouseover (default:0)],action_mouseover=$withval,action_mouseover=0)
 #--- too difficult to escape this - so define it as a variable before using it ;)
-client_perL=no
+client_perl=no
 AC_ARG_WITH(client_perl,                        [  --with-client_perl=<perl path>           sets perl cmdline / path (e.g. #!/usr/bin/perl)],client_perl=$withval,client_perl=no)
 if test client_perl=no; then
        AC_PATH_PROG(client_perl,perl)
@@ -78,6 +78,7 @@ AC_ARG_WITH(illegal_chars,		[  --with-illegal_chars=<chars>             characte
 AC_ARG_WITH(image_path,			[  --with-image_path=<URL>                  relative URL to nagios images (default:"/nagios/images")],image_path=$withval,image_path="/nagios/images")
 AC_ARG_WITH(indent,			[  --with-indent=<char>                     ASCII output indent character (default:" ")],indent=$withval,indent=" ")
 AC_ARG_WITH(indent_label,		[  --with-indent_label=<0|1>                indentation of child checks? (default:1)],indent_label=$withval,indent_label=1)
+AC_ARG_WITH(mouseover_type,		[  --with-mouseover_type=<pnp6|pnp4>        mouseover type (default:PNP 0.6 format)],mouseover_type=$withval,mouseover_type="pnp6")
 AC_ARG_WITH(name,			[  --with-name=<name>                       default name for check_multi label (default:"")],name=$withval,name="")
 AC_ARG_WITH(no_checks_rc,		[  --with-no_checks_rc=<RC>                 RC if no checks are specified (default:3-UNKNOWN)],no_checks_rc=$withval,no_checks_rc=3)
 AC_ARG_WITH(notes_url,			[  --with-notes_url=<URL>                   notes URL (default:"")],notes_url=$withval,notes_url="")
@@ -117,6 +118,7 @@ AC_SUBST(illegal_chars)
 AC_SUBST(image_path)
 AC_SUBST(indent_label)
 AC_SUBST(indent)
+AC_SUBST(mouseover_type)
 AC_SUBST(name)
 AC_SUBST(no_checks_rc)
 AC_SUBST(notes_url)
@@ -222,7 +224,7 @@ AC_MSG_RESULT([ Child timeout (small t)   $child_timeout])
 AC_MSG_RESULT([ Nagios user/group         $nagios_user,$nagios_group])
 AC_MSG_RESULT([ Nagios name               $nagios_name])
 AC_MSG_RESULT([ RC if no checks defined   $no_checks_rc])
-AC_MSG_RESULT([ default file extension    $file_extension])
+AC_MSG_RESULT([ default cmdfile extension $file_extension])
 AC_MSG_RESULT([ ignore missing cmd file?  $ignore_missing_cmd_file])
 AC_MSG_RESULT([ Client perl path          $client_perl])
 echo
@@ -237,7 +239,9 @@ AC_MSG_RESULT([ Collapse tree?            $collapse])
 AC_MSG_RESULT([ Collapse plus style       $style_plus_minus])
 AC_MSG_RESULT([ Extinfo in status.cgi?    $extinfo_in_status])
 AC_MSG_RESULT([ Verbosity level default   $verbose])
+AC_MSG_RESULT([ PNP cgi path              $pnp_cgi])
 AC_MSG_RESULT([ PNP chart with mouseover  $action_mouseover])
+AC_MSG_RESULT([ mouseover type            $mouseover_type])
 echo
 echo " --- Links"
 echo " -------------------------------------------------------------------"
@@ -247,9 +251,9 @@ AC_MSG_RESULT([ documentation URL        '$tag_notes_link'])
 echo
 echo " --- Advanced Options"
 echo " -------------------------------------------------------------------"
-AC_MSG_RESULT([ cmdfile update interval  $cmdfile_update_interval])
 AC_MSG_RESULT([ illegal chars in cmdfile $illegal_chars])
 AC_MSG_RESULT([ check_multi persistent?  $persistent])
+AC_MSG_RESULT([ cmdfile update interval  $cmdfile_update_interval])
 echo
 echo
 echo "*** Next step:  type 'make all'. ***"

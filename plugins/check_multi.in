@@ -134,6 +134,8 @@ my %opt=(
 		name		=> "@name@",
 		# what RC should be returned if no checks are defined
 		no_checks_rc	=> @no_checks_rc@,
+		# specific type to handle mouseover URL: pnp4,pnp6
+		mouseover_type	=> "@mouseover_type@",
 		# see tag_notes_link: URL to be added
 		notes_url	=> "@notes_url@",
 		#--- send_nsca: path to send_nsca binary
@@ -151,15 +153,15 @@ my %opt=(
 		# create persistent data
 		persistent	=> @persistent@,
 		# path to PNP cgis
-		pnp_cgi	=> "@pnp_cgi@",
+		pnp_cgi		=> "@pnp_cgi@",
 		# report option, binary coded as sum of detail options
 		report		=> @report@,
-		#
+		# name of the file which contains template for '-r 2048'
 		service_definition_template => "@service_definition_template@",
 		# signals to cover
 		signals		=> ["DUMMY","INT","TERM","QUIT","HUP"],
 		# path to status.dat 
-		status_dat => "@localstatedir@/status.dat",
+		status_dat	=> "@localstatedir@/status.dat",
 		# style of plus/minus char
 		style_plus_minus => "style='color:#4444FF;line-height:0.3em;font-size:1.5em;cursor:crosshair'",
 		# documentation URL to be added to child check tags
@@ -730,7 +732,7 @@ print <<DETAILED_EOF;
 Set options:
 -s, --set <option>=<value>
    <KEY>=<VALUE> - set multi variable \$<KEY>\$ to <VALUE>
-   action_mouseover=<PNP URL> - mouse triggers PNP popup chart
+   action_mouseover=<0|1> - mouse triggers PNP popup chart
    cmdfile_update_interval=<seconds> - update config file (if HTTP/FTP/...), default:$opt{set}{cmdfile_update_interval}
    collapse=<0|1> - should check_multi collapse child check_multi checks? default:$opt{set}{collapse}
    config_dir=</path/to/config_dir> - path to check_multi config directory, default:$opt{set}{config_dir}
@@ -743,6 +745,7 @@ Set options:
    indent=<characters> - string to indent child checks, default:$opt{set}{indent}
    indent_label=<0|1> - indentation width is child check label width (HTML), default:$opt{set}{indent_label}
    libexec=</path/to/plugins> - directory to be added to search path: default:$opt{set}{libexec}
+   mouseover_typ=<pnp6|pnp4> - which mouseover type is needed? default:$opt{set}{mouseover_type}
    name=<string> - label to be shown in output: <name> OK, default:$opt{set}{name}
    no_checks_rc=<RC> - which RC should be returned if no checks are defined, default:$opt{set}{no_checks_rc}
    notes_url=<URL> - URL to be added to child check, see Nagios notes_url
@@ -768,7 +771,6 @@ Set options:
    tmp_dir_permissions=<octal> - permissions of temporary directory, default:$opt{set}{tmp_dir_permissions}
    tmp_etc=<directory> - path for local copies of command files, default:$opt{set}{tmp_etc}
    verbose=<0|1|2> - level of verbosity, from 1 (less verbose) to 3 (much verbose), default:$opt{set}{verbose}
-   xml_elements=<string> - elements to be added to XML structure
 
 DETAILED_EOF
 }
@@ -2166,8 +2168,17 @@ sub report_html {
 			my $pnp_cgi=substitute_macros($opt{set}{pnp_cgi});
 			my $image_path=substitute_macros($opt{set}{image_path});
 			DEBUG4(">>>$opt{set}{target}:$pnp_cgi:${hostname}:$cmds[$no]{name}:${hostname}:$cmds[$no]{name}:$image_path:$hostname:$cmds[$no]{name}<<<");
+			my $mouseover_url="";
+			if ($opt{set}{mouseover_type}=~/pnp6/) {
+				$mouseover_url="$opt{set}{pnp_cgi}?host=$opt{set}{HOSTNAME}&srv=$cmds[$no]{name}\' class=\'tips\' rel=\'$opt{set}{pnp_cgi}?host=$opt{set}{HOSTNAME}&srv=$cmds[$no]{name}";
+			} elsif ($opt{set}{mouseover_type}=~/pnp4/) {
+				$mouseover_url="$opt{set}{pnp_cgi}?host=${hostname}&srv=$cmds[$no]{name}\' onmouseout=\'clear_g()\' onmouseover=\"get_g(\'$opt{set}{HOSTNAME}\',\'$cmds[$no]{name}\')\""; 
+			} else {
+				add_error("Invalid mouseover URL type $opt{set}{mouseover_type}, allowed are 'pnp6' and 'pnp4'");
+				$mouseover_url="$pnp_cgi?host=${hostname}&srv=$cmds[$no]{name}";
+			}
 			$output.=sprintf "<td nowrap>%s</td>",
-				"<A TARGET=\'$opt{set}{target}\' HREF='/$pnp_cgi?host=${hostname}&srv=$cmds[$no]{name}' onmouseout='clear_g()' onmouseover=\"get_g(\'${hostname}\',\'$cmds[$no]{name}\')\">" .
+				"<A TARGET=\'$opt{set}{target}\' HREF=\'$mouseover_url\'>" . 
 				"<img src=\'$image_path/action.gif\' width=20 height=20 border=0 align=top alt='Show performance chart for $hostname / $cmds[$no]{name}'></A>";
 		} else {
 			$output.="<td></td>";
