@@ -48,12 +48,12 @@ command [ perfdata::nagiostats          ] = /bin/echo "OK|host_number=$host_numb
 state [ WARNING ] = $host_number$               >   500 || \
                     $service_number$            >  2500 || \
                     $host_checks_5min_all$      >   500 || \
-                    $service_checks_5min_all$   >  2500 || \
+                    $service_checks_5min_all$   >  2500 || $service_checks_5min_all$ <= 0 \
                     $host_latency_ms$           >  5000 || \
                     $service_latency_ms$        > 10000
  
-state [ WARNING ] = $host_number$               >  1000 || \
-                    $service_number$            >  5000 || \
+state [ WARNING ] = $host_number$               >  1000 || $host_number$             <= 0 \
+                    $service_number$            >  5000 || $service_number$          <= 0 \
                     $host_checks_5min_all$      >  1000 || \
                     $service_checks_5min_all$   >  5000 || \
                     $host_latency_ms$           > 10000 || \
