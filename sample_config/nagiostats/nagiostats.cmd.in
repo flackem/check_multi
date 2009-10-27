@@ -10,20 +10,20 @@
 #
 # 1. check correct parameter passing for NSTAT binary
 eeval   [ NSTATS_defined                ] = \
-        if ("$NSTATS$" eq "") { \
-                print "No '-s NSTATS=/path/to/nagiostats' defined\n"; \
-                exit 3; \
-        } else { \
-                "OK"; \
-        }
+	if ("$NSTATS$" eq "") { \
+		print "No '-s NSTATS=/path/to/nagiostats' defined\n"; \
+		exit 3; \
+	} else { \
+		"OK"; \
+	}
 # 2. check if passed binary is available and executable
 eeval   [ nagiostats_executable         ] = \
-        if ( ! -x "$NSTATS$") { \
-                print "No nagiostats executable $NSTATS$ found\n"; \
-                exit 3; \
-        } else { \
-                "$NSTATS$"; \
-        }
+	if ( ! -x "$NSTATS$") { \
+		print "No nagiostats executable $NSTATS$ found\n"; \
+		exit 3; \
+	} else { \
+		"$NSTATS$"; \
+	}
 # 3. checks
 command [ host_number                   ] = $NSTATS$ -m -d NUMHOSTS
 command [ host_checks_5min_all          ] = $NSTATS$ -m -d NUMACTHSTCHECKS5M
@@ -45,16 +45,16 @@ command [ service_execution_time_ms     ] = $NSTATS$ -m -d AVGACTSVCEXT
 command [ perfdata::nagiostats          ] = /bin/echo "OK|host_number=$host_number$ host_checks_5min_all=$host_checks_5min_all$ host_checks_5min_scheduled=$host_checks_5min_scheduled$ host_checks_5min_ondemand=$host_checks_5min_ondemand$ service_number=$service_number$ service_checks_5min_all=$service_checks_5min_all$ service_checks_5min_scheduled=$service_checks_5min_scheduled$ service_checks_5min_ondemand=$service_checks_5min_ondemand$ host_latency_ms=$host_latency_ms$ host_execution_time_ms=$host_execution_time_ms$ service_latency_ms=$service_latency_ms$ service_execution_time_ms=$service_execution_time_ms$"
  
 # 5. state definitions
-state [ WARNING ] = $host_number$               >   500 || \
-                    $service_number$            >  2500 || \
-                    $host_checks_5min_all$      >   500 || \
-                    $service_checks_5min_all$   >  2500 || $service_checks_5min_all$ <= 0 \
-                    $host_latency_ms$           >  5000 || \
-                    $service_latency_ms$        > 10000
+state [ WARNING ] =	$host_number$               >   500 || \
+			$service_number$            >  2500 || \
+			$host_checks_5min_all$      >   500 || \
+			$service_checks_5min_all$   >  2500 || $service_checks_5min_all$ <= 0 \
+			$host_latency_ms$           >  5000 || \
+			$service_latency_ms$        > 10000
  
-state [ WARNING ] = $host_number$               >  1000 || $host_number$             <= 0 \
-                    $service_number$            >  5000 || $service_number$          <= 0 \
-                    $host_checks_5min_all$      >  1000 || \
-                    $service_checks_5min_all$   >  5000 || \
-                    $host_latency_ms$           > 10000 || \
-                    $service_latency_ms$        > 20000
+state [ CRITICAL ] =	$host_number$               >  1000 || $host_number$             <= 0 \
+			$service_number$            >  5000 || $service_number$          <= 0 \
+			$host_checks_5min_all$      >  1000 || \
+			$service_checks_5min_all$   >  5000 || \
+			$host_latency_ms$           > 10000 || \
+			$service_latency_ms$        > 20000
