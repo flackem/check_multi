@@ -1053,7 +1053,7 @@ sub parse_lines {
 		$line=~s/\\\s*$// if ($line=~/\\\s*/);
 
 		#--- header line (regex contains all allowed commands)
-		if (($type,$name,$cmd)=($line=~/^\s*(command|cumulate|eval|eeval|statusdat|state|output)\s*\[\s*(\S+)\s*\]\s*=\s*(.*)\s*/i)) {
+		if (($type,$name,$cmd)=($line=~/^\s*(attribute|command|cumulate|eval|eeval|statusdat|state|output)\s*\[\s*(\S+)\s*\]\s*=\s*(.*)\s*/i)) {
 
 			#--- macros?
 			$name=substitute_macros($name);
@@ -1076,7 +1076,7 @@ sub parse_lines {
 
 		#--- proper header line with invalid keyword
 		} elsif ($line=~/^\s*(\w+)\s*\[\s*\S+\s*\]\s*=.*/) {
-			add_error("Invalid keyword \'$1\' specified, allowed are command,eval,eeval,statusdat,state,output");
+			add_error("Invalid keyword \'$1\' specified, allowed are attribute,command,eval,eeval,statusdat,state,output");
 			return;
 
 		#--- continuation line for previous command
@@ -1100,11 +1100,21 @@ sub parse_lines {
 sub parse_header {
 	my ($type,$name,$cmd,$lineno)=@_;
 
-	my ($i,$host,$service);
+	my ($i,$key,$host,$service);
+	
+	#--- split name::key. If key is not available, its empty.
+	($name,$key)=split(/::/,$name); 
+	$key="" if (!defined($key));
+	DEBUG4("parse_header: type:$type name:$name key:$key cmd:$cmd lineno:$lineno");
+
+	#--- $name = 'head'? then $i = 0
+	if ($name=~/(head)/) {
+		DEBUG4("parse_header: head specified - settings values for \$cmds[0]");
+		$i=0;
 
 	#--- overloading: if child check with same name exists, 
 	#--- overload its attributes. Otherwise append new check
-	if ($type eq "command" || $type=~/eval$/ || $type=~/statusdat/ || $type eq "cumulate") {
+	} elsif ($type=~/(attribute|command|eval|statusdat|cumulate)/) {
 		for ($i=1; $i<=$#cmds;$i++) {
 			last if ($cmds[$i]{name} eq $name);
 		}
@@ -1116,8 +1126,25 @@ sub parse_header {
 		}
 	}
 
+	#--- format: 'attribute [ tag::variable ] = value'
+	if ($type eq "attribute") {
+		if ($key eq "") {
+			add_error("parse_header: invalid statement \'attribute [ $name ] = ...\', correct is \'attribute [ TAG::key ] = value\'");
+			return undef;
+		}
+		if (! defined($cmds[$i]{name})) {
+			add_error("parse_header: attribute [ ${name}::${key} ] can not be set: child check with name \'$name\' not found");
+			return undef;
+		} else {
+			if (!defined($cmds[$i]{$key})) {
+				DEBUG2("parse_header: $key=$cmd inserted into $name attribute (\$cmds[$i])");
+			} else {
+				DEBUG2("parse_header: $key=$cmd changed in $name attributes (\$cmds[$i]), was: $cmds[$i]{$key}");
+			}
+			$cmds[$i]{$key}=$cmd;
+		}
 	#--- format: 'command [ tag[::plugin] ] = plugin command line'
-	if ($type eq "command") {
+	} elsif ($type eq "command") {
 
 		#--- normally the plugin name is the first token of $cmd
 		my $plugin="";
