@@ -107,6 +107,8 @@ my %opt=(
 		config_dir	=> "@config_dir@",
 		# how many rows should be displayed for cumulate statement?
 		cumulate_max_rows => 5,
+		# don't complain about being root etc.
+		dont_be_paranoid => 0,
 		# use open3 method to exec child checks
 		exec_open3	=> @exec_open3@,
 		# show child checks also in status view (only in HTML mode)
@@ -2877,7 +2879,7 @@ install_signal_handler(\install_signal_handler, @{$opt{set}{signals}});
 exit $UNKNOWN if (&process_input != $OK);
 
 #--- don't run this as root ;-) 
-add_error("please don't run plugins as root!") if ($opt{set}{user}=~/root/);
+add_error("please don't run plugins as root!") if ($opt{set}{user}=~/root/ && !$opt{set}{dont_be_paranoid});
 
 #--- parse command file (nrpe format)
 &parse_files($opt{filename});

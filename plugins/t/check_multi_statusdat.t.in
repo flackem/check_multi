@@ -32,20 +32,21 @@ foreach my $plugin (@plugins) {
 plan tests => 2;
 
 my $result;
+my $testopts="-s dont_be_paranoid=1";
 
 #-------------------------------------------------------------------------------
 #--- service not found ---------------------------------------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi -x 'statusdat [ eins ] = host_not_there:service_not_there'",
+	"@PERL@ ../check_multi -x 'statusdat [ eins ] = host_not_there:service_not_there' $testopts",
 );
 is(
 	$result->return_code, 
 	3, 
-	"check_multi skips unknown service in status.dat"
+	"check_multi skips unknown service in status.dat - RC3 - passed"
 );
 like(
 	$result->output,
-	'/UNKNOWN - 1 plugins checked, 1 unknown \(eins\) \[statusdat eins: cannot find service \'service_not_there\' on host \'host_not_there\'/', 
-	"output correct"
+	'/UNKNOWN - 0 plugins checked,  \[Could not expand host:service host_not_there:service_not_there from status_dat.*/', 
+	"output correct - passed"
 );
