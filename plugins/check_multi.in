@@ -160,6 +160,10 @@ my %opt=(
 		service_definition_template => "@service_definition_template@",
 		# signals to cover
 		signals		=> ["DUMMY","INT","TERM","QUIT","HUP"],
+		# snmp_community
+		snmp_community	=> "@snmp_community@",
+		# snmp_community
+		snmp_port	=> "@snmp_port@",
 		# path to status.dat 
 		status_dat	=> "@localstatedir@/status.dat",
 		# style of plus/minus char
@@ -871,12 +875,12 @@ sub set_env_vars {
 	$ENV{"MULTI_${no}_LABEL"}="$def{label}{$cmds[$no]{rc}}";
 
 	DEBUG4("set_env_vars: 6 environment vars set\n" . 
-		"1. MULTI_$name=\t$cmds[$no]{output}\n" . 
-		"2. MULTI_STATE_$name=\t$cmds[$no]{rc}\n" .
-		"3. MULTI_LABEL_$name=\t$def{label}{$cmds[$no]{rc}}\n" . 
-		"4. MULTI_${no}=\t$cmds[$no]{output}\n" . 
-		"5. MULTI_${no}_STATE=\t$cmds[$no]{rc}\n" .
-		"6. MULTI_${no}_LABEL=\t$def{label}{$cmds[$no]{rc}}");
+		"1. MULTI_$name=$cmds[$no]{output}\n" . 
+		"2. MULTI_STATE_$name=$cmds[$no]{rc}\n" .
+		"3. MULTI_LABEL_$name=$def{label}{$cmds[$no]{rc}}\n" . 
+		"4. MULTI_${no}=$cmds[$no]{output}\n" . 
+		"5. MULTI_${no}_STATE=$cmds[$no]{rc}\n" .
+		"6. MULTI_${no}_LABEL=$def{label}{$cmds[$no]{rc}}");
 }
 
 #---
@@ -1053,7 +1057,7 @@ sub parse_lines {
 		$line=~s/\\\s*$// if ($line=~/\\\s*/);
 
 		#--- header line (regex contains all allowed commands)
-		if (($type,$name,$cmd)=($line=~/^\s*(attribute|command|cumulate|eval|eeval|statusdat|state|output)\s*\[\s*(\S+)\s*\]\s*=\s*(.*)\s*/i)) {
+		if (($type,$name,$cmd)=($line=~/^\s*(attribute|command|cumulate|eval|eeval|snmp|statusdat|state|output)\s*\[\s*(\S+)\s*\]\s*=\s*(.*)\s*/i)) {
 
 			#--- macros?
 			$name=substitute_macros($name);
@@ -1095,6 +1099,8 @@ sub parse_lines {
 		}
 	}
 	DEBUG4("parse_lines: end - now we have " . $#cmds . " command(s)");
+	use Data::Dumper;
+	DEBUG4("parse_lines:" . Dumper($check_multi));
 }
 
 sub parse_header {
@@ -1114,7 +1120,7 @@ sub parse_header {
 
 	#--- overloading: if child check with same name exists, 
 	#--- overload its attributes. Otherwise append new check
-	} elsif ($type=~/(attribute|command|eval|statusdat|cumulate)/) {
+	} elsif ($type=~/(attribute|command|eval|snmp|statusdat|cumulate)/) {
 		for ($i=1; $i<=$#cmds;$i++) {
 			last if ($cmds[$i]{name} eq $name);
 		}
@@ -1146,6 +1152,13 @@ sub parse_header {
 	#--- format: 'command [ tag[::plugin] ] = plugin command line'
 	} elsif ($type eq "command") {
 
+		#--- increase counters if no overload
+		if (!defined($cmds[$i]{number})) {
+			$cmds[0]{nallchecks}++;
+			$cmds[0]{nchecks}++;
+			$cmds[$i]{number}=$cmds[0]{nchecks};
+		}
+
 		#--- normally the plugin name is the first token of $cmd
 		my $plugin="";
 		if ($cmd=~/\s+/) {
@@ -1168,9 +1181,6 @@ sub parse_header {
 		$cmds[$i]{pplugin}=$pplugin;
 		$cmds[$i]{rc}=$UNKNOWN;
 		$cmds[$i]{displayed}=1;
-		$cmds[0]{nallchecks}++;
-		$cmds[0]{nchecks}++;
-		$cmds[$i]{number}=$cmds[0]{nchecks};
 		$cmds[$i]{output}="";
 		$cmds[$i]{error}="";
 		$cmds[$i]{runtime}=0;
@@ -1184,6 +1194,14 @@ sub parse_header {
 
 	#--- format: 'cumulate  [ tag[::plugin] ] = expression'
 	} elsif ($type eq "cumulate") {
+
+		#--- increase counters if no overload
+		if (!defined($cmds[$i]{number})) {
+			$cmds[0]{nallchecks}++;
+			$cmds[0]{nchecks}++;
+			$cmds[$i]{number}=$cmds[0]{nchecks};
+		}
+
 		$cmds[$i]{type}=$type;
 		$cmds[$i]{name}=$name;
 		$cmds[$i]{command}=$cmd;
@@ -1194,9 +1212,6 @@ sub parse_header {
 		$cmds[$i]{output}="";
 		$cmds[$i]{error}="";
 		$cmds[$i]{runtime}=0;
-		$cmds[0]{nallchecks}++;
-		$cmds[0]{nchecks}++;
-		$cmds[$i]{number}=$cmds[0]{nchecks};
 		if ($opt{set}{suppress_perfdata} && 
 			$opt{set}{suppress_perfdata}=~/\b$name\b/i) {
 			$cmds[$i]{process_perfdata}=0;
@@ -1207,14 +1222,15 @@ sub parse_header {
 
 	#--- format: 'eval    [ tag[::plugin] ] = expression'
 	} elsif ($type eq "eval") {
+
 		$cmds[$i]{type}=$type;
 		$cmds[$i]{name}=$name;
 		$cmds[$i]{command}=$cmd;
 		$cmds[$i]{plugin}="eval";
 		$cmds[$i]{pplugin}="eval";
 		$cmds[$i]{rc}=$UNKNOWN;
-		$cmds[$i]{displayed}=0;
 		$cmds[0]{nallchecks}++;
+		$cmds[$i]{displayed}=0;
 		$cmds[$i]{output}="";
 		$cmds[$i]{error}="";
 		$cmds[$i]{runtime}=0;
@@ -1228,6 +1244,13 @@ sub parse_header {
 
 	#--- format: 'eeval   [ tag[::plugin] ] = expression'
 	} elsif ($type eq "eeval") {
+		#--- increase counters if no overload
+		if (!defined($cmds[$i]{number})) {
+			$cmds[0]{nallchecks}++;
+			$cmds[0]{nchecks}++;
+			$cmds[$i]{number}=$cmds[0]{nchecks};
+		}
+
 		$cmds[$i]{type}=$type;
 		$cmds[$i]{name}=$name;
 		$cmds[$i]{command}=$cmd;
@@ -1235,9 +1258,46 @@ sub parse_header {
 		$cmds[$i]{pplugin}="eval";
 		$cmds[$i]{rc}=$UNKNOWN;
 		$cmds[$i]{displayed}=1;
-		$cmds[0]{nallchecks}++;
-		$cmds[0]{nchecks}++;
-		$cmds[$i]{number}=$cmds[0]{nchecks};
+		$cmds[$i]{output}="";
+		$cmds[$i]{error}="";
+		$cmds[$i]{runtime}=0;
+		if ($opt{set}{suppress_perfdata} && 
+			$opt{set}{suppress_perfdata}=~/\b$name\b/i) {
+			$cmds[$i]{process_perfdata}=0;
+			DEBUG2("parse_header: perfdata of [ $name ] will be suppressed");
+		} else {
+			$cmds[$i]{process_perfdata}=1;
+		}
+
+	#--- format: 'snmp   [ tag ] = OID'
+	} elsif ($type eq "snmp") {
+		#--- increase counters if no overload
+		if (!defined($cmds[$i]{number})) {
+			$cmds[0]{nallchecks}++;
+			$cmds[0]{nchecks}++;
+			$cmds[$i]{number}=$cmds[0]{nchecks};
+		}
+
+		$cmds[$i]{type}=$type;
+		$cmds[$i]{name}=$name;
+		$cmds[$i]{translate}=0xff;
+		if ($cmd=~/\s*([^:]*)\s*\:\s*(.*)\s*\:\s*(.*)\s*/) {
+			$cmds[$i]{host}=$1;
+			$cmds[$i]{host}=substitute_macros($cmds[$i]{host});
+			$cmds[$i]{command}=$2;
+			$cmds[$i]{translate}=$3;
+		} elsif ($cmd=~/\s*([^:]*)\s*\:\s*(.*)\s*/) {
+			$cmds[$i]{host}=$1;
+			$cmds[$i]{host}=substitute_macros($cmds[$i]{host});
+			$cmds[$i]{command}=$2;
+		} else {
+			$cmds[$i]{host}=$opt{set}{HOSTNAME};
+			$cmds[$i]{command}=$cmd;	
+		}
+		$cmds[$i]{plugin}="snmp";
+		$cmds[$i]{pplugin}="snmp";
+		$cmds[$i]{rc}=$UNKNOWN;
+		$cmds[$i]{displayed}=1;
 		$cmds[$i]{output}="";
 		$cmds[$i]{error}="";
 		$cmds[$i]{runtime}=0;
@@ -1261,14 +1321,18 @@ sub parse_header {
 				return -1;
 			}
 			while(@result) {
+		#--- increase counters if no overload
+		if (!defined($cmds[$i]{number})) {
+			$cmds[0]{nallchecks}++;
+			$cmds[0]{nchecks}++;
+			$cmds[$i]{number}=$cmds[0]{nchecks};
+		}
+
 				$cmds[$i]{type}=$type;
 				$cmds[$i]{command}=$cmd;
 				$cmds[$i]{plugin}=undef;
 				$cmds[$i]{pplugin}=undef;
 				$cmds[$i]{rc}=$UNKNOWN;
-				$cmds[0]{nallchecks}++;
-				$cmds[0]{nchecks}++;
-				$cmds[$i]{number}=$cmds[0]{nchecks};
 				$cmds[$i]{displayed}=1;
 				$cmds[$i]{output}="";
 				$cmds[$i]{error}="";
@@ -1516,6 +1580,9 @@ sub exec_command {
 		alarm(0);
 		return $cmds[$no]{rc};
 	} elsif ($cmds[$no]{type} eq "statusdat") {
+		local $SIG{ALRM} = sub {
+			add_error("$cmds[$no]{name}: timeout after $opt{set}{timeout}s");
+		};
 		alarm($opt{set}{timeout});
                 ($cmds[$no]{rc},$cmds[$no]{output})=get_status_dat_service($opt{set}{status_dat},$cmds[$no]{host},$cmds[$no]{service});
 		if ($cmds[$no]{rc} == -1) {
@@ -1523,6 +1590,14 @@ sub exec_command {
 			$cmds[$no]{rc}=$UNKNOWN;
 		}
 		$ENV{"MULTI_".$cmds[$no]{name}}="$cmds[$no]{output}";
+	} elsif ($cmds[$no]{type} eq "snmp") {
+		local $SIG{ALRM} = sub {
+			add_error("$cmds[$no]{name}: timeout after $opt{set}{timeout}s");
+		};
+		alarm($opt{set}{timeout});
+                ($cmds[$no]{rc},$cmds[$no]{output})=get_snmp($cmds[$no]{host},$opt{set}{snmp_port},$opt{set}{snmp_community},$cmds[$no]{command},$cmds[$no]{translate});
+		$ENV{"MULTI_".$cmds[$no]{name}}="$cmds[$no]{output}";
+		alarm(0);
 	}
 	$cmds[$no]{endtime}=time;
 	$cmds[$no]{runtime}=$cmds[$no]{endtime}-$cmds[$no]{starttime};
@@ -1733,6 +1808,49 @@ sub read_status_dat {
 	}
 	close DAT;
 	return $status_dat;
+}
+
+#---
+#--- read SNMP with Net::SNMP
+#---
+sub get_snmp {
+	my ($host,$port,$community,$oid,$translate)=@_;
+	if (!defined($opt{set}{use_snmp})) {
+                unless (eval "use Net::SNMP;1") {
+                        $opt{set}{use_snmp}=0;
+                	DEBUG3("get_snmp: error: could not load Net::SNMP module");
+			return (3,"Load of perl module Net::SNMP failed");
+                } else {
+                	DEBUG3("get_snmp: Net::SNMP module loaded");
+		}
+	} elsif ($opt{set}{use_snmp} != 1) {
+                DEBUG3("get_snmp: no Net::SNMP module available");
+		return (3,"perl module Net::SNMP not available");
+	}
+	
+	my ($session, $error) = Net::SNMP->session(
+		-hostname=>$host,
+		-community=>$community,
+		-translate=>$translate,
+	);
+	if (!defined $session) {
+                DEBUG3("get_snmp: error creating Net::SNMP session: $error");
+		return (3,"error creating Net::SNMP session: $error");
+	}
+
+	my $result = $session->get_request(-varbindlist => [ $oid ],);
+
+	if (!defined $result) {
+		$error=$session->error();
+		$session->close();
+                DEBUG3("get_snmp: Net::SNMP session error: $error");
+		return (3,"Net::SNMP session error: $error");
+	}
+
+	DEBUG3("get_snmp: result for $host($port)-$oid: $result->{$oid}");
+	$session->close();
+	
+	return (0,$result->{$oid});
 }
 
 #---

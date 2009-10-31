@@ -1,5 +1,6 @@
 
 ===== Changelog =====
+	* added 'snmp [ TAG ] = HOST:OID' (snmpget)
 	* added variable mouseover_type to cover PNP 0.6 and 0.4 differences, default is PNP 0.6
 	* first version of new 'cumulate' function, which aggregates data a la 'top'
 	* fixed handling of non-existing signals, and non-existing RCs

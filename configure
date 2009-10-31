@@ -656,6 +656,8 @@ persistent
 pnp_cgi
 report
 service_definition_template
+snmp_community
+snmp_port
 style_plus_minus
 tag_notes_link
 target
@@ -1272,6 +1274,8 @@ check_multi settings:
   --with-persistent=<0|1>                  persistency: saving of state data between two calls (default:0)
   --with-pnp_cgi=<URL>                     relative URL to PNP (default for PNP 0.6:"/pnp4nagios/graph")
   --with-report=<NN>                       default report option (default:13)
+  --with-snmp_community=<community>        SNMP community (default:public)
+  --with-snmp_port=<port>                  SNMP port (default:161)
   --with-style_plus_minus=<HTML code>      HTML style for plus/minus (default:$ACTION_URL)
   --with-tag_notes_link=<URL>              documentation URL for child checks (default:"")
   --with-target=<target_frame>             HTML target frame for URLs (default:_self)
@@ -2263,6 +2267,22 @@ else
 fi
 
 
+# Check whether --with-snmp_community was given.
+if test "${with_snmp_community+set}" = set; then
+  withval=$with_snmp_community; snmp_community=$withval
+else
+  snmp_community="public"
+fi
+
+
+# Check whether --with-snmp_port was given.
+if test "${with_snmp_port+set}" = set; then
+  withval=$with_snmp_port; snmp_port=$withval
+else
+  snmp_port=161
+fi
+
+
 # Check whether --with-style_plus_minus was given.
 if test "${with_style_plus_minus+set}" = set; then
   withval=$with_style_plus_minus; style_plus_minus=$withval
@@ -2357,6 +2377,8 @@ if test "${with_nagios_name+set}" = set; then
 else
   nagios_name=nagios
 fi
+
+
 
 
 
@@ -3132,6 +3154,8 @@ persistent!$persistent$ac_delim
 pnp_cgi!$pnp_cgi$ac_delim
 report!$report$ac_delim
 service_definition_template!$service_definition_template$ac_delim
+snmp_community!$snmp_community$ac_delim
+snmp_port!$snmp_port$ac_delim
 style_plus_minus!$style_plus_minus$ac_delim
 tag_notes_link!$tag_notes_link$ac_delim
 target!$target$ac_delim
@@ -3149,7 +3173,7 @@ LIBOBJS!$LIBOBJS$ac_delim
 LTLIBOBJS!$LTLIBOBJS$ac_delim
 _ACEOF
 
-  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 94; then
+  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 96; then
     break
   elif $ac_last_try; then
     { { echo "$as_me:$LINENO: error: could not make $CONFIG_STATUS" >&5
@@ -3168,7 +3192,7 @@ fi
 
 cat >>$CONFIG_STATUS <<_ACEOF
 cat >"\$tmp/subs-1.sed" <<\CEOF$ac_eof
-/@[a-zA-Z_][a-zA-Z_0-9]*@/!b end
+/@[a-zA-Z_][a-zA-Z_0-9]*@/!b
 _ACEOF
 sed '
 s/[,\\&]/\\&/g; s/@/@|#_!!_#|/g
@@ -3181,8 +3205,6 @@ N; s/^.*\n//; s/[,\\&]/\\&/g; s/@/@|#_!!_#|/g; b n
 ' >>$CONFIG_STATUS <conf$$subs.sed
 rm -f conf$$subs.sed
 cat >>$CONFIG_STATUS <<_ACEOF
-:end
-s/|#_!!_#|//g
 CEOF$ac_eof
 _ACEOF
 
@@ -3425,7 +3447,7 @@ s&@builddir@&$ac_builddir&;t t
 s&@abs_builddir@&$ac_abs_builddir&;t t
 s&@abs_top_builddir@&$ac_abs_top_builddir&;t t
 $ac_datarootdir_hack
-" $ac_file_inputs | sed -f "$tmp/subs-1.sed" >$tmp/out
+" $ac_file_inputs | sed -f "$tmp/subs-1.sed" | sed 's/|#_!!_#|//g' >$tmp/out
 
 test -z "$ac_datarootdir_hack$ac_datarootdir_seen" &&
   { ac_out=`sed -n '/\${datarootdir}/p' "$tmp/out"`; test -n "$ac_out"; } &&

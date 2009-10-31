@@ -68,6 +68,8 @@ while (my $f = shift @ARGV) {
 		s|\@pnp_cgi\@|$pnp_cgi|g;
 		s|\@report\@|@report@|g;
 		s|\@service_definition_template\@|$service_definition_template|g;
+		s|\@snmp_community\@|@snmp_community@|g;
+		s|\@snmp_port\@|@snmp_port@|g;
 		s|\@style_plus_minus\@|@style_plus_minus@|g;
 		s|\@tag_notes_link\@|@tag_notes_link@|g;
 		s|\@target\@|@target@|g;
