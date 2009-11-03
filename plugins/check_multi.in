@@ -91,6 +91,18 @@ $tmp_stderr="";
 	bgcolor	=> { $OK => "#33FF00", $WARNING => "#FEFFC1", $CRITICAL => "#FFBBBB", $UNKNOWN => "#FFDA9F", },
 );
 my %opt=(
+	"commands"	=> {
+		"attribute"	=> 1,
+		"command"	=> 1,
+		"cumulate"	=> 1,
+		"eval"		=> 1,
+		"eeval"		=> 1,
+		"snmp"		=> 1,
+		"statusdat"	=> 1,
+		"state"		=> 1, 
+		"output"	=> 1,
+	},
+	"cmdregex"	=> join('\|',keys(%{$opt{commands}})),
 	"execute"	=> [],
 	"filename"	=> [],
 	"help"		=> 0,
@@ -349,6 +361,9 @@ sub process_input {
 				}
 				DEBUG3("\@cmds after filling from XML input\n" . Dumper(\@cmds));
 			}
+		} elsif ($stdin=~/($opt{cmdregex})\s*\[.*\]\s*=/) {
+			DEBUG3("process_input: command file in STDIN detected");
+			push @{$opt{execute}},split(/\n/,$stdin);
 		}
 	} else {
 		DEBUG3("process_input: no <STDIN> found");
@@ -2062,16 +2077,18 @@ sub report_all {
 	}
 
 	#--- classical report
-	if (! ($opt{set}{report} & $DETAIL_HTML) &&
-	    ! ($opt{set}{report} & $DETAIL_XML)) {
+	if (!($opt{set}{report} & $DETAIL_HTML) &&
+	    !($opt{set}{report} & $DETAIL_XML)) {
 		&report_ascii;
 	}
-	#--- report HTML output
-	if ($opt{set}{report} & $DETAIL_HTML) {
+	#--- report HTML output (and not XML)
+	if (($opt{set}{report} & $DETAIL_HTML) &&
+	   !($opt{set}{report} & $DETAIL_XML)) {
 		&report_html;
 	} 
-	#--- report XML output 
-	if ($opt{set}{report} & $DETAIL_XML) {
+	#--- report XML output (and not HTML)
+	if (($opt{set}{report} & $DETAIL_XML) &&
+	   !($opt{set}{report} & $DETAIL_HTML)) {
 		&report_xml;
 	}
 	#--- report to nsca (send_nsca wrapper)
@@ -2701,11 +2718,11 @@ sub report_service_definition {
 	my @tpl="";
 	#--- use template for service definition
 	if (! -f "$opt{set}{service_definition_template}") {
-		add_error("service definition template file \'$opt{set}{service_definition_template}\' not found");
+		print "#--- Error: service definition template file \'$opt{set}{service_definition_template}\' not found\n";
 		return 1;
 	} elsif (!open(DEF, $opt{set}{service_definition_template})) {
-			add_error("Cannot open $opt{set}{service_definition_template}:$?");
-			return 2;
+		print "#--- Error: cannot open $opt{set}{service_definition_template}:$?\n";
+		return 2;
 	} else {
 		@tpl=<DEF>;
 		close DEF;
