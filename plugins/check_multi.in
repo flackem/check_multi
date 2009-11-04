@@ -2872,7 +2872,9 @@ sub report_checkresult_file {
 		"early_timeout=0\n".
 		"exited_ok=1\n".
 		"return_code=".$cmds[$i]{rc}."\n".
-		"output=".$cmds[$i]{output}."\n";
+		"output=".$cmds[$i]{output};
+		$content.='|'.$cmds[$i]{performance} if ($cmds[$i]{process_perfdata});
+		$content.="\n";
 		print $th $content;
 		close $th;
 
