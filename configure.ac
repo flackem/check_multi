@@ -98,7 +98,7 @@ AC_ARG_WITH(child_timeout,		[  --with-child_timeout=<NN>                timeout 
 AC_ARG_WITH(verbose,			[  --with-verbose=<N>                       verbosity of check_multi (default:0)],verbose=$withval,verbose="0")
 AC_ARG_WITH(nagios_user,		[  --with-nagios-user=<user>                user name to run plugin (default:nagios)],nagios_user=$withval,nagios_user=nagios)
 AC_ARG_WITH(nagios_group,		[  --with-nagios-group=<group>              group name to run plugin (default:nagios)],nagios_group=$withval,nagios_group=nagios)
-AC_ARG_WITH(nagios_name,		[  --with-nagios-name=<name>                set nagios name (there should some clones ;)) (default:nagios)],nagios_name=$withval,nagios_name=nagios)
+AC_ARG_WITH(nagios_name,		[  --with-nagios-name=<name>                set nagios name (there should be some clones ;)) (default:nagios)],nagios_name=$withval,nagios_name=nagios)
 
 AC_SUBST(ac_configure_args)
 AC_SUBST(action_mouseover)

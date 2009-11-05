@@ -1,5 +1,5 @@
 #!@client_perl@ -w
-# nagios: -epn
+# @nagios_name@: -epn
 #
 # check_multi - nagios plugin
 #
@@ -26,7 +26,7 @@ use strict;
 use Getopt::Long qw(:config no_ignore_case bundling);
 use vars qw(
 $MYSELF %cmds %opt $returncode %def %rc $no $VERSION $tmp_stdout $tmp_stderr $xml $check_multi
-$status_dat
+$NAGIOS $nagios $Nagios $status_dat
 $OK $WARNING $CRITICAL $UNKNOWN
 $DETAIL_LIST $DETAIL_LIST_FULL $DETAIL_HTML $DETAIL_STDERR $DETAIL_PERFORMANCE
 $DETAIL_PERFORMANCE_CLASSIC $DETAIL_STATUS $DETAIL_PERFORMANCE_LINK $DETAIL_XML $DETAIL_NAGIOS2
@@ -50,6 +50,9 @@ use lib "@libexecdir@";
 #--- vars ----------------------------------------------------------------------
 #-------------------------------------------------------------------------------
 $MYSELF="check_multi";
+$nagios=lc("@nagios_name@");
+$NAGIOS=uc("@nagios_name@");
+$Nagios=ucfirst(lc("@nagios_name@"));
 $VERSION='$Revision$ $Date$ $Author$'.
 	"\nconfigure @configure_args@";
 #
@@ -129,9 +132,9 @@ my %opt=(
 		# to be searched in directories
 		file_extension	=> "@file_extension@",
 		# hostaddress, either determined from Nagios environment, or specified
-		HOSTADDRESS	=> $ENV{NAGIOS_HOSTADDRESS},
+		HOSTADDRESS	=> $ENV{"${NAGIOS}_HOSTADDRESS"},
 		# hostname, either determined from Nagios environment, or specified
-		HOSTNAME	=> $ENV{NAGIOS_HOSTNAME},
+		HOSTNAME	=> $ENV{"${NAGIOS}_HOSTNAME"},
 		# if set, return UNKNOWN if command file is not found
 		ignore_missing_cmd_file => @ignore_missing_cmd_file@,
 		# characters to cleanup from command files
@@ -518,8 +521,8 @@ sub process_input {
 
 	#--- report option - notes_url
 	if ($opt{set}{report} & $DETAIL_NOTES_LINK && !$opt{set}{notes_url}) {
-		$opt{set}{notes_url}=$ENV{NAGIOS_SERVICENOTESURL};
-		DEBUG3("process_input: notes report option set - taking Nagios SERVICENOTESURL $ENV{NAGIOS_SERVICENOTESURL}");
+		$opt{set}{notes_url}=$ENV{"${NAGIOS}_SERVICENOTESURL"};
+		DEBUG3("process_input: notes report option set - taking $Nagios SERVICENOTESURL ".$ENV{"${NAGIOS}_SERVICENOTESURL"});
 	}
 
 	#--- if no module HTML::Entities available - set var
@@ -598,8 +601,8 @@ sub process_input {
 			#--- take filename to store persistent data from HOSTNAME-SERVICEDESC
 			if ($ENV{MULTI_HOSTNAME} && $ENV{MULTI_SERVICEDESC}) {
 				$cmds[0]{key}="$ENV{MULTI_HOSTNAME}-$ENV{MULTI_SERVICEDESC}";
-			} elsif ($ENV{MULTI_HOSTNAME} && $ENV{NAGIOS_SERVICEDESC}) {
-				$cmds[0]{key}="$ENV{MULTI_HOSTNAME}-$ENV{NAGIOS_SERVICEDESC}";
+			} elsif ($ENV{MULTI_HOSTNAME} && $ENV{"${NAGIOS}_SERVICEDESC"}) {
+				$cmds[0]{key}="$ENV{MULTI_HOSTNAME}-".$ENV{"${NAGIOS}_SERVICEDESC"};
 			} else {
 				print "process_input: need HOSTNAME and SERVICEDESC for persistent mode.\nPlease specify -s HOSTNAME=<hostname> -s SERVICEDESC=<service description>\n";
 				return $UNKNOWN;
@@ -830,14 +833,14 @@ sub substitute_macros {
 		if (defined($ENV{"MULTI_${var}"})) {
 			DEBUG3("substitute_macros: replacing env var MULTI_${var} with $ENV{\"MULTI_${var}\"}");
 			$input=~s/\$$var\$/$ENV{"MULTI_${var}"}/g;
-		#--- 2. check for NAGIOS var
-		} elsif (defined($ENV{"NAGIOS_${var}"})) {
-			DEBUG3("substitute_macros: replacing env var NAGIOS_${var} with $ENV{\"NAGIOS_${var}\"}");
-			$input=~s/\$$var\$/$ENV{"NAGIOS_${var}"}/g;
+		#--- 2. check for @nagios_name@ var
+		} elsif (defined($ENV{"${NAGIOS}_${var}"})) {
+			DEBUG3("substitute_macros: replacing env var ${NAGIOS}_${var} with $ENV{\"${NAGIOS}_${var}\"}");
+			$input=~s/\$$var\$/$ENV{"${NAGIOS}_${var}"}/g;
 		#--- 3. nothing to substitute
 		} else {
 			$input=~s/\$$var\$//g;
-			DEBUG3("substitute_macros: var NAGIOS_${var}/MULTI_${var} not defined: removed \$$var\$");
+			DEBUG3("substitute_macros: var ${NAGIOS}_${var}/MULTI_${var} not defined: removed \$$var\$");
 		}
 	}
 	return $input;
@@ -2047,7 +2050,7 @@ sub report_all {
 
 	#--- some debugging first
 	DEBUG4("MULTI Environment (sorted):\n\t".join("\n\t",get_env_vars('^MULTI')));
-	DEBUG4("NAGIOS Environment (sorted):\n\t".join("\n\t",get_env_vars('^NAGIOS')));
+	DEBUG4("${NAGIOS} Environment (sorted):\n\t".join("\n\t",get_env_vars('^${NAGIOS}')));
 
 	#--- construction site for persistence
 	if ($opt{set}{persistent} && $opt{set}{use_xml_simple} && $cmds[0]{key}) {

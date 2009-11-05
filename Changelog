@@ -1,5 +1,6 @@
 
 ===== Changelog =====
+	* added support for icinga, 'configure --with-nagios_name=icinga'
 	* command file can now be feeded via STDIN, thanks to Joerg Krueger for this idea
 	* added 'snmp [ TAG ] = HOST:OID' (snmpget)
 	* added variable mouseover_type to cover PNP 0.6 and 0.4 differences, default is PNP 0.6
