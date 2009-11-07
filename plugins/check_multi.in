@@ -1663,7 +1663,8 @@ sub exec_command {
 					$top[$i]{runtime}=0;
 					$top[$i]{type}=$cmds[$no]{type};
 					$top[$i]{process_perfdata}=1;
-					$top[$i]{performance}="$top[$i]{name}=$top[$i]{output}";
+					$top[$i]{performance}="$cmds[$no]{name}_$top[$i]{name}=$top[$i]{output}";
+					$top[$i]{name}="$cmds[$no]{name}_$top[$i]{name}";
 				}
 				#--- replace original part with new array
 				splice(@cmds,$no,1,@top);
