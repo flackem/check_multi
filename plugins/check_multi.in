@@ -122,6 +122,8 @@ my %opt=(
 		config_dir	=> "@config_dir@",
 		# how many rows should be displayed for cumulate statement?
 		cumulate_max_rows => 5,
+		# should cumulate ignore zero values?
+		cumulate_ignore_zero => @cumulate_ignore_zero@,
 		# don't complain about being root etc.
 		dont_be_paranoid => 0,
 		# use open3 method to exec child checks
@@ -762,6 +764,7 @@ Set options:
    collapse=<0|1> - should check_multi collapse child check_multi checks? default:$opt{set}{collapse}
    config_dir=</path/to/config_dir> - path to check_multi config directory, default:$opt{set}{config_dir}
    cumulate_max_rows=<N> - number of rows which cumulate [ TAG ] should display
+   cumulate_ignore_zero=<0|1> - should cumulate ignore zero values? default:$opt{set}{cumulate_ignore_zero}
    exec_open3=<0|1> - use open3 method to exec child checks (to be tested though), default:$opt{set}{exec_open3}
    extinfo_in_status=<0|1> - show child checks also in Nagios status.cgi (HTML), default:$opt{set}{extinfo_in_status}
    file_extension=<ext> - standard file extension for config files, default:$opt{set}{file_extension}
@@ -1693,8 +1696,14 @@ sub get_cumulated_top {
 	my %c=();
 	foreach my $line (split('\n',$output)) {
 		if ($line=~/\s*(\S*)\s+(\d+)\s*/) {
-			$c{"$1"}+=$2;
-			DEBUG4("get_cumulated_top: $1 += $2 -> $c{$1}\n");
+			#--- zero value? count it if cumulate_ignore_zero=0
+			if ($opt{set}{cumulate_ignore_zero}) {
+				$c{"$1"}+=$2 if ($2);
+				DEBUG4("get_cumulated_top: $1 += $2 -> $c{$1}\n") if ($2);
+			} else {
+				$c{"$1"}+=$2;
+				DEBUG4("get_cumulated_top: $1 += $2 -> $c{$1}\n");
+			}
 		} else {
 			DEBUG2("get_cumulated_top: invalid line format: $line\n");
 		}

@@ -637,6 +637,7 @@ checkresults_dir
 collapse
 cmdfile_update_interval
 config_dir
+cumulate_ignore_zero
 extinfo_in_status
 ethtool
 exec_open3
@@ -1257,6 +1258,7 @@ check_multi settings:
   --with-collapse=<0|1>                    HTML javascript tree collapse option (default:1)
   --with-checkresults_dir=<path>           directory for Nagios checkresults (default:${localstatedir}/spool/checkresults)
   --with-config_dir=<path>                 directory for check_multi configuration files (default:${sysconfdir}/multi)
+  --with-cumulate_ignore_zero=<0|1>        cumulate ignores zero values (default:1)
   --with-ethtool=</path/to/ethtool>        define path to ethtool (default:/sbin/ethtool)
   --with-exec_open3=<0|1>                  use new exec method with function open3
   --with-extinfo_in_status=<0|1>           display check_multi output in status.cgi
@@ -1287,7 +1289,7 @@ check_multi settings:
   --with-verbose=<N>                       verbosity of check_multi (default:0)
   --with-nagios-user=<user>                user name to run plugin (default:nagios)
   --with-nagios-group=<group>              group name to run plugin (default:nagios)
-  --with-nagios-name=<name>                set nagios name (there should some clones ;)) (default:nagios)
+  --with-nagios-name=<nagios|icinga>       set nagios name (there might be some clones ;)) (default:nagios)
 
 _ACEOF
 ac_status=$?
@@ -2128,6 +2130,14 @@ else
   config_dir="${sysconfdir}/check_multi"
 fi
 
+
+# Check whether --with-cumulate_ignore_zero was given.
+if test "${with_cumulate_ignore_zero+set}" = set; then
+  withval=$with_cumulate_ignore_zero; cumulate_ignore_zero=$withval
+else
+  cumulate_ignore_zero="1"
+fi
+
 if test ethtool=""; then
 
 # Check whether --with-ethtool was given.
@@ -2377,6 +2387,7 @@ if test "${with_nagios_name+set}" = set; then
 else
   nagios_name=nagios
 fi
+
 
 
 
@@ -3135,6 +3146,7 @@ checkresults_dir!$checkresults_dir$ac_delim
 collapse!$collapse$ac_delim
 cmdfile_update_interval!$cmdfile_update_interval$ac_delim
 config_dir!$config_dir$ac_delim
+cumulate_ignore_zero!$cumulate_ignore_zero$ac_delim
 extinfo_in_status!$extinfo_in_status$ac_delim
 ethtool!$ethtool$ac_delim
 exec_open3!$exec_open3$ac_delim
@@ -3173,7 +3185,7 @@ LIBOBJS!$LIBOBJS$ac_delim
 LTLIBOBJS!$LTLIBOBJS$ac_delim
 _ACEOF
 
-  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 96; then
+  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 97; then
     break
   elif $ac_last_try; then
     { { echo "$as_me:$LINENO: error: could not make $CONFIG_STATUS" >&5

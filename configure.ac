@@ -66,6 +66,7 @@ AC_ARG_WITH(cmdfile_update_interval,	[  --with-cmdfile_update_interval=<seconds>
 AC_ARG_WITH(collapse,			[  --with-collapse=<0|1>                    HTML javascript tree collapse option (default:1)],collapse=$withval,collapse="1")
 AC_ARG_WITH(checkresults_dir,		[  --with-checkresults_dir=<path>           directory for Nagios checkresults (default:${localstatedir}/spool/checkresults)],checkresults_dir=$withval,checkresults_dir="${localstatedir}/spool/checkresults")
 AC_ARG_WITH(config_dir,			[  --with-config_dir=<path>                 directory for check_multi configuration files (default:${sysconfdir}/multi)],config_dir=$withval,config_dir="${sysconfdir}/check_multi")
+AC_ARG_WITH(cumulate_ignore_zero,	[  --with-cumulate_ignore_zero=<0|1>        cumulate ignores zero values (default:1)],cumulate_ignore_zero=$withval,cumulate_ignore_zero="1")
 if test ethtool=""; then
 	AC_ARG_WITH(ethtool,			[  --with-ethtool=</path/to/ethtool>        define path to ethtool (default:/sbin/ethtool)],ethtool=$ethtool,ethtool="/sbin/ethtool")
 fi
@@ -98,7 +99,7 @@ AC_ARG_WITH(child_timeout,		[  --with-child_timeout=<NN>                timeout 
 AC_ARG_WITH(verbose,			[  --with-verbose=<N>                       verbosity of check_multi (default:0)],verbose=$withval,verbose="0")
 AC_ARG_WITH(nagios_user,		[  --with-nagios-user=<user>                user name to run plugin (default:nagios)],nagios_user=$withval,nagios_user=nagios)
 AC_ARG_WITH(nagios_group,		[  --with-nagios-group=<group>              group name to run plugin (default:nagios)],nagios_group=$withval,nagios_group=nagios)
-AC_ARG_WITH(nagios_name,		[  --with-nagios-name=<name>                set nagios name (there should be some clones ;)) (default:nagios)],nagios_name=$withval,nagios_name=nagios)
+AC_ARG_WITH(nagios_name,		[  --with-nagios-name=<nagios|icinga>       set nagios name (there might be some clones ;)) (default:nagios)],nagios_name=$withval,nagios_name=nagios)
 
 AC_SUBST(ac_configure_args)
 AC_SUBST(action_mouseover)
@@ -109,6 +110,7 @@ AC_SUBST(checkresults_dir)
 AC_SUBST(collapse)
 AC_SUBST(cmdfile_update_interval)
 AC_SUBST(config_dir)
+AC_SUBST(cumulate_ignore_zero)
 AC_SUBST(extinfo_in_status)
 AC_SUBST(ethtool)
 AC_SUBST(exec_open3)

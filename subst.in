@@ -46,6 +46,7 @@ while (my $f = shift @ARGV) {
 		s|\@nagios_group\@|@nagios_group@|g;
 		s|\@child_timeout\@|@child_timeout@|g;
 		s|\@collapse\@|@collapse@|g;
+		s|\@cumulate_ignore_zero\@|@cumulate_ignore_zero@|g;
 		s|\@cmdfile_update_interval\@|@cmdfile_update_interval@|g;
 		s|\@configure_args\@|@ac_configure_args@|g;
 		s|\@config_dir\@|$config_dir|g;
