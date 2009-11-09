@@ -1195,9 +1195,7 @@ sub parse_header {
 		my $pplugin=$plugin;
 
 		#--- or it is specified in [ TAG::PLUGIN ]
-		if ($name=~/::/) {
-			($name,$pplugin)=split(/::/,$name);
-		}
+		$pplugin=$key if ($key);
 
 		$cmds[$i]{type}=$type;
 		$cmds[$i]{name}=$name;
