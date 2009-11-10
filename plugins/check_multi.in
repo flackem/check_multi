@@ -1124,8 +1124,8 @@ sub parse_lines {
 		}
 	}
 	DEBUG4("parse_lines: end - now we have " . $#cmds . " command(s)");
-	use Data::Dumper;
-	DEBUG4("parse_lines:" . Dumper($check_multi));
+	#use Data::Dumper;
+	#DEBUG4("parse_lines:" . Dumper($check_multi));
 }
 
 sub parse_header {
