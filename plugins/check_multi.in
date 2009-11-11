@@ -2878,13 +2878,13 @@ sub report_checkresult_file {
 		"scheduled_check=0\n".
 		"reschedule_check=0\n".
 		"latency=0\n".
-		"start_time=".$cmds[$i]{starttime}."\n".
-		"finish_time=".$cmds[$i]{endtime}."\n".
+		"start_time=".sprintf("%17.6f",$cmds[$i]{starttime})."\n".
+		"finish_time=".sprintf("%17.6f",$cmds[$i]{endtime})."\n".
 		"early_timeout=0\n".
 		"exited_ok=1\n".
 		"return_code=".$cmds[$i]{rc}."\n".
 		"output=".$cmds[$i]{output};
-		$content.='|'.$cmds[$i]{performance} if ($cmds[$i]{process_perfdata});
+		$content.='|'.$cmds[$i]{performance} if ($cmds[$i]{process_perfdata} && defined($cmds[$i]{performance}) && $cmds[$i]{performance});
 		$content.="\n";
 		print $th $content;
 		close $th;
