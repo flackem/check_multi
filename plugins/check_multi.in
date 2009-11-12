@@ -2866,6 +2866,7 @@ sub report_checkresult_file {
 		}
 		#--- create checkresults file
 		my ($th,$tf)=File::Temp::tempfile("cXXXXXX",DIR=>"$opt{set}{checkresults_dir}");
+		my $escaped_output=$cmds[$i]{output}; $escaped_output=~s/\n/\\n/g;
 		my $content=
 		"### check_multi passive check result file $tf ###\n".
 		"file_time=".int(time)."\n\n".
@@ -2883,7 +2884,7 @@ sub report_checkresult_file {
 		"early_timeout=0\n".
 		"exited_ok=1\n".
 		"return_code=".$cmds[$i]{rc}."\n".
-		"output=".$cmds[$i]{output};
+		"output=".$escaped_output;
 		$content.='|'.$cmds[$i]{performance} if ($cmds[$i]{process_perfdata} && defined($cmds[$i]{performance}) && $cmds[$i]{performance});
 		$content.="\n";
 		print $th $content;
