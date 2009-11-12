@@ -1,5 +1,6 @@
 
 ===== Changelog =====
+	* added extended_perfdata, with particular state counters and overall states
 	* added support for icinga, 'configure --with-nagios_name=icinga'
 	* command file can now be feeded via STDIN, thanks to Joerg Krueger for this idea
 	* added 'snmp [ TAG ] = HOST:OID' (snmpget)

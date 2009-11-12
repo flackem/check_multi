@@ -54,6 +54,7 @@ while (my $f = shift @ARGV) {
 		s|\@ethtool\@|@ethtool@|g;
 		s|\@exec_open3\@|@exec_open3@|g;
 		s|\@extinfo_in_status\@|@extinfo_in_status@|g;
+		s|\@extended_perfdata\@|@extended_perfdata@|g;
 		s|\@file_extension\@|@file_extension@|g;
 		s|\@findbin\@|@findbin@|g;
 		s|\@gunzip\@|@gunzip@|g;

@@ -642,6 +642,7 @@ cmdfile_update_interval
 config_dir
 cumulate_ignore_zero
 extinfo_in_status
+extended_perfdata
 ethtool
 exec_open3
 findbin
@@ -1264,6 +1265,7 @@ check_multi settings:
   --with-cumulate_ignore_zero=<0|1>        cumulate ignores zero values (default:1)
   --with-ethtool=</path/to/ethtool>        define path to ethtool (default:/sbin/ethtool)
   --with-exec_open3=<0|1>                  use new exec method with function open3
+  --with-extended_perfdata=<0|1>           provide extended check_multi perfdata
   --with-extinfo_in_status=<0|1>           display check_multi output in status.cgi
   --with-findbin=<0|1>                     use Perl module FindBin for addressing plugins (default:1)
   --with-file_extension=<ext>              default extension for check_multi command files (default:"cmd")
@@ -1864,7 +1866,6 @@ echo "${ECHO_T}no" >&6; }
 fi
 
 
-#AC_PATH_PROG(INSTALL,install)
 ac_aux_dir=
 for ac_dir in "$srcdir" "$srcdir/.." "$srcdir/../.."; do
   if test -f "$ac_dir/install-sh"; then
@@ -2232,6 +2233,14 @@ else
 fi
 
 
+# Check whether --with-extended_perfdata was given.
+if test "${with_extended_perfdata+set}" = set; then
+  withval=$with_extended_perfdata; extended_perfdata=$withval
+else
+  extended_perfdata=0
+fi
+
+
 # Check whether --with-extinfo_in_status was given.
 if test "${with_extinfo_in_status+set}" = set; then
   withval=$with_extinfo_in_status; extinfo_in_status=$withval
@@ -2462,6 +2471,7 @@ if test "${with_nagios_name+set}" = set; then
 else
   nagios_name=nagios
 fi
+
 
 
 
@@ -3227,6 +3237,7 @@ cmdfile_update_interval!$cmdfile_update_interval$ac_delim
 config_dir!$config_dir$ac_delim
 cumulate_ignore_zero!$cumulate_ignore_zero$ac_delim
 extinfo_in_status!$extinfo_in_status$ac_delim
+extended_perfdata!$extended_perfdata$ac_delim
 ethtool!$ethtool$ac_delim
 exec_open3!$exec_open3$ac_delim
 findbin!$findbin$ac_delim
@@ -3258,7 +3269,6 @@ verbose!$verbose$ac_delim
 nagios_user!$nagios_user$ac_delim
 nagios_group!$nagios_group$ac_delim
 nagios_name!$nagios_name$ac_delim
-LIBEXECDIR!$LIBEXECDIR$ac_delim
 _ACEOF
 
   if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 97; then
@@ -3300,12 +3310,13 @@ _ACEOF
 ac_delim='%!_!# '
 for ac_last_try in false false false false false :; do
   cat >conf$$subs.sed <<_ACEOF
+LIBEXECDIR!$LIBEXECDIR$ac_delim
 INSTALL_OPTS!$INSTALL_OPTS$ac_delim
 LIBOBJS!$LIBOBJS$ac_delim
 LTLIBOBJS!$LTLIBOBJS$ac_delim
 _ACEOF
 
-  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 3; then
+  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 4; then
     break
   elif $ac_last_try; then
     { { echo "$as_me:$LINENO: error: could not make $CONFIG_STATUS" >&5

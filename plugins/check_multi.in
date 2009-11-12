@@ -130,6 +130,8 @@ my %opt=(
 		exec_open3	=> @exec_open3@,
 		# show child checks also in status view (only in HTML mode)
 		extinfo_in_status => "@extinfo_in_status@",
+		# print extended perfdata, count of states and overall state
+		extended_perfdata => "@extended_perfdata@",
 		# standard extension of check_multi command files, 
 		# to be searched in directories
 		file_extension	=> "@file_extension@",
@@ -2592,6 +2594,16 @@ sub report_perfdata {
 			($opt{set}{name}) ? $opt{set}{name} : $MYSELF, $MYSELF,
 			$cmds[0]{nallchecks},
 			$cmds[0]{runtime};
+		#--- extended performance data output for check_multi
+		if ($opt{set}{extended_perfdata}) {
+			printf "%s_extended::check_multi_extended::count_ok=%d count_warning=%d count_critical=%d count_unknown=%d overall_state=%d ", 
+				($opt{set}{name}) ? $opt{set}{name} : $MYSELF,
+				$rc{count}[$OK],
+				$rc{count}[$WARNING],
+				$rc{count}[$CRITICAL],
+				$rc{count}[$UNKNOWN],
+				$rc{head};
+		}
 		#--- one line per command, format: tag=output
 		for ($no=1;$no<=$#cmds;$no++) {
 

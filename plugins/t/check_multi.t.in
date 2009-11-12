@@ -26,7 +26,7 @@ foreach my $plugin (@plugins) {
 		plan skip_all => "Skipping tests because component $plugin not found or not executable as \'$path_to_plugin\'";
 	}
 }
-plan tests => 32;
+plan tests => 34;
 
 my $result;
 my $testopts="-s dont_be_paranoid=1";
@@ -141,6 +141,25 @@ like(
 	'/^OK - 2 plugins checked, 0 critical, 0 warning, 0 unknown, 2 ok\n'.
 	'\[ 1\] eins 1\n'.
 	'\[ 2\] zwei 2\|check_multi::check_multi::plugins=2 time=\d+\.\d+ eins::echo::eins=1 zwei::echo::zwei=2 $/',
+	"output correct - passed"
+);
+
+#-------------------------------------------------------------------------------
+#--- report option 8 with extended_perddata ------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi -x 'command [ eins ] = echo \"1|eins=1\"' -x 'command [ zwei ] = echo \"2|zwei=2\"' -r 8 -s extended_perfdata=1 $testopts"
+);
+is(
+	$result->return_code, 
+	0, 
+	"report option 8 (check_multi perfdata) - RC0 - passed"
+);
+like(
+	$result->output,
+	'/^OK - 2 plugins checked, 0 critical, 0 warning, 0 unknown, 2 ok\n'.
+	'\[ 1\] eins 1\n'.
+	'\[ 2\] zwei 2\|check_multi::check_multi::plugins=2 time=\d+\.\d+ check_multi::check_multi_extended::count_ok=2 count_warning=0 count_critical=0 count_unknown=0 overall_state=0 eins::echo::eins=1 zwei::echo::zwei=2 $/',
 	"output correct - passed"
 );
 
