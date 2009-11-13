@@ -159,7 +159,7 @@ like(
 	$result->output,
 	'/^OK - 2 plugins checked, 0 critical, 0 warning, 0 unknown, 2 ok\n'.
 	'\[ 1\] eins 1\n'.
-	'\[ 2\] zwei 2\|check_multi::check_multi::plugins=2 time=\d+\.\d+ check_multi::check_multi_extended::count_ok=2 count_warning=0 count_critical=0 count_unknown=0 overall_state=0 eins::echo::eins=1 zwei::echo::zwei=2 $/',
+	'\[ 2\] zwei 2\|check_multi::check_multi::plugins=2 time=\d+\.\d+ check_multi_extended::check_multi_extended::count_ok=2 count_warning=0 count_critical=0 count_unknown=0 overall_state=0 eins::echo::eins=1 zwei::echo::zwei=2 $/',
 	"output correct - passed"
 );
 
