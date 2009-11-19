@@ -2540,7 +2540,7 @@ sub report_xml {
 	 	$output.="," . join(",",@{$cmds[0]{parms}}) if (defined($cmds[0]{parms}));
 		$output=substitute_macros($output);
 		DEBUG4("report_xml: output [ head ] = \'$output\'");
-		$xmlstr.=eval($output);
+		$xmlstr.=encode_xml(eval($output));
 	} else {
 		#--- print header line (2): summary for particular states 
 		if ($opt{set}{report} & $DETAIL_LIST_FULL) {
@@ -2571,7 +2571,7 @@ sub report_xml {
 		#foreach my $token (split(/,/,$opt{set}{xml_elements})) {
 		foreach my $token (sort keys %{$cmds[$no]}) {
 			if (defined($cmds[$no]{$token})) {
-				$xmlstr.=sprintf "\t\t<%s>%s</%s>\n",$token,$cmds[$no]{$token},$token;
+				$xmlstr.=sprintf "\t\t<%s>%s</%s>\n",$token,xml_encode($cmds[$no]{$token}),$token;
 			} else {
 				add_error("report_xml: XML element $token not found");
 			}
@@ -2580,6 +2580,15 @@ sub report_xml {
 	}
 	$xmlstr.="</PARENT>\n</div>\n";
 	print $xmlstr;
+}
+
+sub xml_encode {
+	my $input=shift;
+	my %transtab=( '&'=>'&amp;','<'=>'&lt;','>'=>'&gt;',);
+	for (keys(%transtab)) {
+		$input=~s/$_/$transtab{$_}/g;
+	}
+	$input;
 }
 
 #---
