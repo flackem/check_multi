@@ -38,11 +38,12 @@ AC_PROG_MAKE_SET
 #AC_PATH_PROG([STRIP],[strip],[true])
 AC_PATH_PROG(CHMOD,chmod)
 AC_PATH_PROG(CP,cp)
+AC_PATH_PROG(ETHTOOL,ethtool)
+AC_PATH_PROG(GUNZIP,gunzip)
+AC_PATH_PROG(ID,id)
 AC_PROG_INSTALL
 AC_SUBST(INSTALL)
 AC_PATH_PROG(PERL,perl)
-AC_PATH_PROG(ETHTOOL,ethtool)
-AC_PATH_PROG(GUNZIP,gunzip)
 
 #---
 if test "${exec_prefix}" = "NONE"; then
@@ -102,6 +103,13 @@ AC_ARG_WITH(nagios_user,		[  --with-nagios-user=<user>                user name 
 AC_ARG_WITH(nagios_group,		[  --with-nagios-group=<group>              group name to run plugin (default:nagios)],nagios_group=$withval,nagios_group=nagios)
 AC_ARG_WITH(nagios_name,		[  --with-nagios-name=<nagios|icinga>       set nagios name (there might be some clones ;)) (default:nagios)],nagios_name=$withval,nagios_name=nagios)
 
+#--- check if user exists (thanks to John S. Skogtvedt)
+$ID $nagios_user >/dev/null
+if test $? -ne 0; then
+	AC_MSG_ERROR(user '$nagios_user' does not exist.)
+fi
+
+#--- substitutions
 AC_SUBST(ac_configure_args)
 AC_SUBST(action_mouseover)
 AC_SUBST(action_url)

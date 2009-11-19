@@ -555,6 +555,7 @@ sub process_input {
 
 	#--- set libexec-dir at the beginning of PATH var
 	if ($opt{set}{libexec}) {
+		DEBUG1(">>> $opt{set}{libexec} <<<");
 		$ENV{PATH}="$opt{set}{libexec}:$ENV{PATH}";
 	}
 
