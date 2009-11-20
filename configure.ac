@@ -42,7 +42,6 @@ AC_PATH_PROG(ETHTOOL,ethtool)
 AC_PATH_PROG(GUNZIP,gunzip)
 AC_PATH_PROG(ID,id)
 AC_PROG_INSTALL
-AC_SUBST(INSTALL)
 AC_PATH_PROG(PERL,perl)
 
 #---
@@ -54,7 +53,7 @@ fi
 ACTION_URL="style='color:#4444FF;line-height:0.1em;font-size:1.5em;cursor:crosshair'"
 AC_ARG_WITH(action_url,		[  
 
-check_multi settings:
+detail settings:
   --with-action_url=<URL>                  action URL (default:"")],action_url=$withval,action_url="")
 AC_ARG_WITH(action_mouseover,           [  --with-action_mouseover=<0|1>            show PNP chart popup triggered by mouseover (default:0)],action_mouseover=$withval,action_mouseover=0)
 #--- too difficult to escape this - so define it as a variable before using it ;)
@@ -94,22 +93,26 @@ AC_ARG_WITH(style_plus_minus,		[  --with-style_plus_minus=<HTML code>      HTML 
 AC_ARG_WITH(tag_notes_link,		[  --with-tag_notes_link=<URL>              documentation URL for child checks (default:"")],tag_notes_link=$withval,tag_notes_link="")
 AC_ARG_WITH(target,			[  --with-target=<target_frame>             HTML target frame for URLs (default:_self)],target=$withval,target="_self")
 AC_ARG_WITH(tmp_dir,			[  --with-tmp_dir=<path>                    /path/to/tmp_dir (default:/tmp/check_multi)],tmp_dir=$withval,tmp_dir="/tmp/check_multi")
-AC_ARG_WITH(tmp_etc,			[  --with-tmp_etc=<path>                    /path/to/tmp_dir/etc (default:$tmp_dir/etc)],tmp_etc=$withval,tmp_etc="$tmp_dir/etc")
 AC_ARG_WITH(tmp_dir_permissions,	[  --with-tmp_dir_permissions=<octal perms> permissions of tmp_dir (default:01777)],tmp_dir_permissions=$withval,tmp_dir_permissions="01777")
-AC_ARG_WITH(parent_timeout,		[  --with-parent_timeut=<NN>                timeout for parent check (default:60)],parent_timeout=$withval,parent_timeout="60")
+AC_ARG_WITH(tmp_etc,			[  --with-tmp_etc=<path>                    /path/to/tmp_dir/etc (default:$tmp_dir/etc)],tmp_etc=$withval,tmp_etc="$tmp_dir/etc")
+AC_ARG_WITH(parent_timeout,		[ 
+major settings:
+  --with-parent_timeut=<NN>                timeout for parent check (default:60)],parent_timeout=$withval,parent_timeout="60")
 AC_ARG_WITH(child_timeout,		[  --with-child_timeout=<NN>                timeout for child checks (default:10)],child_timeout=$withval,child_timeout="10")
-AC_ARG_WITH(verbose,			[  --with-verbose=<N>                       verbosity of check_multi (default:0)],verbose=$withval,verbose="0")
-AC_ARG_WITH(nagios_user,		[  --with-nagios-user=<user>                user name to run plugin (default:nagios)],nagios_user=$withval,nagios_user=nagios)
-AC_ARG_WITH(nagios_group,		[  --with-nagios-group=<group>              group name to run plugin (default:nagios)],nagios_group=$withval,nagios_group=nagios)
+#AC_ARG_WITH(nagios_user,		[  --with-nagios-user=<user>                user name to run plugin (default:nagios)],nagios_user=$withval,nagios_user=nagios)
+#AC_ARG_WITH(nagios_group,		[  --with-nagios-group=<group>              group name to run plugin (default:nagios)],nagios_group=$withval,nagios_group=nagios)
+#--- taking user handling from Nagios plugins (default: install user)
+INSTALL_OPTS=""
+AC_ARG_WITH(nagios_user,		[  --with-nagios-user=USER                  installs executables with this user. Defaults to install user], INSTALL_OPTS="-o $withval")
+AC_ARG_WITH(nagios_group,		[  --with-nagios-group=GROUP                installs executables with this group. Defaults to install user], INSTALL_OPTS="$INSTALL_OPTS -g $withval")
 AC_ARG_WITH(nagios_name,		[  --with-nagios-name=<nagios|icinga>       set nagios name (there might be some clones ;)) (default:nagios)],nagios_name=$withval,nagios_name=nagios)
+AC_ARG_WITH(verbose,			[  --with-verbose=<N>                       verbosity of check_multi (default:0)],verbose=$withval,verbose="0")
 
-#--- check if user exists (thanks to John S. Skogtvedt)
-$ID $nagios_user >/dev/null
-if test $? -ne 0; then
-	AC_MSG_ERROR(user '$nagios_user' does not exist.)
-fi
 
 #--- substitutions
+AC_SUBST(INSTALL)
+AC_SUBST(INSTALL_OPTS)
+AC_SUBST(LIBEXECDIR)
 AC_SUBST(ac_configure_args)
 AC_SUBST(action_mouseover)
 AC_SUBST(action_url)
@@ -151,17 +154,7 @@ AC_SUBST(tmp_dir_permissions)
 AC_SUBST(parent_timeout)
 AC_SUBST(child_timeout)
 AC_SUBST(verbose)
-AC_SUBST(nagios_user)
-AC_SUBST(nagios_group)
 AC_SUBST(nagios_name)
-AC_SUBST(LIBEXECDIR)
-
-AC_DEFINE_UNQUOTED(DEFAULT_NAGIOS_USER,"$nagios_user")
-AC_DEFINE_UNQUOTED(DEFAULT_NAGIOS_GROUP,"$nagios_group")
-AC_DEFINE_UNQUOTED(DEFAULT_NAGIOS_NAME,"$nagios_name")
-
-INSTALL_OPTS="-o $nagios_user -g $nagios_group"
-AC_SUBST(INSTALL_OPTS)
 
 AC_CONFIG_FILES(
 	subst
@@ -237,7 +230,6 @@ echo " --- System options"
 echo " -------------------------------------------------------------------"
 AC_MSG_RESULT([ Parent timeout (BIG T)    $parent_timeout])
 AC_MSG_RESULT([ Child timeout (small t)   $child_timeout])
-AC_MSG_RESULT([ Nagios user/group         $nagios_user,$nagios_group])
 AC_MSG_RESULT([ Nagios name               $nagios_name])
 AC_MSG_RESULT([ RC if no checks defined   $no_checks_rc])
 AC_MSG_RESULT([ default cmdfile extension $file_extension])

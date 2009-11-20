@@ -42,8 +42,6 @@ while (my $f = shift @ARGV) {
 		s|\@action_url\@|@action_url@|g;
 		s|\@client_perl\@|@client_perl@|g;
 		s|\@nagios_name\@|@nagios_name@|g;
-		s|\@nagios_user\@|@nagios_user@|g;
-		s|\@nagios_group\@|@nagios_group@|g;
 		s|\@child_timeout\@|@child_timeout@|g;
 		s|\@collapse\@|@collapse@|g;
 		s|\@cumulate_ignore_zero\@|@cumulate_ignore_zero@|g;
