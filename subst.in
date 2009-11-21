@@ -40,6 +40,7 @@ while (my $f = shift @ARGV) {
 		s|\@PERL\@|@PERL@|g;
 		s|\@action_mouseover\@|@action_mouseover@|g;
 		s|\@action_url\@|@action_url@|g;
+		s|\@child_interval\@|@child_interval@|g;
 		s|\@client_perl\@|@client_perl@|g;
 		s|\@nagios_name\@|@nagios_name@|g;
 		s|\@child_timeout\@|@child_timeout@|g;

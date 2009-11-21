@@ -1,5 +1,6 @@
 
 ===== Changelog =====
+	* added new variable child_interval to provide time interval between child checks (default: 0.0 seconds)
 	* fixed status output for '-r 64': OK is only displayed, if plugin output does not contain OK itself, thanks to Jens Person
 	* added extended_perfdata, with particular state counters and overall states, thanks to Gerd von Egidy and Joerg Linge
 	* added support for icinga, 'configure --with-nagios_name=icinga'

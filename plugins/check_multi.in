@@ -35,7 +35,10 @@ $DETAIL_NOTES_LINK $DETAIL_SERVICE_DEFINITION $DETAIL_SEND_NSCA $DETAIL_FEED_PAS
 );
 BEGIN {
 	#--- if hires timer available, use it
-	eval("use Time::HiRes qw(time)");
+	eval("use Time::HiRes qw(time sleep)");
+	if (! $@) {
+		$opt{set}{use_time_hires}=1;
+	}
 	#--- if FindBin module available, use it for finding plugins
 	if (@findbin@) {
 		eval("use FindBin");
@@ -114,6 +117,8 @@ my %opt=(
 		action_mouseover => @action_mouseover@,
 		# checkresults_dir
 		checkresults_dir => "@checkresults_dir@",
+		# child_interval
+		child_interval => "@child_interval@",
 		# update config file (if HTTP/FTP/etc) once a day (in seconds)
 		cmdfile_update_interval	=> @cmdfile_update_interval@,
 		# should check_multi collapse child check_multi checks per default?
@@ -226,6 +231,7 @@ my @cmds=(
 		runtime => 0.0,		# runtime in seconds
 		nchecks => 0,		# number of child checks (displayed)
 		nallchecks => 0,	# number of all child checks (with non-displayed checks)
+		sleeped => 0.0,		# time sleeped between child checks
 		number	=> 0,		# current number of check (0 for head)
 		output	=> "",		# output
 		rc	=> $OK,		# return code
@@ -555,7 +561,6 @@ sub process_input {
 
 	#--- set libexec-dir at the beginning of PATH var
 	if ($opt{set}{libexec}) {
-		DEBUG1(">>> $opt{set}{libexec} <<<");
 		$ENV{PATH}="$opt{set}{libexec}:$ENV{PATH}";
 	}
 
@@ -763,6 +768,7 @@ Set options:
    <KEY>=<VALUE> - set multi variable \$<KEY>\$ to <VALUE>
    action_mouseover=<0|1> - mouse triggers PNP popup chart
    checkresults_dir=<path> - path to Nagios checkresults directory (direct insertion of checkresults)
+   child_interval=<time> - time in seconds to sleep between child_checks, may be fraction of seconds (default:$opt{set}{child_interval})
    cmdfile_update_interval=<seconds> - update config file (if HTTP/FTP/...), default:$opt{set}{cmdfile_update_interval}
    collapse=<0|1> - should check_multi collapse child check_multi checks? default:$opt{set}{collapse}
    config_dir=</path/to/config_dir> - path to check_multi config directory, default:$opt{set}{config_dir}
@@ -771,7 +777,7 @@ Set options:
    exec_open3=<0|1> - use open3 method to exec child checks (to be tested though), default:$opt{set}{exec_open3}
    extinfo_in_status=<0|1> - show child checks also in Nagios status.cgi (HTML), default:$opt{set}{extinfo_in_status}
    file_extension=<ext> - standard file extension for config files, default:$opt{set}{file_extension}
-   ignore_missing_cmd_file=<0|1> - don't complain if config file missing, default:$opt{set}{ignore_missing_cmd_file}
+   ignore_missing_cmd_file=<0|1> - do not complain if config file missing, default:$opt{set}{ignore_missing_cmd_file}
    illegal_chars=<characters> - specify characters to cleanup from command files
    image_path=</path/to/imagefiles> - relative path to Nagios imagefiles: default:$opt{set}{image_path}
    indent=<characters> - string to indent child checks, default:$opt{set}{indent}
@@ -793,8 +799,8 @@ Set options:
    service_definition_template=</path/to/template> - template for passive service definition
    status_dat=</path/to/status.dat> - where is Nagios status.dat? default:$opt{set}{status_dat}
    style_plus_minus=<HTML style> - style of HTML plus/minus characters
-   suppress_perfdata=<tag1>[,<tag2>][,...] - don't provide perfdata for check tag1,tag2...
-   suppress_service=<tag1>[,<tag2>][,...] - don't report service data for check tag1,tag2...
+   suppress_perfdata=<tag1>[,<tag2>][,...] - do not provide perfdata for check tag1,tag2...
+   suppress_service=<tag1>[,<tag2>][,...] - do not report service data for check tag1,tag2...
    tag_notes_link=<URL> - notes URL be added to child checks, default:$opt{set}{tag_notes_link}
    target=<target> - frame target for action_url and notes_url, default:$opt{set}{target}
    timeout=<seconds> - child check timeout (small t), default:$opt{set}{timeout}
@@ -2974,6 +2980,12 @@ while ($no<=$#cmds) {
 	} elsif ($cmds[$no]{feeded}) {
 		# do nothing - this cmd has been feeded in via STDIN
 	} else {
+		#--- wait interval between child checks if more than one check
+		if ($no>1) {
+			sleep($opt{set}{child_interval});
+			DEBUG3("-> sleeping $opt{set}{child_interval} seconds before child[$no]");
+			$cmds[0]{sleeped}+=$opt{set}{child_interval};
+		}
 		#--- execute command
 		&exec_command($no);
 	}
