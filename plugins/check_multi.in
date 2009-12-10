@@ -1569,6 +1569,8 @@ sub exec_command {
 						$cmds[$no]{performance}=undef;
 					}
 				}
+				#--- silently supress empty or blank perfdata
+				$cmds[$no]{performance}=undef if ($cmds[$no]{performance}=~/^\s*$/);
 			}
 	
 			alarm(0);
