@@ -1654,7 +1654,7 @@ sub exec_command {
 		#--- probably the temporary directory is full ;)
 		if (!$cmds[$no]{output} && !$cmds[$no]{error}) {
 			$cmds[$no]{rc}=$UNKNOWN;
-			$cmds[$no]{output}="[no output, no stderr - check your plugin and the tmp directory $opt{set}{tmp_dir}]";
+			add_error("$cmds[$no]{name}: no output, no stderr - check your plugin and the tmp directory $opt{set}{tmp_dir}]");
 		}
 		#--- postprocessing for cumulate
 		if ($cmds[$no]{type} eq "cumulate") {
