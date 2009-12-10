@@ -50,6 +50,7 @@ while (my $f = shift @ARGV) {
 		s|\@configure_args\@|@ac_configure_args@|g;
 		s|\@config_dir\@|$config_dir|g;
 		s|\$\{contrib_dir\}|@contrib_dir@|g;
+		s|\@empty_output_is_unknown\@|@empty_output_is_unknown@|g;
 		s|\@ethtool\@|@ethtool@|g;
 		s|\@exec_open3\@|@exec_open3@|g;
 		s|\@extinfo_in_status\@|@extinfo_in_status@|g;

@@ -644,6 +644,7 @@ collapse
 cmdfile_update_interval
 config_dir
 cumulate_ignore_zero
+empty_output_is_unknown
 extinfo_in_status
 extended_perfdata
 ethtool
@@ -1264,6 +1265,7 @@ detail settings:
   --with-child_interval=<time>             time between child checks, fractions of seconds allowed (default:0.0)
   --with-config_dir=<path>                 directory for check_multi configuration files (default:${sysconfdir}/multi)
   --with-cumulate_ignore_zero=<0|1>        cumulate ignores zero values (default:1)
+  --with-empty_output_is_unknown=<0|1>     should empty output be flagged as UNKNOWN (default:1)
   --with-ethtool=</path/to/ethtool>        define path to ethtool (default:/sbin/ethtool)
   --with-exec_open3=<0|1>                  use new exec method with function open3
   --with-extended_perfdata=<0|1>           provide extended check_multi perfdata
@@ -2264,6 +2266,14 @@ else
   cumulate_ignore_zero="1"
 fi
 
+
+# Check whether --with-empty_output_is_unknown was given.
+if test "${with_empty_output_is_unknown+set}" = set; then
+  withval=$with_empty_output_is_unknown; empty_output_is_unknown=$withval
+else
+  empty_output_is_unknown="1"
+fi
+
 if test ethtool=""; then
 
 # Check whether --with-ethtool was given.
@@ -2525,6 +2535,7 @@ fi
 
 
 #--- substitutions
+
 
 
 
@@ -3275,6 +3286,7 @@ collapse!$collapse$ac_delim
 cmdfile_update_interval!$cmdfile_update_interval$ac_delim
 config_dir!$config_dir$ac_delim
 cumulate_ignore_zero!$cumulate_ignore_zero$ac_delim
+empty_output_is_unknown!$empty_output_is_unknown$ac_delim
 extinfo_in_status!$extinfo_in_status$ac_delim
 extended_perfdata!$extended_perfdata$ac_delim
 ethtool!$ethtool$ac_delim
@@ -3304,7 +3316,6 @@ tmp_dir!$tmp_dir$ac_delim
 tmp_etc!$tmp_etc$ac_delim
 tmp_dir_permissions!$tmp_dir_permissions$ac_delim
 parent_timeout!$parent_timeout$ac_delim
-child_timeout!$child_timeout$ac_delim
 _ACEOF
 
   if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 97; then
@@ -3346,13 +3357,14 @@ _ACEOF
 ac_delim='%!_!# '
 for ac_last_try in false false false false false :; do
   cat >conf$$subs.sed <<_ACEOF
+child_timeout!$child_timeout$ac_delim
 verbose!$verbose$ac_delim
 nagios_name!$nagios_name$ac_delim
 LIBOBJS!$LIBOBJS$ac_delim
 LTLIBOBJS!$LTLIBOBJS$ac_delim
 _ACEOF
 
-  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 4; then
+  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 5; then
     break
   elif $ac_last_try; then
     { { echo "$as_me:$LINENO: error: could not make $CONFIG_STATUS" >&5

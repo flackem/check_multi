@@ -131,6 +131,8 @@ my %opt=(
 		cumulate_ignore_zero => @cumulate_ignore_zero@,
 		# don't complain about being root etc.
 		dont_be_paranoid => 0,
+		# should empty output be flagged as UNKNOWN?
+		empty_output_is_unknown => 1,
 		# use open3 method to exec child checks
 		exec_open3	=> @exec_open3@,
 		# show child checks also in status view (only in HTML mode)
@@ -774,6 +776,7 @@ Set options:
    config_dir=</path/to/config_dir> - path to check_multi config directory, default:$opt{set}{config_dir}
    cumulate_max_rows=<N> - number of rows which cumulate [ TAG ] should display
    cumulate_ignore_zero=<0|1> - should cumulate ignore zero values? default:$opt{set}{cumulate_ignore_zero}
+   empty_output_is_unknown=<0|1> - should empty output be flagged as UNKNOWN?, default:$opt{set}{empty_output_is_unknown}
    exec_open3=<0|1> - use open3 method to exec child checks (to be tested though), default:$opt{set}{exec_open3}
    extinfo_in_status=<0|1> - show child checks also in Nagios status.cgi (HTML), default:$opt{set}{extinfo_in_status}
    file_extension=<ext> - standard file extension for config files, default:$opt{set}{file_extension}
@@ -1652,7 +1655,9 @@ sub exec_command {
 	} else {
 		#--- if there is neither output nor any error message: return UNKNOWN because there went something wrong
 		#--- probably the temporary directory is full ;)
-		if (!$cmds[$no]{output} && !$cmds[$no]{error}) {
+		if ($opt{set}{empty_output_is_unknown} && 
+		    $cmds[$no]{output} eq "" && 
+		    $cmds[$no]{error} eq "") {
 			$cmds[$no]{rc}=$UNKNOWN;
 			add_error("$cmds[$no]{name}: no output, no stderr - check your plugin and the tmp directory $opt{set}{tmp_dir}]");
 		}

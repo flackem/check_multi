@@ -68,6 +68,7 @@ AC_ARG_WITH(checkresults_dir,		[  --with-checkresults_dir=<path>           direc
 AC_ARG_WITH(child_interval,		[  --with-child_interval=<time>             time between child checks, fractions of seconds allowed (default:0.0)],child_interval=$withval,child_interval=0.0)
 AC_ARG_WITH(config_dir,			[  --with-config_dir=<path>                 directory for check_multi configuration files (default:${sysconfdir}/multi)],config_dir=$withval,config_dir="${sysconfdir}/check_multi")
 AC_ARG_WITH(cumulate_ignore_zero,	[  --with-cumulate_ignore_zero=<0|1>        cumulate ignores zero values (default:1)],cumulate_ignore_zero=$withval,cumulate_ignore_zero="1")
+AC_ARG_WITH(empty_output_is_unknown,	[  --with-empty_output_is_unknown=<0|1>     should empty output be flagged as UNKNOWN (default:1)],empty_output_is_unknown=$withval,empty_output_is_unknown="1")
 if test ethtool=""; then
 	AC_ARG_WITH(ethtool,			[  --with-ethtool=</path/to/ethtool>        define path to ethtool (default:/sbin/ethtool)],ethtool=$ethtool,ethtool="/sbin/ethtool")
 fi
@@ -124,6 +125,7 @@ AC_SUBST(collapse)
 AC_SUBST(cmdfile_update_interval)
 AC_SUBST(config_dir)
 AC_SUBST(cumulate_ignore_zero)
+AC_SUBST(empty_output_is_unknown)
 AC_SUBST(extinfo_in_status)
 AC_SUBST(extended_perfdata)
 AC_SUBST(ethtool)
