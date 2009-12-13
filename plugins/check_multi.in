@@ -158,8 +158,8 @@ my %opt=(
 		indent_label	=> @indent_label@,
 		# plugin directory to be added to check_multi search path
 		libexec		=> "@libexecdir@",
-		# specific type to handle mouseover URL: pnp4,pnp6
-		mouseover_type	=> "@mouseover_type@",
+		# pnp_version needed for mouseover: 0.6,0,4
+		pnp_version	=> "@pnp_version@",
 		# label to be shown in output: <name> OK, ...
 		name		=> "@name@",
 		# what RC should be returned if no checks are defined
@@ -168,8 +168,8 @@ my %opt=(
 		notes_url	=> "@notes_url@",
 		# create persistent data
 		persistent	=> @persistent@,
-		# path to PNP cgis
-		pnp_cgi		=> "@pnp_cgi@",
+		# PNP URL
+		pnp_url		=> "@pnp_url@",
 		# report option, binary coded as sum of detail options
 		report		=> @report@,
 		#--- send_nsca: path to send_nsca binary
@@ -786,12 +786,12 @@ Set options:
    indent=<characters> - string to indent child checks, default:$opt{set}{indent}
    indent_label=<0|1> - indentation width is child check label width (HTML), default:$opt{set}{indent_label}
    libexec=</path/to/plugins> - directory to be added to search path: default:$opt{set}{libexec}
-   mouseover_typ=<pnp6|pnp4> - which mouseover type is needed? default:$opt{set}{mouseover_type}
+   pnp_version=<0.6|0.4> - pnp_version needed for mouseover popups? default:$opt{set}{pnp_version}
    name=<string> - label to be shown in output: <name> OK, default:$opt{set}{name}
    no_checks_rc=<RC> - which RC should be returned if no checks are defined, default:$opt{set}{no_checks_rc}
    notes_url=<URL> - URL to be added to child check, see Nagios notes_url
    persistent=<0|1> - run check_multi in persistent mode, default:$opt{set}{persistent}
-   pnp_cgi=</path/to/PNP-CGIs> - specify path to PNP cgi scripts (including CGI), default:$opt{set}{pnp_cgi}
+   pnp_url=</path/to/PNP-CGIs> - specify PNP URL, default:$opt{set}{pnp_url}
    report=<number> - binary coded report option, default:$opt{set}{report}
    send_nsca=<path/to/send_nsca> - path to send_nsca binary, default:$opt{set}{send_nsca}
    send_nsca_cfg=</path/to/send_nsca.cfg> -  path to send_nsca cfg file, default:$opt{set}{send_nsca_cfg}
@@ -2327,7 +2327,7 @@ sub report_html {
 			$def{color}{$cmds[$no]{rc}},
 			$no;
 		#--- Action url (standard version)
-		if (	($opt{set}{report} & $DETAIL_PERFORMANCE) &&
+		if (	($opt{set}{report} & ($DETAIL_PERFORMANCE | $DETAIL_PERFORMANCE_CLASSIC)) &&
 			($opt{set}{report} & $DETAIL_PERFORMANCE_LINK) && 
 			defined($cmds[$no]{performance}) &&
 			$cmds[$no]{process_perfdata} &&
@@ -2344,13 +2344,13 @@ sub report_html {
 			}
 			chomp($hostname);
 			DEBUG3("report_html: hostname is $hostname");
-			my $pnp_cgi=substitute_macros($opt{set}{pnp_cgi});
+			my $pnp_url=substitute_macros($opt{set}{pnp_url});
 			my $image_path=substitute_macros($opt{set}{image_path});
 			$output.=sprintf "<td nowrap>%s</td>", 
-				"<A TARGET=\'$opt{set}{target}\' HREF=\'$pnp_cgi?host=${hostname}&srv=$cmds[$no]{name}\'> " . 
+				"<A TARGET=\'$opt{set}{target}\' HREF=\'$pnp_url?host=${hostname}&srv=$cmds[$no]{name}\'> " . 
 				"<img src=\'$image_path/action.gif\' width=20 height=20 border=0 align=top alt='Show performance chart for $hostname / $cmds[$no]{plugin}'></A>";
 		#--- Action url (mouseover version)
-		} elsif (($opt{set}{report} & $DETAIL_PERFORMANCE) &&
+		} elsif (($opt{set}{report} & ($DETAIL_PERFORMANCE | $DETAIL_PERFORMANCE_CLASSIC)) &&
 			($opt{set}{report} & $DETAIL_PERFORMANCE_LINK) && 
 			defined($cmds[$no]{performance}) &&
 			$cmds[$no]{process_perfdata} &&
@@ -2367,20 +2367,20 @@ sub report_html {
 			}
 			chomp($hostname);
 			DEBUG3("report_html: hostname is $hostname");
-			my $pnp_cgi=substitute_macros($opt{set}{pnp_cgi});
+			my $pnp_url=substitute_macros($opt{set}{pnp_url});
 			my $image_path=substitute_macros($opt{set}{image_path});
-			DEBUG4(">>>$opt{set}{target}:$pnp_cgi:${hostname}:$cmds[$no]{name}:${hostname}:$cmds[$no]{name}:$image_path:$hostname:$cmds[$no]{name}<<<");
+			DEBUG4(">>>$opt{set}{target}:$pnp_url:${hostname}:$cmds[$no]{name}:${hostname}:$cmds[$no]{name}:$image_path:$hostname:$cmds[$no]{name}<<<");
 			my $mouseover_url="";
-			if ($opt{set}{mouseover_type}=~/pnp6/) {
-				$mouseover_url="$opt{set}{pnp_cgi}?host=$opt{set}{HOSTNAME}&srv=$cmds[$no]{name}\' class=\'tips\' rel=\'$opt{set}{pnp_cgi}?host=$opt{set}{HOSTNAME}&srv=$cmds[$no]{name}";
-			} elsif ($opt{set}{mouseover_type}=~/pnp4/) {
-				$mouseover_url="$opt{set}{pnp_cgi}?host=${hostname}&srv=$cmds[$no]{name}\' onmouseout=\'clear_g()\' onmouseover=\"get_g(\'$opt{set}{HOSTNAME}\',\'$cmds[$no]{name}\')\""; 
+			if ($opt{set}{pnp_version}=~/0.6/) {
+				$mouseover_url="$opt{set}{pnp_url}/graph?host=$opt{set}{HOSTNAME}&srv=$cmds[$no]{name}\' class=\'tips\' rel=\'$opt{set}{pnp_url}/popup?host=$opt{set}{HOSTNAME}&srv=$cmds[$no]{name}";
+			} elsif ($opt{set}{pnp_version}=~/0.4/) {
+				$mouseover_url="$opt{set}{pnp_url}/index.php?host=${hostname}&srv=$cmds[$no]{name}\' onmouseout=\'clear_g()\' onmouseover=\"get_g(\'$opt{set}{HOSTNAME}\',\'$cmds[$no]{name}\')\""; 
 			} else {
-				add_error("Invalid mouseover URL type $opt{set}{mouseover_type}, allowed are 'pnp6' and 'pnp4'");
-				$mouseover_url="$pnp_cgi?host=${hostname}&srv=$cmds[$no]{name}";
+				add_error("Invalid mouseover URL type $opt{set}{pnp_version}, allowed are '0.6' and '0.4'");
+				$mouseover_url="$pnp_url/graph?host=${hostname}&srv=$cmds[$no]{name}";
 			}
 			$output.=sprintf "<td nowrap>%s</td>",
-				"<A TARGET=\'$opt{set}{target}\' HREF=\'$mouseover_url\'>" . 
+				"<A HREF=\'$mouseover_url\' TARGET=\'$opt{set}{target}\'>" . 
 				"<img src=\'$image_path/action.gif\' width=20 height=20 border=0 align=top alt='Show performance chart for $hostname / $cmds[$no]{name}'></A>";
 		} else {
 			$output.="<td></td>";

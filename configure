@@ -657,12 +657,12 @@ illegal_chars
 image_path
 indent_label
 indent
-mouseover_type
+pnp_version
 name
 no_checks_rc
 notes_url
 persistent
-pnp_cgi
+pnp_url
 report
 service_definition_template
 snmp_community
@@ -1277,12 +1277,12 @@ detail settings:
   --with-image_path=<URL>                  relative URL to nagios images (default:"/nagios/images")
   --with-indent=<char>                     ASCII output indent character (default:" ")
   --with-indent_label=<0|1>                indentation of child checks? (default:1)
-  --with-mouseover_type=<pnp6|pnp4>        mouseover type (default:PNP 0.6 format)
   --with-name=<name>                       default name for check_multi label (default:"")
   --with-no_checks_rc=<RC>                 RC if no checks are specified (default:3-UNKNOWN)
   --with-notes_url=<URL>                   notes URL (default:"")
   --with-persistent=<0|1>                  persistency: saving of state data between two calls (default:0)
-  --with-pnp_cgi=<URL>                     relative URL to PNP (default for PNP 0.6:"/pnp4nagios/graph")
+  --with-pnp_url=<URL>                     relative URL to PNP (default for PNP 0.6:"/pnp4nagios")
+  --with-pnp_version=<0.6|0.4>             PNP version (default: 0.6)
   --with-report=<NN>                       default report option (default:13)
   --with-snmp_community=<community>        SNMP community (default:public)
   --with-snmp_port=<port>                  SNMP port (default:161)
@@ -2365,14 +2365,6 @@ else
 fi
 
 
-# Check whether --with-mouseover_type was given.
-if test "${with_mouseover_type+set}" = set; then
-  withval=$with_mouseover_type; mouseover_type=$withval
-else
-  mouseover_type="pnp6"
-fi
-
-
 # Check whether --with-name was given.
 if test "${with_name+set}" = set; then
   withval=$with_name; name=$withval
@@ -2405,11 +2397,19 @@ else
 fi
 
 
-# Check whether --with-pnp_cgi was given.
-if test "${with_pnp_cgi+set}" = set; then
-  withval=$with_pnp_cgi; pnp_cgi=$withval
+# Check whether --with-pnp_url was given.
+if test "${with_pnp_url+set}" = set; then
+  withval=$with_pnp_url; pnp_url=$withval
 else
-  pnp_cgi="/pnp4nagios/graph"
+  pnp_url="/pnp4nagios"
+fi
+
+
+# Check whether --with-pnp_version was given.
+if test "${with_pnp_version+set}" = set; then
+  withval=$with_pnp_version; pnp_version=$withval
+else
+  pnp_version="0.6"
 fi
 
 
@@ -3299,12 +3299,12 @@ illegal_chars!$illegal_chars$ac_delim
 image_path!$image_path$ac_delim
 indent_label!$indent_label$ac_delim
 indent!$indent$ac_delim
-mouseover_type!$mouseover_type$ac_delim
+pnp_version!$pnp_version$ac_delim
 name!$name$ac_delim
 no_checks_rc!$no_checks_rc$ac_delim
 notes_url!$notes_url$ac_delim
 persistent!$persistent$ac_delim
-pnp_cgi!$pnp_cgi$ac_delim
+pnp_url!$pnp_url$ac_delim
 report!$report$ac_delim
 service_definition_template!$service_definition_template$ac_delim
 snmp_community!$snmp_community$ac_delim
@@ -3806,12 +3806,12 @@ echo "${ECHO_T} Collapse plus style       $style_plus_minus" >&6; }
 echo "${ECHO_T} Extinfo in status.cgi?    $extinfo_in_status" >&6; }
 { echo "$as_me:$LINENO: result:  Verbosity level default   $verbose" >&5
 echo "${ECHO_T} Verbosity level default   $verbose" >&6; }
-{ echo "$as_me:$LINENO: result:  PNP cgi path              $pnp_cgi" >&5
-echo "${ECHO_T} PNP cgi path              $pnp_cgi" >&6; }
+{ echo "$as_me:$LINENO: result:  pnp version               $pnp_version" >&5
+echo "${ECHO_T} pnp version               $pnp_version" >&6; }
+{ echo "$as_me:$LINENO: result:  PNP URL                   $pnp_url" >&5
+echo "${ECHO_T} PNP URL                   $pnp_url" >&6; }
 { echo "$as_me:$LINENO: result:  PNP chart with mouseover  $action_mouseover" >&5
 echo "${ECHO_T} PNP chart with mouseover  $action_mouseover" >&6; }
-{ echo "$as_me:$LINENO: result:  mouseover type            $mouseover_type" >&5
-echo "${ECHO_T} mouseover type            $mouseover_type" >&6; }
 echo
 echo " --- Links"
 echo " -------------------------------------------------------------------"

@@ -15,7 +15,7 @@ my $bindir="@bindir@";
 my $srcdir="@srcdir@";
 
 my ${image_path}="@image_path@";
-my ${pnp_cgi}="@pnp_cgi@";
+my ${pnp_url}="@pnp_url@";
 my ${service_definition_template}="@service_definition_template@";
 my ${tmp_etc}="@tmp_etc@";
 
@@ -63,12 +63,12 @@ while (my $f = shift @ARGV) {
 		s|\@indent_label\@|@indent_label@|g;
 		s|\@indent\@|@indent@|g;
 		s|\@localstatedir\@|@localstatedir@|g;
-		s|\@mouseover_type\@|@mouseover_type@|g;
 		s|\@name\@|@name@|g;
 		s|\@no_checks_rc\@|@no_checks_rc@|g;
 		s|\@notes_url\@|@notes_url@|g;
 		s|\@persistent\@|@persistent@|g;
-		s|\@pnp_cgi\@|$pnp_cgi|g;
+		s|\@pnp_url\@|$pnp_url|g;
+		s|\@pnp_version\@|@pnp_version@|g;
 		s|\@report\@|@report@|g;
 		s|\@service_definition_template\@|$service_definition_template|g;
 		s|\@snmp_community\@|@snmp_community@|g;
