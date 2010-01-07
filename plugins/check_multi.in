@@ -215,7 +215,7 @@ my %opt=(
 		# verbosity, from 1 (less verbose) to 3 (much verbose)
 		verbose		=> @verbose@,
 		# elements to be added to XML structure
-		xml_elements	=> "name,rc,output,error,plugin,command,performance,starttime,endtime,runtime,type",
+		eml_elements	=> "name,rc,output,error,plugin,command,performance,starttime,endtime,runtime,type",
 	},
 
 	"ok"		=> undef,
@@ -2537,10 +2537,9 @@ sub report_html {
 #---
 sub report_xml {
 
-	my $xmlstr="<div id=\"check_multi_xml\" style='display:none'>";
-	#$xmlstr.="<meta http-equiv=\"Content-Style-Type\" content=\"application/xml\">\n";
-	$xmlstr.="<?xml version=\"1.0\"?>\n";
+	my $xmlstr="<?xml version=\"1.0\"?>\n";
 	$xmlstr.="<?xml-stylesheet type=\"text/xsl\" href=\"extinfo.xsl\"?>\n";
+	$xmlstr.="<div id=\"check_multi_xml\" style='display:none'>\n";
 	$xmlstr.="<PARENT>\n";
 	foreach my $token (sort keys %{$cmds[0]}) {
 		if (defined($cmds[0]{$token})) {
