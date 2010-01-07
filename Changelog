@@ -1,5 +1,6 @@
 
 ===== Changelog =====
+	* added plugin_path variable, it allows to separate different plugins from libexecdir
 	* restructured pnp variables, pnp_cgi is replaced by pnp_url and pnp_version
 	* pnp popup errors fixed, thanks to Joerg Linge, Sebastian Waitz and Rene Rosenberger
 	* added new variable child_interval to provide time interval between child checks (default: 0.0 seconds)

@@ -168,6 +168,8 @@ my %opt=(
 		notes_url	=> "@notes_url@",
 		# create persistent data
 		persistent	=> @persistent@,
+		# path to additional plugins
+		plugin_path	=> "@plugin_path@",
 		# PNP URL
 		pnp_url		=> "@pnp_url@",
 		# report option, binary coded as sum of detail options
@@ -559,6 +561,11 @@ sub process_input {
 			DEBUG2("process_input: IO::Select not available");
 		}
 		DEBUG3("process_input: IPC::Open3 and IO::Select modules loaded");
+	}
+
+	#--- set plugin_path at 2nd position of PATH var
+	if ($opt{set}{plugin_path}) {
+		$ENV{PATH}="$opt{set}{plugin_path}:$ENV{PATH}";
 	}
 
 	#--- set libexec-dir at the beginning of PATH var

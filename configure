@@ -662,6 +662,7 @@ name
 no_checks_rc
 notes_url
 persistent
+plugin_path
 pnp_url
 report
 service_definition_template
@@ -1281,6 +1282,7 @@ detail settings:
   --with-no_checks_rc=<RC>                 RC if no checks are specified (default:3-UNKNOWN)
   --with-notes_url=<URL>                   notes URL (default:"")
   --with-persistent=<0|1>                  persistency: saving of state data between two calls (default:0)
+  --with-plugin_path=</path/to/plugins>    path to plugins (default:"")
   --with-pnp_url=<URL>                     relative URL to PNP (default for PNP 0.6:"/pnp4nagios")
   --with-pnp_version=<0.6|0.4>             PNP version (default: 0.6)
   --with-report=<NN>                       default report option (default:13)
@@ -2397,6 +2399,14 @@ else
 fi
 
 
+# Check whether --with-plugin_path was given.
+if test "${with_plugin_path+set}" = set; then
+  withval=$with_plugin_path; plugin_path=$withval
+else
+  plugin_path=""
+fi
+
+
 # Check whether --with-pnp_url was given.
 if test "${with_pnp_url+set}" = set; then
   withval=$with_pnp_url; pnp_url=$withval
@@ -2535,6 +2545,7 @@ fi
 
 
 #--- substitutions
+
 
 
 
@@ -3304,6 +3315,7 @@ name!$name$ac_delim
 no_checks_rc!$no_checks_rc$ac_delim
 notes_url!$notes_url$ac_delim
 persistent!$persistent$ac_delim
+plugin_path!$plugin_path$ac_delim
 pnp_url!$pnp_url$ac_delim
 report!$report$ac_delim
 service_definition_template!$service_definition_template$ac_delim
@@ -3315,7 +3327,6 @@ target!$target$ac_delim
 tmp_dir!$tmp_dir$ac_delim
 tmp_etc!$tmp_etc$ac_delim
 tmp_dir_permissions!$tmp_dir_permissions$ac_delim
-parent_timeout!$parent_timeout$ac_delim
 _ACEOF
 
   if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 97; then
@@ -3357,6 +3368,7 @@ _ACEOF
 ac_delim='%!_!# '
 for ac_last_try in false false false false false :; do
   cat >conf$$subs.sed <<_ACEOF
+parent_timeout!$parent_timeout$ac_delim
 child_timeout!$child_timeout$ac_delim
 verbose!$verbose$ac_delim
 nagios_name!$nagios_name$ac_delim
@@ -3364,7 +3376,7 @@ LIBOBJS!$LIBOBJS$ac_delim
 LTLIBOBJS!$LTLIBOBJS$ac_delim
 _ACEOF
 
-  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 5; then
+  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 6; then
     break
   elif $ac_last_try; then
     { { echo "$as_me:$LINENO: error: could not make $CONFIG_STATUS" >&5

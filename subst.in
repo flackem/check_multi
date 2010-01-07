@@ -15,6 +15,7 @@ my $bindir="@bindir@";
 my $srcdir="@srcdir@";
 
 my ${image_path}="@image_path@";
+my ${plugin_path}="@plugin_path@";
 my ${pnp_url}="@pnp_url@";
 my ${service_definition_template}="@service_definition_template@";
 my ${tmp_etc}="@tmp_etc@";
@@ -88,6 +89,7 @@ while (my $f = shift @ARGV) {
 		s|\@image_path\@|$image_path|g;		
 		s|\@localstatedir\@|$localstatedir|g;
 		s|\@libexecdir\@|$libexecdir|g;	
+		s|\@plugin_path\@|$plugin_path|g;		
 		s|\$\{exec_prefix\}|$exec_prefix|g;	# must be next to last
 		s|\@prefix\@|@prefix@|g;		# must be last
 		s|\$\{prefix\}|@prefix@|g;		# must be last
