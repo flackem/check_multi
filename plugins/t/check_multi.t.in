@@ -12,7 +12,8 @@ my $t;
 
 #--- add $libexec_dir to PATH to be sure that plugins will be called from libexec_dir
 my $libexec_dir="@libexecdir@";
-$ENV{PATH}="$libexec_dir:$ENV{PATH}";
+my $plugin_path="@plugin_path@";
+$ENV{PATH}="$libexec_dir:$plugin_path:$ENV{PATH}";
 
 #--- check needed plugins for tests
 my @plugins=(

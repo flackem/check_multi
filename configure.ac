@@ -86,7 +86,7 @@ AC_ARG_WITH(name,			[  --with-name=<name>                       default name for
 AC_ARG_WITH(no_checks_rc,		[  --with-no_checks_rc=<RC>                 RC if no checks are specified (default:3-UNKNOWN)],no_checks_rc=$withval,no_checks_rc=3)
 AC_ARG_WITH(notes_url,			[  --with-notes_url=<URL>                   notes URL (default:"")],notes_url=$withval,notes_url="")
 AC_ARG_WITH(persistent,			[  --with-persistent=<0|1>                  persistency: saving of state data between two calls (default:0)],persisent=$withval,persistent=0)
-AC_ARG_WITH(plugin_path,		[  --with-plugin_path=</path/to/plugins>    path to plugins (default:"")],plugin_path=$withval,plugin_path="")
+AC_ARG_WITH(plugin_path,		[  --with-plugin_path=</path/to/plugins>    path to plugins (default:"/usr/local/nagios/libexec")],plugin_path=$withval,plugin_path="/usr/local/nagios/libexec")
 AC_ARG_WITH(pnp_url,			[  --with-pnp_url=<URL>                     relative URL to PNP (default for PNP 0.6:"/pnp4nagios")],pnp_url=$withval,pnp_url="/pnp4nagios")
 AC_ARG_WITH(pnp_version,		[  --with-pnp_version=<0.6|0.4>             PNP version (default: 0.6)],pnp_version=$withval,pnp_version="0.6")
 AC_ARG_WITH(report,			[  --with-report=<NN>                       default report option (default:13)],report=$withval,report="13")

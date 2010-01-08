@@ -1282,7 +1282,7 @@ detail settings:
   --with-no_checks_rc=<RC>                 RC if no checks are specified (default:3-UNKNOWN)
   --with-notes_url=<URL>                   notes URL (default:"")
   --with-persistent=<0|1>                  persistency: saving of state data between two calls (default:0)
-  --with-plugin_path=</path/to/plugins>    path to plugins (default:"")
+  --with-plugin_path=</path/to/plugins>    path to plugins (default:"/usr/local/nagios/libexec")
   --with-pnp_url=<URL>                     relative URL to PNP (default for PNP 0.6:"/pnp4nagios")
   --with-pnp_version=<0.6|0.4>             PNP version (default: 0.6)
   --with-report=<NN>                       default report option (default:13)
@@ -2403,7 +2403,7 @@ fi
 if test "${with_plugin_path+set}" = set; then
   withval=$with_plugin_path; plugin_path=$withval
 else
-  plugin_path=""
+  plugin_path="/usr/local/nagios/libexec"
 fi
 
 
