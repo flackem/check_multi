@@ -31,6 +31,7 @@ $OK $WARNING $CRITICAL $UNKNOWN
 $DETAIL_LIST $DETAIL_LIST_FULL $DETAIL_HTML $DETAIL_STDERR $DETAIL_PERFORMANCE
 $DETAIL_PERFORMANCE_CLASSIC $DETAIL_STATUS $DETAIL_PERFORMANCE_LINK $DETAIL_XML $DETAIL_NAGIOS2
 $DETAIL_NOTES_LINK $DETAIL_SERVICE_DEFINITION $DETAIL_SEND_NSCA $DETAIL_FEED_PASSIVE
+$DETAIL_ENCODE_COMMANDS
 *DEBUG1 *DEBUG2 *DEBUG3 *DEBUG4
 );
 BEGIN {
@@ -80,6 +81,7 @@ $DETAIL_NOTES_LINK=1024;
 $DETAIL_SERVICE_DEFINITION=2048;
 $DETAIL_SEND_NSCA=4096;
 $DETAIL_FEED_PASSIVE=8192;
+$DETAIL_ENCODE_COMMANDS=16384;
 #
 #--- vars
 $no=0;
@@ -1052,22 +1054,32 @@ sub parse_files {
 	#--- loop over filenames
 	foreach my $filename (@{$filenames}) {
 
-		if (!open(FILE, $filename)) {
+		#--- encoded flat file
+		if ($filename=~/%0A/) {
+			$filename=~s/\%([A-Fa-f0-9]{2})/pack('C', hex($1))/seg;
+			@lines=(split(/\n/,$filename));
+			DEBUG3("-" x 80);
+			DEBUG3("parse_files: parsing encoded $filename with $#lines lines");
+			DEBUG3("-" x 80);
+		#--- error opening file
+		} elsif (!open(FILE, $filename)) { 
 			next if ($opt{set}{ignore_missing_cmd_file});
 			add_error("parse_files: cannot open config file $filename: $!");
 			$rc{head}=$UNKNOWN;		# head RC to UNKNOWN
 			$rc{expr}[$OK]="0==1";	# OK: false
 			next;
+		#--- read file
 		} else {
 			@lines=<FILE>;
 			push @lines, ""; # add empty line to avoid last line eval problem
 			close FILE;
+			DEBUG3("-" x 80);
+			DEBUG3("parse_files: parsing file $filename with $#lines lines");
+			DEBUG3("-" x 80);
 		}
-		DEBUG3("-" x 80);
-		DEBUG3("parse_files: parsing file $filename with $#lines lines");
-		DEBUG3("-" x 80);
 	
 		parse_lines(@lines);
+
 	}
 	return $#cmds+1;
 }
@@ -1083,6 +1095,13 @@ sub parse_lines {
 	$lineno=0;	# count sourcefile lines
 	DEBUG4("parse_lines: starting with " . $#cmds . " command(s)");
 	LINE: while ($line=shift(@lines)) {
+
+		#--- encode lines
+		if ($opt{set}{report} & $DETAIL_ENCODE_COMMANDS) {
+			$line=~s/([^A-Za-z0-9])/sprintf("%%%02X", ord($1))/seg;
+			print $line;
+			next LINE;
+		}
 
 		#--- count lines
 		$lineno++;		
@@ -2973,6 +2992,12 @@ add_error("please don't run plugins as root!") if ($opt{set}{user}=~/root/ && !$
 
 #--- parse single command lines
 &parse_lines(@{$opt{execute}});
+
+#--- quick exit if only encoding of commands requested
+if ($opt{set}{report} & $DETAIL_ENCODE_COMMANDS) {
+	print "%0A\n";	# end up with NEWLINE
+	exit $OK;	
+}
 
 #--- no child checks defined yet? Throw UNKNOWN
 if ($#cmds<1) {

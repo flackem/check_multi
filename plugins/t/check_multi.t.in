@@ -27,7 +27,7 @@ foreach my $plugin (@plugins) {
 		plan skip_all => "Skipping tests because component $plugin not found or not executable as \'$path_to_plugin\'";
 	}
 }
-plan tests => 34;
+plan tests => 38;
 
 my $result;
 my $testopts="-s dont_be_paranoid=1";
@@ -224,6 +224,41 @@ like(
 );
 
 #-------------------------------------------------------------------------------
+#--- check_multi encode  (report option 16384) ---------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi -r 16384 -x 'command [ encode ] = echo encode' $testopts",
+);
+is(
+	$result->return_code, 
+	0, 
+	"report option 16384 - encode commands - RC0 - passed"
+);
+like(
+	$result->output,
+	'/command%20%5B%20encode%20%5D%20%3D%20echo%20encode%0A/',
+	"output correct - passed"
+);
+
+#-------------------------------------------------------------------------------
+#--- check_multi decode (of encoded command) -----------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi -f command%20%5B%20encode%20%5D%20%3D%20echo%20encode%0A $testopts",
+);
+is(
+	$result->return_code, 
+	0, 
+	"decode encoded command - RC0 - passed"
+);
+like(
+	$result->output,
+	'/OK - 1 plugins checked, 1 ok\n'. 
+	'\[ 1\] encode encode\|check_multi::check_multi::plugins=1 time=\d+\.\d+/',
+	"output correct - passed"
+);
+
+#-------------------------------------------------------------------------------
 #--- check_multi recursive -----------------------------------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
@@ -232,7 +267,7 @@ $result = NPTest->testCmd(
 is(
 	$result->return_code, 
 	0, 
-	"check_multi recursive (check_multi calls check_multi) - RC0 - passed"
+	"recursive (check_multi calls check_multi) - RC0 - passed"
 );
 like(
 	$result->output,
@@ -251,7 +286,7 @@ $result = NPTest->testCmd(
 is(
 	$result->return_code, 
 	0, 
-	"check_multi discards invalid perfdata - RC0 - passed"
+	"discards invalid perfdata - RC0 - passed"
 );
 like(
 	$result->output,
@@ -269,7 +304,7 @@ $result = NPTest->testCmd(
 is(
 	$result->return_code, 
 	0, 
-	"check_multi overloading commands - RC0 - passed"
+	"overloading commands - RC0 - passed"
 );
 like(
 	$result->output,
@@ -286,7 +321,7 @@ $result = NPTest->testCmd(
 is(
 	$result->return_code, 
 	0, 
-	"check_multi custom output for header line - RC0 - passed"
+	"custom output for header line - RC0 - passed"
 );
 like(
 	$result->output,
@@ -303,7 +338,7 @@ $result = NPTest->testCmd(
 is(
 	$result->return_code, 
 	0, 
-	"check_multi feeds check_multi - RC0 - passed"
+	"feeds check_multi - RC0 - passed"
 );
 like(
 	$result->output,
@@ -320,7 +355,7 @@ $result = NPTest->testCmd(
 is(
 	$result->return_code, 
 	0, 
-	"check_multi changes child check attributes - RC0 - passed"
+	"changes child check attributes - RC0 - passed"
 );
 like(
 	$result->output,
@@ -337,7 +372,7 @@ $result = NPTest->testCmd(
 is(
 	$result->return_code, 
 	0, 
-	"check_multi cumulates data like top - RC0 - passed"
+	"cumulates data like top - RC0 - passed"
 );
 like(
 	$result->output,
