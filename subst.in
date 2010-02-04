@@ -4,7 +4,13 @@ my $prefix="@prefix@";
 my $exec_prefix="@exec_prefix@";
 
 my $CHMOD="@CHMOD@";
-my $INSTALL="@INSTALL@"; $INSTALL=~s/^\.\//\.\.\// if ($INSTALL=~/^\.\//);
+my $INSTALL="@INSTALL@"; 
+#--- ugly, but I don't know how to handle several subsequent directories.
+#--- if someone has an idea... ;)
+if ($INSTALL=~/^\.\//) {
+	my $pwd=`pwd`; chomp $pwd;
+	$INSTALL="$pwd/$INSTALL";
+}
 my $INSTALL_OPTS="@INSTALL_OPTS@";
 my $PERL="@PERL@";
 my $action_mouseover="@action_mouseover@";
