@@ -2351,7 +2351,7 @@ sub report_html {
 
 		$output.=sprintf "<tr style='font-size:8pt'><td nowrap><table style='background-color:%s'><tr style='vertical-align:middle'><td style='font-size:6pt'>%2.d</td></tr></table></td>", 
 			$def{color}{$cmds[$no]{rc}},
-			$no;
+			$cmds[$no]{number};
 		#--- Action url (standard version)
 		if (	($opt{set}{report} & ($DETAIL_PERFORMANCE | $DETAIL_PERFORMANCE_CLASSIC)) &&
 			($opt{set}{report} & $DETAIL_PERFORMANCE_LINK) && 
@@ -2612,7 +2612,7 @@ sub report_xml {
 
 	for ($no=1;$no<=$#cmds;$no++) {
 		$xmlstr.="\t<CHILD>\n";
-		$xmlstr.="\t\t<no>$no</no>\n";
+		$xmlstr.="\t\t<no>$cmds[$no]{number}</no>\n";
 		#foreach my $token (split(/,/,$opt{set}{xml_elements})) {
 		foreach my $token (sort keys %{$cmds[$no]}) {
 			if (defined($cmds[$no]{$token})) {
