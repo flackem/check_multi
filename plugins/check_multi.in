@@ -996,6 +996,15 @@ sub add_error {
 }
 
 #---
+#--- fatal - immediate exit with UNKNOWN state
+#---
+sub fatal {
+	DEBUG3("fatal: exit with error message \'@_\'");
+	print "$MYSELF fatal error: @_\n";
+	exit $UNKNOWN;
+}
+
+#---
 #--- create unique tmpfile and try to create it
 #---
 sub get_tmpfile {
@@ -1018,8 +1027,7 @@ sub get_tmpfile {
 			return $tmpfile;
 		}
 	}
-	add_error("get_tmpfile: giving up opening $tmpfile after $attempt attempts:$!");
-	return "";
+	fatal("get_tmpfile: giving up creating $tmpfile:$!");
 }
 
 #---
@@ -1494,7 +1502,7 @@ sub exec_command {
 	
 				#--- execute command and store stdout/stderr/return code
 				if (!defined(my $child=fork())) {
-    					die "cannot fork: $!";
+    					fatal("cannot fork: $!");
 				} elsif ($child==0) {
 					exec("$cmds[$no]{command} 1>$tmp_stdout 2>$tmp_stderr");
 				} else { 
