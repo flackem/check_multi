@@ -121,7 +121,7 @@ is(
 like(
 	$result->output,
 	'/^UNKNOWN - 1 plugins checked, 0 critical, 0 warning, 1 unknown, 0 ok\n'.
-	'\[ 1\] procs  \[ STDERR: sh: check_prox: command not found RC was 127!\]$/',
+	'\[ 1\] procs  \[ sh: check_prox: command not found RC was 127!\]$/',
 	"output correct - passed"
 );
 

@@ -91,6 +91,7 @@ $tmp_stdout="";
 $tmp_stderr="";
 %def=(
 	label	=> { $OK  => "OK", $WARNING  => "WARNING", $CRITICAL  => "CRITICAL", $UNKNOWN  => "UNKNOWN", },
+	llabel	=> { $OK  => "ok", $WARNING  => "warning", $CRITICAL  => "critical", $UNKNOWN  => "unknown", },
 	code	=> { "OK" => $OK,  "WARNING" => $WARNING,  "CRITICAL" => $CRITICAL,  "UNKNOWN" => $UNKNOWN,
 		     "ok" => $OK,  "warning" => $WARNING,  "critical" => $CRITICAL,  "unknown" => $UNKNOWN,  },
 	s2r	=> { 0    => $OK,  2         => $WARNING,  3          => $CRITICAL,  1         => $UNKNOWN,  },
@@ -191,7 +192,9 @@ my %opt=(
 		# name of the file which contains template for '-r 2048'
 		service_definition_template => "@service_definition_template@",
 		# signals to cover
-		signals		=> ["DUMMY","INT","TERM","QUIT","HUP"],
+		signals		=> ["DUMMY","INT","TERM","QUIT","HUP","__WARN__"],
+		# which RC if caught signal
+		signal_rc	=> @signal_rc@,
 		# snmp_community
 		snmp_community	=> "@snmp_community@",
 		# snmp_community
@@ -978,13 +981,16 @@ sub signal_handler {
 	install_signal_handler(\install_signal_handler, $signal);
 
 	#--- do reports before quitting
-	add_error("Got signal $signal");
-	&result_rating;
+	my $message=$signal; chomp $message;
+	add_error("Got signal - $message");
+	&global_result_rating;
 	&report_all;
 
 	#--- cleanup end exit
 	unlink $tmp_stdout, $tmp_stderr if (!$opt{set}{exec_open3});
-	exit $rc{head};
+
+	#--- exit with predefined exit code or with head rc
+	exit (defined($opt{signal_rc})) ? $opt{signal_rc} : $rc{head};
 }
 
 #---
@@ -1073,7 +1079,7 @@ sub parse_files {
 		} elsif (!open(FILE, $filename)) { 
 			next if ($opt{set}{ignore_missing_cmd_file});
 			add_error("parse_files: cannot open config file $filename: $!");
-			$rc{head}=$UNKNOWN;		# head RC to UNKNOWN
+			$rc{head}=$UNKNOWN;	# head RC to UNKNOWN
 			$rc{expr}[$OK]="0==1";	# OK: false
 			next;
 		#--- read file
@@ -1182,6 +1188,7 @@ sub parse_header {
 	#--- split name::key. If key is not available, its empty.
 	($name,$key)=split(/::/,$name); 
 	$key="" if (!defined($key));
+	$key=lc($key);	# force lower key for keys
 	DEBUG4("parse_header: type:$type name:$name key:$key cmd:$cmd lineno:$lineno");
 
 	#--- $name = 'head'? then $i = 0
@@ -1214,9 +1221,9 @@ sub parse_header {
 			return undef;
 		} else {
 			if (!defined($cmds[$i]{$key})) {
-				DEBUG2("parse_header: $key=$cmd inserted into $name attribute (\$cmds[$i])");
+				DEBUG2("parse_header: key $key attribute \'$cmd\' inserted into object $name (\$cmds[$i])");
 			} else {
-				DEBUG2("parse_header: $key=$cmd changed in $name attributes (\$cmds[$i]), was: $cmds[$i]{$key}");
+				DEBUG2("parse_header: key $key attribute \'$cmd\' changed in object $name (\$cmds[$i]), was: $cmds[$i]{$key}");
 			}
 			$cmds[$i]{$key}=$cmd;
 		}
@@ -1248,6 +1255,10 @@ sub parse_header {
 		$cmds[$i]{command}=$cmd;
 		$cmds[$i]{plugin}=$plugin;
 		$cmds[$i]{pplugin}=$pplugin;
+		$cmds[$i]{ok}=undef;
+		$cmds[$i]{warning}=undef;
+		$cmds[$i]{critical}=undef;
+		$cmds[$i]{unknown}=undef;
 		$cmds[$i]{rc}=$UNKNOWN;
 		$cmds[$i]{displayed}=1;
 		$cmds[$i]{output}="";
@@ -1276,6 +1287,10 @@ sub parse_header {
 		$cmds[$i]{command}=$cmd;
 		$cmds[$i]{plugin}=$type;
 		$cmds[$i]{pplugin}="";
+		$cmds[$i]{ok}=undef;
+		$cmds[$i]{warning}=undef;
+		$cmds[$i]{critical}=undef;
+		$cmds[$i]{unknown}=undef;
 		$cmds[$i]{rc}=$UNKNOWN;
 		$cmds[$i]{displayed}=1;
 		$cmds[$i]{output}="";
@@ -1297,6 +1312,10 @@ sub parse_header {
 		$cmds[$i]{command}=$cmd;
 		$cmds[$i]{plugin}="eval";
 		$cmds[$i]{pplugin}="eval";
+		$cmds[$i]{ok}=undef;
+		$cmds[$i]{warning}=undef;
+		$cmds[$i]{critical}=undef;
+		$cmds[$i]{unknown}=undef;
 		$cmds[$i]{rc}=$UNKNOWN;
 		$cmds[0]{nallchecks}++;
 		$cmds[$i]{displayed}=0;
@@ -1325,6 +1344,10 @@ sub parse_header {
 		$cmds[$i]{command}=$cmd;
 		$cmds[$i]{plugin}="eval";
 		$cmds[$i]{pplugin}="eval";
+		$cmds[$i]{ok}=undef;
+		$cmds[$i]{warning}=undef;
+		$cmds[$i]{critical}=undef;
+		$cmds[$i]{unknown}=undef;
 		$cmds[$i]{rc}=$UNKNOWN;
 		$cmds[$i]{displayed}=1;
 		$cmds[$i]{output}="";
@@ -1366,6 +1389,10 @@ sub parse_header {
 		$cmds[$i]{plugin}="snmp";
 		$cmds[$i]{pplugin}="snmp";
 		$cmds[$i]{rc}=$UNKNOWN;
+		$cmds[$i]{ok}=undef;
+		$cmds[$i]{warning}=undef;
+		$cmds[$i]{critical}=undef;
+		$cmds[$i]{unknown}=undef;
 		$cmds[$i]{displayed}=1;
 		$cmds[$i]{output}="";
 		$cmds[$i]{error}="";
@@ -1401,6 +1428,10 @@ sub parse_header {
 				$cmds[$i]{command}=$cmd;
 				$cmds[$i]{plugin}=undef;
 				$cmds[$i]{pplugin}=undef;
+				$cmds[$i]{ok}=undef;
+				$cmds[$i]{warning}=undef;
+				$cmds[$i]{critical}=undef;
+				$cmds[$i]{unknown}=undef;
 				$cmds[$i]{rc}=$UNKNOWN;
 				$cmds[$i]{displayed}=1;
 				$cmds[$i]{output}="";
@@ -1649,6 +1680,10 @@ sub exec_command {
 		$cmds[$no]{endtime}=time;
 		$cmds[$no]{runtime}=$cmds[$no]{endtime}-$cmds[$no]{starttime};
 		alarm(0);
+
+		#--- evaluate single command RC rating
+		single_result_rating($no);
+
 		return $cmds[$no]{rc};
 	} elsif ($cmds[$no]{type} eq "statusdat") {
 		local $SIG{ALRM} = sub {
@@ -1712,6 +1747,10 @@ sub exec_command {
 					$top[$i]{command}=$cmds[$no]{command};
 					$top[$i]{plugin}=$cmds[$no]{type};
 					$top[$i]{pplugin}=$cmds[$no]{plugin};
+					$top[$i]{ok}=undef;
+					$top[$i]{warning}=undef;
+					$top[$i]{critical}=undef;
+					$top[$i]{unknown}=undef;
 					$top[$i]{rc}=$OK;
 					$top[$i]{number}=$no+$i;
 					$top[$i]{displayed}=1;
@@ -1729,6 +1768,9 @@ sub exec_command {
 				$cmds[0]{nchecks}+=$#top;
 			}
 		}
+
+		#--- evaluate single command RC rating
+		single_result_rating($no);
 		
 		#--- set environment variable states
 		set_env_vars($no);
@@ -1954,16 +1996,20 @@ sub eval_result {
 	}
 
  	#--- at runtime: substitute $MACRO$ macros and $STATES$
+	DEBUG4("eval_result: input before substituting macros: $input");
 	$input=substitute_macros($input);
 	$input=substitute_states($input);
+	DEBUG4("eval_result: input after substituting macros: $input");
 
 	#--- evaluate expression
 	my $result=eval "($input)";
 
+	DEBUG4("eval_result: after evaluation: result=$result \$\@=$@");
 	#--- catch error
 	if ($@) {
 		$message="Evaluation error in \'$input_org\': $@\n";
 		$message=~s/\n/ /g;
+		DEBUG4("eval_result: eval error $message");
 		return (-1,$message);
 	#--- return result
 	} else {
@@ -2067,7 +2113,7 @@ sub state_string_ascii {
 #---
 #--- calculate sums from %cmds and %rc
 #---
-sub result_rating {
+sub global_result_rating {
 
 	#--- measure runtime without reporting ;-)
 	$cmds[0]{runtime}=time - $cmds[0]{starttime};
@@ -2084,6 +2130,7 @@ sub result_rating {
 		push @{$rc{list_all}[$cmds[$no]{rc}]},$cmds[$no]{name}; # add plugin to all list
 	}
 	
+	#--- sort in severity order
 	foreach my $s (sort numerically keys %{$def{s2r}}) {
 		$ENV{"MULTI_$def{label}{$s}_COUNT"}=$rc{count}[$s];
 		$ENV{"MULTI_$def{label}{$s}_LIST"}=join(',',@{$rc{list}[$s]});
@@ -2096,7 +2143,7 @@ sub result_rating {
 		if (! defined($result) || $result eq "") {
 			; # do nothing
 		} elsif ($result < 0) {
-			add_error("result_rating: parsing error ($message)");
+			add_error("global_result_rating: parsing error ($message)");
 		} else {
 			$rc{match}[$state]=1;
 			$rc{head}=$state;
@@ -2105,6 +2152,39 @@ sub result_rating {
 	}
 	#--- set several environment vars for 'head'
 	set_env_vars(0);
+}
+
+#---
+#--- behave like check_generic: evaluate RCs for single command
+#---
+sub single_result_rating {
+	my $no=shift;
+
+	#--- sort in severity order
+	foreach my $state (sort numerically keys %{$def{s2r}}) {
+
+		#--- no special settings for evaluation? then do not evaluete!
+		if (!defined($cmds[$no]{$def{llabel}{$state}})) {
+			DEBUG4("single_result_rating: no expression for $def{llabel}{$state} -> no evaluation");
+			next;
+		} else {
+			DEBUG4("single_result_rating: expression found for $def{llabel}{$state}: >>>\'$cmds[$no]{output}\'$cmds[$no]{$def{llabel}{$state}}<<<");
+		}
+
+		my ($result,$message)=eval_result("\'$cmds[$no]{output}\'$cmds[$no]{$def{llabel}{$state}}");
+		DEBUG4("single_result_rating: evaluating expression \'$cmds[$no]{output}\'$cmds[$no]{$def{llabel}{$state}}, result is $result");
+
+		if (! defined($result) || $result eq "") {
+			; # do nothing
+		} elsif ($result < 0) {
+			add_error("single_result_rating: parsing error $message");
+			DEBUG4("single_result_rating: parsing error expresstion ($cmds[$no]{output}$cmds[$no]{$state})->($message)");
+		} else {
+			$cmds[$no]{rc}=$state;
+			$cmds[$no]{error}.="Output matched rule \'$cmds[$no]{$def{llabel}{$state}}\' -> RC is set to $def{label}{$state}";
+			DEBUG4("single_result_rating: setting RC of cmds[$no] to $state");
+		}
+	}
 }
 
 #---
@@ -2249,7 +2329,7 @@ sub report_ascii {
 				$cmds[$no]{name},
 				$cmds[$no]{output},
 				(defined($cmds[$no]{error}) && $cmds[$no]{error} ne "" && ($opt{set}{report} & $DETAIL_STDERR)) ?
-			 	" [ STDERR: " . $cmds[$no]{error} . ']' : "";
+			 	" [ " . $cmds[$no]{error} . ']' : "";
 		} else {
 			$cmds[$no]{output}=~s/\n/\n$opt{set}{indent}/g;
 			printf "%s[%2.d] %s %s%s%s",
@@ -2262,7 +2342,7 @@ sub report_ascii {
 					: "",
 				($cmds[$no]{output}=~/\<!--(.*?)--\>/sg) ? $1 : $cmds[$no]{output},
 				(defined($cmds[$no]{error}) && $cmds[$no]{error} ne "" && ($opt{set}{report} & $DETAIL_STDERR)) ?
-			 	" [ STDERR: " . $cmds[$no]{error} . ']' : "";
+			 	" [ " . $cmds[$no]{error} . ']' : "";
 		}
 	}
 
@@ -2468,7 +2548,7 @@ sub report_html {
 			$cmds[$no]{error} ne "" && 
 			($opt{set}{report} & $DETAIL_STDERR)) {
 
-			$output.=" [ STDERR: " . join('<br>',$cmds[$no]{error}) . "]";
+			$output.=" [ " . join('<br>',$cmds[$no]{error}) . "]";
 		}
 		$output.="</tr>";
 	}
@@ -2619,6 +2699,7 @@ sub report_xml {
 	$xmlstr.="\t<error>" . join(", ",@{$cmds[0]{error}}) . "</error>\n" if (defined($cmds[0]{error}[0]));
 
 	for ($no=1;$no<=$#cmds;$no++) {
+		next if (!$cmds[$no]{displayed});
 		$xmlstr.="\t<CHILD>\n";
 		$xmlstr.="\t\t<no>$cmds[$no]{number}</no>\n";
 		#foreach my $token (split(/,/,$opt{set}{xml_elements})) {
@@ -3047,7 +3128,7 @@ while ($no<=$#cmds) {
 $cmds[0]{endtime}=time;
 
 #--- prepare output
-&result_rating;
+&global_result_rating;
 
 #--- report
 &report_all;

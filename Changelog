@@ -1,5 +1,6 @@
 
 ===== Changelog =====
+	* added ok/warning/critical/unknown state rules for particular child checks: check_multi goes check_generic
 	* added fatal exit for two conditions: fork error and tmpfile error
 	* added encode option for providing complete config files via command line, thx to Michael Kraus and Gerhard Lausser
 	* added plugin_path variable, it allows to separate different plugins from libexecdir
