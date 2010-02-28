@@ -983,14 +983,18 @@ sub signal_handler {
 	#--- do reports before quitting
 	my $message=$signal; chomp $message;
 	add_error("Got signal - $message");
+	DEBUG4("signal_handler - with message $message");
 	&global_result_rating;
+	DEBUG4("signal_handler - RC code $rc{head}");
 	&report_all;
 
 	#--- cleanup end exit
 	unlink $tmp_stdout, $tmp_stderr if (!$opt{set}{exec_open3});
 
 	#--- exit with predefined exit code or with head rc
-	exit (defined($opt{signal_rc})) ? $opt{signal_rc} : $rc{head};
+	my $RC=(defined($opt{set}{signal_rc})) ? $opt{set}{signal_rc} : $rc{head};
+	DEBUG4("signal_handler - signal_rc is $opt{set}{signal_rc} - exiting with RC code $RC");
+	exit($RC);
 }
 
 #---
@@ -2004,7 +2008,6 @@ sub eval_result {
 	#--- evaluate expression
 	my $result=eval "($input)";
 
-	DEBUG4("eval_result: after evaluation: result=$result \$\@=$@");
 	#--- catch error
 	if ($@) {
 		$message="Evaluation error in \'$input_org\': $@\n";
@@ -3134,4 +3137,5 @@ $cmds[0]{endtime}=time;
 &report_all;
 
 #--- return rc with highest severity
+DEBUG4("This is the end - with RC $rc{head}");
 exit $rc{head};

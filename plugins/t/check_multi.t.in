@@ -24,8 +24,18 @@ my @plugins=(
 foreach my $plugin (@plugins) {
 	my $path_to_plugin=`which $plugin`; chomp $path_to_plugin;
 	if (! -x "$path_to_plugin") {
-		plan skip_all => "Skipping tests because component $plugin not found or not executable as \'$path_to_plugin\'";
+		plan skip_all => "tests because component $plugin not found or not executable as \'$path_to_plugin\'";
 	}
+}
+my $path_to_check_procs=`which check_procs`; chomp $path_to_check_procs;
+my $procs_string="";
+my $procs_warning="";
+my $procs_output=`$path_to_check_procs -w 10`; chomp $procs_output;
+if ($procs_output=~/PROCS (\S+): \d+ (\S+)/) {
+	$procs_warning=$1;
+	$procs_string=$2;
+} else {
+	plan skip_all => "tests because check_procs output ($procs_output) does not match pattern (PROCS (\\S+): \\d+ (\\s+))";
 }
 plan tests => 38;
 
@@ -46,7 +56,7 @@ is(
 like(
 	$result->output,
 	'/^OK - 1 plugins checked, 1 ok\n'.
-	'\[ 1\] procs PROCS OK: \d+ processes|check_multi::check_multi::plugins=1 time=\d+$/',
+	'\[ 1\] procs PROCS OK: \d+ '.$procs_string.'|check_multi::check_multi::plugins=1 time=\d+$/',
 	"output correct - passed"
 );
 
@@ -65,7 +75,7 @@ is(
 like(
 	$result->output,
 	'/^OK - 1 plugins checked, 0 critical, 0 warning, 0 unknown, 1 ok\n'.
-	'\[ 1\] procs PROCS OK: \d+ processes$/',
+	'\[ 1\] procs PROCS OK: \d+ '.$procs_string.'$/',
 	"output correct - passed"
 );
 
@@ -84,7 +94,7 @@ is(
 like(
 	$result->output,
 	'/^WARNING - 1 plugins checked, 1 warning \(procs\)\n'.
-	'\[ 1\] procs PROCS WARNING: \d+ processes$/',
+	'\[ 1\] procs PROCS '.$procs_warning.': \d+ '.$procs_string.'$/',
 	"output correct - passed"
 );
 
@@ -103,7 +113,7 @@ is(
 like(
 	$result->output,
 	'/^OK - 1 plugins checked, 0 critical, 0 warning, 0 unknown, 1 ok\n'.
-	'<SCRIPT LANGUAGE=\'JavaScript\'> function Toggle.*PROCS OK: \d+ processes.*div>$/',
+	'<SCRIPT LANGUAGE=\'JavaScript\'> function Toggle.*PROCS OK: \d+ '.$procs_string.'.*div>$/',
 	"output correct - passed"
 );
 
@@ -313,6 +323,23 @@ like(
 	"output correct - passed"
 );
 #-------------------------------------------------------------------------------
+#--- killing me softly - checking signal handler -------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi -x 'eeval [ killing_me_HUPly ] = kill 1, \$\$;' -r 1 $testopts",
+);
+is(
+	$result->return_code, 
+	3, 
+	"testing signal handler - RC0 - passed"
+);
+like(
+	$result->output,
+	'/^UNKNOWN - 1 plugins checked, 1 unknown \(killing_me_HUPly\) \[Got signal - HUP\]\n'.
+	'\[ 1\] killing_me_HUPly $/',
+	"output correct - passed"
+);
+#-------------------------------------------------------------------------------
 #--- output / head -------------------------------------------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
@@ -326,24 +353,7 @@ is(
 like(
 	$result->output,
 	'/\\d+ processes running\n'.
-	'\[ 1\] procs PROCS OK: \\d+ processes$/',
-	"output correct - passed"
-);
-#-------------------------------------------------------------------------------
-#--- check_multi feeds check_multi ---------------------------------------------
-#-------------------------------------------------------------------------------
-$result = NPTest->testCmd(
-	"@PERL@ ../check_multi -x 'command [ procs ] = check_procs' -r 256 | ../check_multi -r 1 $testopts",
-);
-is(
-	$result->return_code, 
-	0, 
-	"feeds check_multi - RC0 - passed"
-);
-like(
-	$result->output,
-	'/OK - 1 plugins checked, 1 ok\n'.
-	'\[ 1\] procs PROCS OK: \d+ processes$/',
+	'\[ 1\] procs PROCS OK: \\d+ '.$procs_string.'$/',
 	"output correct - passed"
 );
 #-------------------------------------------------------------------------------
