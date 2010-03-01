@@ -37,10 +37,31 @@ if ($procs_output=~/PROCS (\S+): \d+ (\S+)/) {
 } else {
 	plan skip_all => "tests because check_procs output ($procs_output) does not match pattern (PROCS (\\S+): \\d+ (\\s+))";
 }
-plan tests => 38;
+plan tests => 40;
 
 my $result;
 my $testopts="-s dont_be_paranoid=1";
+
+#-------------------------------------------------------------------------------
+#--- check_multi version -------------------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi -V"
+);
+print '-'x 80 ; print "\n";
+print $result->output; print "\n";
+print '-'x 80 ; print "\n";
+is(
+	$result->return_code, 
+	3, 
+	"check_multi version - RC3 - passed"
+);
+like(
+	$result->output,
+	'/^check_multi.*Revision.*Date.*Author: flackem.*\n'.
+	'configure.*$/',
+	"output correct - passed"
+);
 
 #-------------------------------------------------------------------------------
 #--- simple OK output with 1 plugin --------------------------------------------
