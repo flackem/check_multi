@@ -262,7 +262,7 @@ my $check_multi={
 };
 
 
-	
+
 #-------------------------------------------------------------------------------
 #--- subs ----------------------------------------------------------------------
 #-------------------------------------------------------------------------------
@@ -350,7 +350,7 @@ sub process_input {
 				$opt{set}{use_xml_simple} = 0;
 				add_error("process_input: XML::Simple not available: $@");
 			}
-	
+
 			#--- read in XML data and feed cmds structure
 			if ($opt{set}{use_xml_simple}) {
 				my $in=XML::Simple::XMLin(
@@ -463,7 +463,7 @@ sub process_input {
 			DEBUG3("http/ftp URL specified: $opt{filename}[$i]");
 
 			#--- LWP module NOT loaded?
- 			if (!$opt{set}{use_lwp_simple}) {
+			if (!$opt{set}{use_lwp_simple}) {
 				add_error("LWP::Simple module not available, could not get command file $opt{filename}[$i]");
 				next;
 			}
@@ -1099,7 +1099,7 @@ sub parse_files {
 			DEBUG3("parse_files: parsing file $filename with $#lines lines");
 			DEBUG3("-" x 80);
 		}
-	
+
 		parse_lines(@lines);
 
 	}
@@ -1192,7 +1192,7 @@ sub parse_header {
 	my ($type,$name,$cmd,$lineno)=@_;
 
 	my ($i,$key,$host,$service);
-	
+
 	#--- split name::key. If key is not available, its empty.
 	($name,$key)=split(/::/,$name); 
 	$key="" if (!defined($key));
@@ -1484,7 +1484,7 @@ sub parse_header {
 			$found=1;
 		} elsif ($name=~/head/i) {
 			($cmds[0]{fmtstr},@{$cmds[0]{parms}})=split(',',$cmd);
-                        $found=1;
+			$found=1;
 		} else {
 			for ($i=0; $found==0 && $i<=$#cmds;$i++) {
 				if ($cmds[$i]{name} eq $name) {
@@ -1531,17 +1531,17 @@ sub exec_command {
 
 		eval {
 			alarm($opt{set}{timeout});
-	
+
 			#--- classic execution with temporary files
 			if (!$opt{set}{exec_open3}) {
 
 				#--- prepare tmpfiles for stdout and stderr
 				$tmp_stdout=&get_tmpfile("$opt{set}{tmp_dir}", "${MYSELF}_stdout_$$");
 				$tmp_stderr=&get_tmpfile("$opt{set}{tmp_dir}", "${MYSELF}_stderr_$$");
-	
+
 				#--- execute command and store stdout/stderr/return code
 				if (!defined(my $child=fork())) {
-    					fatal("cannot fork: $!");
+					fatal("cannot fork: $!");
 				} elsif ($child==0) {
 					exec("$cmds[$no]{command} 1>$tmp_stdout 2>$tmp_stderr");
 				} else { 
@@ -1558,7 +1558,7 @@ sub exec_command {
 				$cmds[$no]{rc}=$? >> 8;
 				$ENV{"MULTI_${no}_RC"}=$cmds[$no]{rc};
 				$ENV{"MULTI_${no}_RC_label"}=($cmds[$no]{rc}<=$UNKNOWN)?$def{label}{$cmds[$no]{rc}}:"INVALID";
-	
+
 				#--- store stdout/stderr and cleanup tmpfiles
 				$cmds[$no]{output}=readfile($tmp_stdout);
 				DEBUG3("exec_command: raw output >$cmds[$no]{output}<");
@@ -1610,7 +1610,7 @@ sub exec_command {
 			#DEBUG3("exec_command: raw stderr >$cmds[$no]{error}<");
 			$cmds[$no]{stdout}=HTML::Entities::encode_entities($cmds[$no]{stdout}) if ($opt{set}{use_html_entities} && $cmds[$no]{stdout});
 			$cmds[$no]{error}=HTML::Entities::encode_entities($cmds[$no]{error}) if ($opt{set}{use_html_entities} && $cmds[$no]{error});
-	
+
 			#--- split performance data from standard output
 			if ($cmds[$no]{output}=~/\|/) {
 				DEBUG4("exec_command(1): output contains \|");
@@ -1645,7 +1645,7 @@ sub exec_command {
 				#--- silently supress empty or blank perfdata
 				$cmds[$no]{performance}=undef if (defined($cmds[$no]{performance}) && $cmds[$no]{performance}=~/^\s*$/);
 			}
-	
+
 			alarm(0);
 		};
 	} elsif ($cmds[$no]{type} eq "eval" || $cmds[$no]{type} eq "eeval") {
@@ -1656,11 +1656,11 @@ sub exec_command {
 		$cmds[$no]{output}=eval($cmds[$no]{command});
 		if ($cmds[$no]{type} eq "eeval") {
 			$cmds[$no]{rc}=$?>>8;
-         		#--- unknown return code? change it explicitly to UNKNOWN
-         		if (! defined($def{r2s}{$cmds[$no]{rc}})) {
-            			$cmds[$no]{error}.=" RC was $cmds[$no]{rc}!";
-            			$cmds[$no]{rc}=$UNKNOWN;
-         		}
+			#--- unknown return code? change it explicitly to UNKNOWN
+			if (! defined($def{r2s}{$cmds[$no]{rc}})) {
+				$cmds[$no]{error}.=" RC was $cmds[$no]{rc}!";
+				$cmds[$no]{rc}=$UNKNOWN;
+			}
 		} elsif ($cmds[$no]{type} eq "eval") {
 			$cmds[$no]{rc}=$OK;
 		}
@@ -1698,7 +1698,7 @@ sub exec_command {
 			add_error("$cmds[$no]{name}: timeout after $opt{set}{timeout}s");
 		};
 		alarm($opt{set}{timeout});
-                ($cmds[$no]{rc},$cmds[$no]{output})=get_status_dat_service($opt{set}{status_dat},$cmds[$no]{host},$cmds[$no]{service});
+		($cmds[$no]{rc},$cmds[$no]{output})=get_status_dat_service($opt{set}{status_dat},$cmds[$no]{host},$cmds[$no]{service});
 		if ($cmds[$no]{rc} == -1) {
 			add_error("statusdat $cmds[$no]{name}: cannot find service \'$cmds[$no]{service}\' on host \'$cmds[$no]{host}\' in \'$opt{set}{status_dat}\'");
 			$cmds[$no]{rc}=$UNKNOWN;
@@ -1709,13 +1709,13 @@ sub exec_command {
 			add_error("$cmds[$no]{name}: timeout after $opt{set}{timeout}s");
 		};
 		alarm($opt{set}{timeout});
-                ($cmds[$no]{rc},$cmds[$no]{output})=get_snmp($cmds[$no]{host},$opt{set}{snmp_port},$opt{set}{snmp_community},$cmds[$no]{command},$cmds[$no]{translate});
+		($cmds[$no]{rc},$cmds[$no]{output})=get_snmp($cmds[$no]{host},$opt{set}{snmp_port},$opt{set}{snmp_community},$cmds[$no]{command},$cmds[$no]{translate});
 		$ENV{"MULTI_".$cmds[$no]{name}}="$cmds[$no]{output}";
 		alarm(0);
 	}
 	$cmds[$no]{endtime}=time;
 	$cmds[$no]{runtime}=$cmds[$no]{endtime}-$cmds[$no]{starttime};
-	
+
 	#--- any oddities during command execution?
 	if ($@) {
 		#--- timeout encountered: store status
@@ -1735,8 +1735,8 @@ sub exec_command {
 		#--- if there is neither output nor any error message: return UNKNOWN because there went something wrong
 		#--- probably the temporary directory is full ;)
 		if ($opt{set}{empty_output_is_unknown} && 
-		    $cmds[$no]{output} eq "" && 
-		    $cmds[$no]{error} eq "") {
+			$cmds[$no]{output} eq "" && 
+			$cmds[$no]{error} eq "") {
 			$cmds[$no]{rc}=$UNKNOWN;
 			add_error("$cmds[$no]{name}: no output, no stderr - check your plugin and the tmp directory $opt{set}{tmp_dir}]");
 		}
@@ -1824,7 +1824,7 @@ sub get_cumulated_top {
 }
 
 sub get_status_dat_service {
-        my ($statusdat_path, $host_name, $service_description)=@_;
+	my ($statusdat_path, $host_name, $service_description)=@_;
 
 	if (!$host_name || !$service_description) {
 		add_error("get_status_dat_service: empty host_name=$host_name or service_description=$service_description specified");
@@ -1845,7 +1845,7 @@ sub get_status_dat_service {
 		return (-1,"");
 	} else {
 		DEBUG4("get_status_dat_service: found data for $host_name:$service_description: RC $status_dat->{$host_name}->{$service_description}->{current_state} and output \'$status_dat->{$host_name}->{$service_description}->{plugin_output}\', long_output \'$status_dat->{$host_name}->{$service_description}->{long_plugin_output}\'");
-        	return (
+		return (
 			$status_dat->{$host_name}->{$service_description}->{current_state}, 
 			$status_dat->{$host_name}->{$service_description}->{plugin_output}."\n".
 			$status_dat->{$host_name}->{$service_description}->{long_plugin_output}
@@ -1854,7 +1854,7 @@ sub get_status_dat_service {
 }
 
 sub expand_status_dat_service {
-        my ($statusdat_path, $host_name, $service_description)=@_;
+	my ($statusdat_path, $host_name, $service_description)=@_;
 
 	DEBUG4("expand_status_dat_service: expanding $host_name:$service_description");
 	if (!$host_name || !$service_description) {
@@ -1952,25 +1952,25 @@ sub read_status_dat {
 sub get_snmp {
 	my ($host,$port,$community,$oid,$translate)=@_;
 	if (!defined($opt{set}{use_snmp})) {
-                unless (eval "use Net::SNMP;1") {
-                        $opt{set}{use_snmp}=0;
-                	DEBUG3("get_snmp: error: could not load Net::SNMP module");
+		unless (eval "use Net::SNMP;1") {
+			$opt{set}{use_snmp}=0;
+			DEBUG3("get_snmp: error: could not load Net::SNMP module");
 			return (3,"Load of perl module Net::SNMP failed");
-                } else {
-                	DEBUG3("get_snmp: Net::SNMP module loaded");
+		} else {
+			DEBUG3("get_snmp: Net::SNMP module loaded");
 		}
 	} elsif ($opt{set}{use_snmp} != 1) {
-                DEBUG3("get_snmp: no Net::SNMP module available");
+		DEBUG3("get_snmp: no Net::SNMP module available");
 		return (3,"perl module Net::SNMP not available");
 	}
-	
+
 	my ($session, $error) = Net::SNMP->session(
 		-hostname=>$host,
 		-community=>$community,
 		-translate=>$translate,
 	);
 	if (!defined $session) {
-                DEBUG3("get_snmp: error creating Net::SNMP session: $error");
+		DEBUG3("get_snmp: error creating Net::SNMP session: $error");
 		return (3,"error creating Net::SNMP session: $error");
 	}
 
@@ -1979,13 +1979,13 @@ sub get_snmp {
 	if (!defined $result) {
 		$error=$session->error();
 		$session->close();
-                DEBUG3("get_snmp: Net::SNMP session error: $error");
+		DEBUG3("get_snmp: Net::SNMP session error: $error");
 		return (3,"Net::SNMP session error: $error");
 	}
 
 	DEBUG3("get_snmp: result for $host($port)-$oid: $result->{$oid}");
 	$session->close();
-	
+
 	return (0,$result->{$oid});
 }
 
@@ -2003,7 +2003,7 @@ sub eval_result {
 		return ($UNKNOWN, "eval_result: invalid empty input");
 	}
 
- 	#--- at runtime: substitute $MACRO$ macros and $STATES$
+	#--- at runtime: substitute $MACRO$ macros and $STATES$
 	DEBUG4("eval_result: input before substituting macros: $input");
 	$input=substitute_macros($input);
 	$input=substitute_states($input);
@@ -2041,7 +2041,7 @@ sub get_state_token {
 	my $start=0;
 	my $end=0;
 	my $instring=0;
-	
+
 	#--- read string (and one char more for handling of last token)
 	for (my $pos=0; $pos<=length($state); $pos++) {
 
@@ -2103,7 +2103,7 @@ sub get_state_token {
 	#--- return array
 	@token;
 }
-	
+
 sub state_string_ascii {
 	my ($state)=@_;
 	my $output="";
@@ -2136,7 +2136,7 @@ sub global_result_rating {
 		$rc{count_all}[$cmds[$no]{rc}]++;	# count all return codes
 		push @{$rc{list_all}[$cmds[$no]{rc}]},$cmds[$no]{name}; # add plugin to all list
 	}
-	
+
 	#--- sort in severity order
 	foreach my $s (sort numerically keys %{$def{s2r}}) {
 		$ENV{"MULTI_$def{label}{$s}_COUNT"}=$rc{count}[$s];
@@ -2205,11 +2205,11 @@ sub report_all {
 
 	#--- construction site for persistence
 	if ($opt{set}{persistent} && $opt{set}{use_xml_simple} && $cmds[0]{key}) {
-                unless (eval "use Data::Dumper;1") {
-                        $opt{set}{test}=0;
-                        DEBUG2("report_all: Data::Dumper not available");
-                } else {
-                	DEBUG3("report_all: Data::Dumper module loaded");
+		unless (eval "use Data::Dumper;1") {
+			$opt{set}{test}=0;
+			DEBUG2("report_all: Data::Dumper not available");
+		} else {
+			DEBUG3("report_all: Data::Dumper module loaded");
 			DEBUG4("report_all:" . Dumper($check_multi));
 		}
 
@@ -2253,10 +2253,10 @@ sub report_all {
 	if ($opt{set}{report} & $DETAIL_FEED_PASSIVE) {
 		&report_checkresult_file;
 	}
-	
+
 	#--- at last: perfdata
 	&report_perfdata;
-	
+
 	#--- final '\n' - dedicated to Wolfgang Barth ;-)
 	if (	!($opt{set}{report} & $DETAIL_NAGIOS2) && 
 		!($opt{set}{report} & $DETAIL_HTML) &&
@@ -2273,7 +2273,7 @@ sub report_ascii {
 	DEBUG1("\n","-" x 80);
 	DEBUG1("Plugin output");
 	DEBUG1("-" x 80);
-	
+
 	if (defined($cmds[0]{fmtstr})) {
 		my $output="printf " . $cmds[0]{fmtstr};
 	 	$output.="," . join(",",@{$cmds[0]{parms}}) if (defined($cmds[0]{parms}));
@@ -2287,7 +2287,7 @@ sub report_ascii {
 		#--- print header line (1): name, state, number of plugins
 		print "$opt{set}{name} " if $opt{set}{name};
 		print "$def{label}{$rc{head}} - $cmds[0]{nchecks} plugins checked, ";
-	
+
 		#--- print header line (2): summary for particular states 
 		if ($opt{set}{report} & $DETAIL_LIST_FULL) {
 			print	"$rc{count}[$CRITICAL] critical" . ((@{$rc{list}[$CRITICAL]}) ? " (" . join(', ',@{$rc{list}[$CRITICAL]}) . ')' : "") . ", " .
@@ -2310,7 +2310,7 @@ sub report_ascii {
 	}
 	#--- print general errors if any occured
 	print " [" . join(", ",@{$cmds[0]{error}}) . "]" if (defined($cmds[0]{error}[0]));
-	
+
 	#--- loop over commands: report particular results for long plugin output
 	for ($no=1;$no<=$#cmds;$no++) {
 
@@ -2385,7 +2385,7 @@ sub report_ascii {
 #---
 sub report_html {
 	my $output="";
-	
+
 	if (defined($cmds[0]{fmtstr})) {
 		$output.="sprintf " . $cmds[0]{fmtstr};
 	 	$output.="," . join(",",@{$cmds[0]{parms}}) if (defined($cmds[0]{parms}));
@@ -2396,7 +2396,7 @@ sub report_html {
 		#--- print header line (1): name, state, number of plugins
 		$output.="$opt{set}{name} " if $opt{set}{name};
 		$output.="$def{label}{$rc{head}} - $cmds[0]{nchecks} plugins checked, ";
-	
+
 		#--- print header line (2): summary for particular states 
 		if ($opt{set}{report} & $DETAIL_LIST_FULL) {
 			$output.="$rc{count}[$CRITICAL] critical" . ((@{$rc{list}[$CRITICAL]}) ? " (" . join(', ',@{$rc{list}[$CRITICAL]}) . ')' : "") . ", " .
@@ -2563,7 +2563,7 @@ sub report_html {
 	$output.="</div>" if ($opt{set}{collapse} == 1 && ! $opt{set}{extinfo_in_status});
 
 	#--- print state evaluation if verbose flag set
-        if ($opt{set}{verbose} >= 2) {
+	if ($opt{set}{verbose} >= 2) {
 		if ($ENV{"MULTI_PPID"} != $$) {
 			$output.="<A onClick='Toggle(this)' style='".$opt{set}{style_plus_minus}."'>+</A>";
 			$output.="<DIV style='display:none'><h4>Child check overview</h4>";
@@ -2645,7 +2645,7 @@ sub report_html {
 		}
 		$output.="</div>";
 	}
-	
+
 	#--- status_in_extinfo? escape newlines by '<br>'
 	$output=~s/\n/<br \/>/g if ($opt{set}{extinfo_in_status});
 
@@ -2908,7 +2908,7 @@ sub report_service_definition {
 		close DEF;
 	}
 	my $output="";
-        for($no=1;$no<=$#cmds;$no++) {
+	for($no=1;$no<=$#cmds;$no++) {
 		next if ($cmds[$no]{type} eq "eval");
 		my @svc=@tpl;
 		foreach my $line (@svc) {
@@ -2918,7 +2918,7 @@ sub report_service_definition {
 			DEBUG4("report_service_definition: after substitution: $line");
 			$output.=$line;
 		}
-        }
+	}
 	print $output;
 }
 
@@ -3111,7 +3111,7 @@ $cmds[0]{timeouttime}=$cmds[0]{starttime} + $opt{set}{TIMEOUT};
 #--- loop over commands in order of config file
 $no=1;
 while ($no<=$#cmds) {
-	
+
 	#--- if total timeout is going to be exceeded, cancel next commands
 	if (time + $opt{set}{timeout} > $cmds[0]{timeouttime}) {
 		$cmds[$no]{output}="UNKNOWN - execution cancelled due to global timeout ($opt{set}{TIMEOUT}s)";
