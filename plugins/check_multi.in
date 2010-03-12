@@ -540,8 +540,12 @@ sub process_input {
 
 	#--- report option - notes_url
 	if ($opt{set}{report} & $DETAIL_NOTES_LINK && !$opt{set}{notes_url}) {
-		$opt{set}{notes_url}=$ENV{"${NAGIOS}_SERVICENOTESURL"};
-		DEBUG3("process_input: notes report option set - taking $Nagios SERVICENOTESURL ".$ENV{"${NAGIOS}_SERVICENOTESURL"});
+		if ($ENV{"${NAGIOS}_SERVICENOTESURL"}) {
+			$opt{set}{notes_url}=$ENV{"${NAGIOS}_SERVICENOTESURL"};
+			DEBUG3("process_input: notes report option set - taking $Nagios SERVICENOTESURL ".$ENV{"${NAGIOS}_SERVICENOTESURL"});
+		} else {
+			add_error("process_input: Notes link report option chosen, but no $Nagios environment variable SERVICENOTESURL found and no parameter notes_url specified");
+		}
 	}
 
 	#--- if no module HTML::Entities available - set var
