@@ -356,7 +356,7 @@ is(
 );
 like(
 	$result->output,
-	'/^UNKNOWN - 1 plugins checked, 1 unknown \(killing_me_HUPly\) \[Got signal - HUP\]\n'.
+	'/^UNKNOWN - 1 plugins checked, 1 unknown \(killing_me_HUPly\) \[HUP generated at line 1 in.*\]\n'.
 	'\[ 1\] killing_me_HUPly $/',
 	"output correct - passed"
 );

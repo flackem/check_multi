@@ -979,15 +979,15 @@ sub install_signal_handler {
 #--- got signal? report what we have and terminate savely
 #--- 
 sub signal_handler {
-	my $signal=$_[0];
+	my $signal=$_[0]; chomp $signal;
+	my @loc=caller(1);
 
 	#--- reinstall signal_handler (just paranoid ;)
 	install_signal_handler(\install_signal_handler, $signal);
 
 	#--- do reports before quitting
-	my $message=$signal; chomp $message;
-	add_error("Got signal - $message");
-	DEBUG4("signal_handler - with message $message");
+	add_error("$signal generated at line $loc[2] in $loc[1] ($loc[3])");
+	DEBUG4("signal_handler - with message $signal");
 	&global_result_rating;
 	DEBUG4("signal_handler - RC code $rc{head}");
 	&report_all;
@@ -1668,7 +1668,11 @@ sub exec_command {
 			$cmds[$no]{output}.="[$@]";
 			$cmds[$no]{rc}=$WARNING;
 		} else {
-			chomp($cmds[$no]{output});
+			if (!$cmds[$no]{output}) {
+				$cmds[$no]{output}="";
+			} else {
+				chomp($cmds[$no]{output});
+			}
 			$ENV{"MULTI_".$cmds[$no]{name}}="$cmds[$no]{output}";
 			#--- split performance data from standard output
 			if ($cmds[$no]{output}=~/\|/) {
