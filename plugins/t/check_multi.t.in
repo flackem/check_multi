@@ -37,7 +37,7 @@ if ($procs_output=~/PROCS (\S+): \d+ (\S+)/) {
 } else {
 	plan skip_all => "tests because check_procs output ($procs_output) does not match pattern (PROCS (\\S+): \\d+ (\\s+))";
 }
-plan tests => 40;
+plan tests => 42;
 
 my $result;
 my $testopts="-s dont_be_paranoid=1";
@@ -268,6 +268,24 @@ is(
 like(
 	$result->output,
 	'/command%20%5B%20encode%20%5D%20%3D%20echo%20encode%0A/',
+	"output correct - passed"
+);
+
+#-------------------------------------------------------------------------------
+#--- check_multi hide OK states (report option 32768) --------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi -r 32768 -x 'command [ OK ] = (echo 0; exit 0)' -x 'command [ WARNING ] = (echo 1; exit 1)' $testopts",
+);
+is(
+	$result->return_code, 
+	1, 
+	"report option 32768 - hide OK states - RC1 - passed"
+);
+like(
+	$result->output,
+	'/WARNING - 2 plugins checked, 0 critical, 1 warning, 0 unknown, 1 ok\n'.
+	'\[ 2\] WARNING 1/',
 	"output correct - passed"
 );
 
