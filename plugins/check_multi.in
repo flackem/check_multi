@@ -196,6 +196,8 @@ my %opt=(
 		signals		=> ["DUMMY","INT","TERM","QUIT","HUP","__WARN__"],
 		# which RC if caught signal
 		signal_rc	=> @signal_rc@,
+		# loose (German) performance data (replace commata by decimal points)
+		loose_perfdata => "@loose_perfdata@",
 		# snmp_community
 		snmp_community	=> "@snmp_community@",
 		# snmp_community
@@ -805,6 +807,7 @@ Set options:
    indent=<characters> - string to indent child checks, default:$opt{set}{indent}
    indent_label=<0|1> - indentation width is child check label width (HTML), default:$opt{set}{indent_label}
    libexec=</path/to/plugins> - directory to be added to search path: default:$opt{set}{libexec}
+   loose_perfdata=<0|1> - accept non standard performance data, e.g. german commata, default:$opt{set}{loose_perfdata}
    pnp_version=<0.6|0.4> - pnp_version needed for mouseover popups? default:$opt{set}{pnp_version}
    name=<string> - label to be shown in output: <name> OK, default:$opt{set}{name}
    no_checks_rc=<RC> - which RC should be returned if no checks are defined, default:$opt{set}{no_checks_rc}
@@ -1640,7 +1643,7 @@ sub exec_command {
 
 				#--- check performance data and suppress if found errors
 				if (($opt{set}{report} & $DETAIL_PERFORMANCE) && $cmds[$no]{process_perfdata}) {
-					if (my $errstr=error_in_perfdata($cmds[$no]{performance})) {
+					if (my $errstr=parse_perfdata($cmds[$no]{performance})) {
 						add_error("$cmds[$no]{name} perfdata discarded for $errstr");
 						$cmds[$no]{performance}=undef;
 					}
@@ -1684,7 +1687,7 @@ sub exec_command {
 
 				#--- check performance data and suppress if found errors
 				if (($opt{set}{report} & $DETAIL_PERFORMANCE) && $cmds[$no]{process_perfdata}) {
-					if (my $errstr=error_in_perfdata($cmds[$no]{performance})) {
+					if (my $errstr=parse_perfdata($cmds[$no]{performance})) {
 						add_error("$cmds[$no]{name} perfdata discarded for $errstr");
 						$cmds[$no]{performance}=undef;
 					}
@@ -2830,7 +2833,7 @@ sub report_perfdata {
 			next if (! $cmds[$no]{process_perfdata});
 
 			if (defined($cmds[$no]{performance})) {
-				if (my $errstr=error_in_perfdata($cmds[$no]{performance})) {
+				if (my $errstr=parse_perfdata($cmds[$no]{performance})) {
 					add_error("$cmds[$no]{name} perfdata discarded for $errstr");
 				} else {
 					print "$cmds[$no]{performance} ";
@@ -2843,34 +2846,43 @@ sub report_perfdata {
 #---
 #--- find errors in perfdata
 #---
-sub error_in_perfdata {
+sub parse_perfdata {
 	my $perfdata=shift;
 	my $label="";
 	my $data="";
 	my $error="";
 	my $uom="";
 
+	#--- accepting loose perfdata
+	if ($opt{set}{loose_perfdata}) {
+		DEBUG4("parse_perfdata: loose_perfdata=1"); 
+		#--- replace decimal comma with decimal point
+		if ($ENV{LANG} =~ /de_DE/) {
+			DEBUG4("parse_perfdata: LANG is de_DE, replacing commata by decimal points"); 
+			($perfdata) =~ s/,/./g;
+		}
+	}
 
 	#---
 	#--- 'label'=value[UOM];[warn];[crit];[min];[max]
 	#---
 	#--- loop over perfdata
 	while ($perfdata) {
-		DEBUG4("error_in_perfdata: parsing perfdata:$perfdata");	
+		DEBUG4("parse_perfdata: parsing perfdata:$perfdata");	
 		#--- label w/ \'
 		if ($perfdata=~/^\s*(\'[^']*\')=([^ ]+)(.*)/) {
 			$label=$1;
 			$data=$2;
 			$perfdata=$3;
-			DEBUG4("error_in_perfdata: parsed perfdata -'label':$1 data:$2 rest:$3");	
+			DEBUG4("parse_perfdata: parsed perfdata -'label':$1 data:$2 rest:$3");	
 		#--- label w/o \'
 		} elsif ($perfdata=~/^\s*([^\s=']+)=([^ ]+)(.*)/) {
 			$label=$1;
 			$data=$2;
 			$perfdata=$3;
-			DEBUG4("error_in_perfdata: parsed perfdata - label:$1 data:$2 rest:$3");	
+			DEBUG4("parse_perfdata: parsed perfdata - label:$1 data:$2 rest:$3");	
 		} else {
-			DEBUG2("error_in_perfdata: general parsing error - invalid perfdata");	
+			DEBUG2("parse_perfdata: general parsing error - invalid perfdata");	
 			return "general error in '$perfdata'";
 		}
 		$perfdata=~s/^\s+//; $perfdata=~s/\s+$//;
@@ -2885,10 +2897,10 @@ sub error_in_perfdata {
 
 		#--- invalid perfdata with trailing ';' after max value
 		if (($data=~tr/;//)>=5) {
-			DEBUG2("error_in_perfdata: invalid ';' after max value $max");	
+			DEBUG2("parse_perfdata: invalid ';' after max value $max");	
 			return "error in '$data': invalid ';' after max value $max";
 		} else {
-			DEBUG4("error_in_perfdata: number of ';' ok in $data: " . scalar($data=~tr/;//));	
+			DEBUG4("parse_perfdata: number of ';' ok in $data: " . scalar($data=~tr/;//));	
 		}
 
 		$error.= "$label: bad value \'$value\' in data \'$data\' " if ($value && $value !~/^[-0-9.]+$/);
@@ -2901,7 +2913,7 @@ sub error_in_perfdata {
 
 		#--- done: perfdata is ok
 	}
-	DEBUG3("error_in_perfdata: no errors found");	
+	DEBUG3("parse_perfdata: no errors found");	
 	return undef;
 }
 

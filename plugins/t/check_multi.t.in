@@ -37,7 +37,7 @@ if ($procs_output=~/PROCS (\S+): \d+ (\S+)/) {
 } else {
 	plan skip_all => "tests because check_procs output ($procs_output) does not match pattern (PROCS (\\S+): \\d+ (\\s+))";
 }
-plan tests => 42;
+plan tests => 44;
 
 my $result;
 my $testopts="-s dont_be_paranoid=1";
@@ -330,7 +330,7 @@ like(
 #--- discarding perfdata  ------------------------------------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi -x 'command [ eins ] = echo \"eins|eins=1,1\"' -r 9 $testopts",
+	"@PERL@ ../check_multi -x 'command [ eins ] = echo \"eins|eins=1,1\"' -r 9 -s loose_perfdata=0 $testopts",
 );
 is(
 	$result->return_code, 
@@ -343,6 +343,27 @@ like(
 	'\[ 1\] eins eins\|check_multi::check_multi::plugins=1 time=\d+\.\d+ $/',
 	"output correct - passed"
 );
+
+#-------------------------------------------------------------------------------
+#--- accepting loose German perfdata -------------------------------------------
+#-------------------------------------------------------------------------------
+my $old_ENV_LANG=$ENV{LANG};
+$ENV{LANG}="de_DE";
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi -x 'command [ eins ] = echo \"eins|eins=1,1\"' -r 9 -s loose_perfdata=1 $testopts",
+);
+is(
+	$result->return_code, 
+	0, 
+	"accepting loose perfdata - RC0 - passed"
+);
+like(
+	$result->output,
+	'/^OK - 1 plugins checked, 1 ok\n'.
+	'\[ 1\] eins eins\|check_multi::check_multi::plugins=1 time=\d+\.\d+ eins::echo::eins=1\,1 $/',
+	"output correct - passed"
+);
+$ENV{LANG}=$old_ENV_LANG;
 
 #-------------------------------------------------------------------------------
 #--- overloading ---------------------------------------------------------------

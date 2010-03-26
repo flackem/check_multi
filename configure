@@ -615,6 +615,7 @@ snmp_port
 snmp_community
 signal_rc
 service_definition_template
+loose_perfdata
 report
 pnp_url
 plugin_path
@@ -727,6 +728,7 @@ with_illegal_chars
 with_image_path
 with_indent
 with_indent_label
+with_loose_perfdata
 with_name
 with_no_checks_rc
 with_notes_url
@@ -1398,6 +1400,7 @@ detail settings:
   --with-image_path=<URL>                  relative URL to nagios images (default:"/nagios/images")
   --with-indent=<char>                     ASCII output indent character (default:" ")
   --with-indent_label=<0|1>                indentation of child checks? (default:1)
+  --with-loose_perfdata=1                  loose performance data (default:1)
   --with-name=<name>                       default name for check_multi label (default:"")
   --with-no_checks_rc=<RC>                 RC if no checks are specified (default:3-UNKNOWN)
   --with-notes_url=<URL>                   notes URL (default:"")
@@ -2519,6 +2522,14 @@ else
 fi
 
 
+# Check whether --with-loose_perfdata was given.
+if test "${with_loose_perfdata+set}" = set; then
+  withval=$with_loose_perfdata; loose_perfdata=$withval
+else
+  loose_perfdata=1
+fi
+
+
 # Check whether --with-name was given.
 if test "${with_name+set}" = set; then
   withval=$with_name; name=$withval
@@ -2705,6 +2716,7 @@ fi
 
 
 #--- substitutions
+
 
 
 
