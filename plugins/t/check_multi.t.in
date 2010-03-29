@@ -37,7 +37,7 @@ if ($procs_output=~/PROCS (\S+): \d+ (\S+)/) {
 } else {
 	plan skip_all => "tests because check_procs output ($procs_output) does not match pattern (PROCS (\\S+): \\d+ (\\s+))";
 }
-plan tests => 44;
+plan tests => 46;
 
 my $result;
 my $testopts="-s dont_be_paranoid=1";
@@ -455,3 +455,24 @@ like(
 	'check_multi::check_multi::plugins=5 time=[\d\.]+ \S+::cumulate::\S+=\d+ \S+::cumulate::\S+=\d+ \S+::cumulate::\S+=\d+ \S+::cumulate::\S+=\d+ \S+::cumulate::\S+=\d+ $/',
 	"output correct - passed"
 );
+#-------------------------------------------------------------------------------
+#--- check_multi child and global timeout --------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi -x 'command [ one ] = ( sleep 2; echo one)' -x 'command [ two ] = echo two' -r 1 -t 1 -T 2 $testopts",
+);
+is(
+	$result->return_code, 
+	3, 
+	"timeout check: child one killed, child two cancelled - RC3 - passed"
+);
+like(
+	$result->output,
+	'/UNKNOWN - 2 plugins checked, 2 unknown \(one, two\) \[one: timeout after 1s\]\n'.
+	'\[ 1\] one \n'.
+	'\[ 2\] two UNKNOWN - execution cancelled due to global timeout \(2s\)/',
+	"output correct - passed"
+);
+#-------------------------------------------------------------------------------
+#--- check_multi cumulate ------------------------------------------------------
+#-------------------------------------------------------------------------------

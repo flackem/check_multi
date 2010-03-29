@@ -1553,9 +1553,15 @@ sub exec_command {
 				} else { 
 					$SIG{'ALRM'} = sub { 
 						add_error("$cmds[$no]{name}: timeout after $opt{set}{timeout}s"); 
+						#--- kill both ways: with prepended minus some perl versions kill the
+						#--- whole process group while positive numbers kill exact one process
+						#--- we want to end all child check processes in order to clean up
+						#--- properly after timeouts
 						kill -15,$child; 
+						kill 15,$child; 
 						sleep 1; 
 						kill -9,$child; 
+						kill 9,$child; 
 					};
 					alarm($opt{set}{timeout});
 					waitpid($child,0);
@@ -2857,8 +2863,8 @@ sub parse_perfdata {
 	if ($opt{set}{loose_perfdata}) {
 		DEBUG4("parse_perfdata: loose_perfdata=1"); 
 		#--- replace decimal comma with decimal point
-		if ($ENV{LANG} =~ /de_DE/) {
-			DEBUG4("parse_perfdata: LANG is de_DE, replacing commata by decimal points"); 
+		if (defined($ENV{LANG}) && $ENV{LANG} =~ /de_DE/) {
+			DEBUG4("parse_perfdata: LANG is $ENV{LANG}, replacing commata by decimal points"); 
 			($perfdata) =~ s/,/./g;
 		}
 	}

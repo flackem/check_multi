@@ -1,5 +1,6 @@
 
 ===== Changelog =====
+	* timeout routine now also kills child checks with positive numbers (thanks to Henry Rolofs)
 	* added new report mode which hides OK states / only shows problem states (thx to Timo Kempkens)
 	* added ok/warning/critical/unknown state rules for particular child checks: check_multi goes check_generic
 	* added fatal exit for two conditions: fork error and tmpfile error
