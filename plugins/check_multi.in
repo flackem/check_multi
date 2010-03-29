@@ -25,8 +25,8 @@
 use strict; 
 use Getopt::Long qw(:config no_ignore_case bundling);
 use vars qw(
-$MYSELF %cmds %opt $returncode %def %rc $no $VERSION $tmp_stdout $tmp_stderr $xml $check_multi
-$NAGIOS $nagios $Nagios $status_dat
+$MYSELF @cmds %opt $returncode %def %rc $no $VERSION $tmp_stdout $tmp_stderr $xml $check_multi
+$NAGIOS $nagios $Nagios $status_dat $timezero
 $OK $WARNING $CRITICAL $UNKNOWN
 $DETAIL_LIST $DETAIL_LIST_FULL $DETAIL_HTML $DETAIL_STDERR $DETAIL_PERFORMANCE
 $DETAIL_PERFORMANCE_CLASSIC $DETAIL_STATUS $DETAIL_PERFORMANCE_LINK $DETAIL_XML $DETAIL_NAGIOS2
@@ -53,6 +53,7 @@ use lib "@libexecdir@";
 #-------------------------------------------------------------------------------
 #--- vars ----------------------------------------------------------------------
 #-------------------------------------------------------------------------------
+$timezero=time;
 $MYSELF="check_multi";
 $nagios=lc("@nagios_name@");
 $NAGIOS=uc("@nagios_name@");
@@ -675,9 +676,8 @@ sub process_input {
 	}
 
 	#--- do some debug output
-	DEBUG3("\n$MYSELF".' $Id $');
+	DEBUG3("$MYSELF - $VERSION");
 	DEBUG3("Command line: $0 ".join(' ',@SAVEARGV));
-	#DEBUG3("User: ".getlogin()." ($>)");
 
 	#--- just debugging: print options
 	foreach my $option (sort keys(%opt)) {
@@ -959,6 +959,9 @@ sub get_env_vars {
 #---
 sub debug_message {
 	foreach (@_) {
+		if ($opt{set}{verbose}>2) {
+			printf "%08.5f ", time-$timezero;
+		}
 		print "$_\n";
 	}	
 }

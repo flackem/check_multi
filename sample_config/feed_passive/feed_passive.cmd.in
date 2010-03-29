@@ -9,3 +9,8 @@ command [ procs_mem    ] = check_procs -w 100000 -c 2000000 --metric=RSS -v
 command [ procs_zombie ] = check_procs -w 1 -c 2 -s Z
 command [ proc_cron    ] = check_procs -c 1: -C cron
 command [ proc_syslogd ] = check_procs -c 1: -C syslogd
+
+#--- avoid redundant states
+state   [ WARNING      ] = IGNORE
+state   [ CRITICAL     ] = IGNORE
+state   [ UNKNOWN      ] = IGNORE
