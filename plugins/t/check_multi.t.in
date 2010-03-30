@@ -37,10 +37,10 @@ if ($procs_output=~/PROCS (\S+): \d+ (\S+)/) {
 } else {
 	plan skip_all => "tests because check_procs output ($procs_output) does not match pattern (PROCS (\\S+): \\d+ (\\s+))";
 }
-plan tests => 46;
+plan tests => 50;
 
 my $result;
-my $testopts="-s dont_be_paranoid=1";
+my $testopts="-s dont_be_paranoid=1 -s tmp_dir=/tmp/check_multi";
 
 #-------------------------------------------------------------------------------
 #--- check_multi version -------------------------------------------------------
@@ -54,13 +54,13 @@ print '-'x 80 ; print "\n";
 is(
 	$result->return_code, 
 	3, 
-	"check_multi version - RC3 - passed"
+	"check_multi version - RC3"
 );
 like(
 	$result->output,
 	'/^check_multi.*Revision.*Date.*Author: flackem.*\n'.
 	'configure.*$/',
-	"output correct - passed"
+	"output correct"
 );
 
 #-------------------------------------------------------------------------------
@@ -72,13 +72,13 @@ $result = NPTest->testCmd(
 is(
 	$result->return_code, 
 	0, 
-	"default report option - RC0 - passed"
+	"default report option - RC0"
 );
 like(
 	$result->output,
 	'/^OK - 1 plugins checked, 1 ok\n'.
 	'\[ 1\] procs PROCS OK: \d+ '.$procs_string.'|check_multi::check_multi::plugins=1 time=\d+$/',
-	"output correct - passed"
+	"output correct"
 );
 
 
@@ -91,13 +91,13 @@ $result = NPTest->testCmd(
 is(
 	$result->return_code, 
 	0, 
-	"report option 0 (all states shown) - RC0 - passed"
+	"report option 0 (all states shown) - RC0"
 );
 like(
 	$result->output,
 	'/^OK - 1 plugins checked, 0 critical, 0 warning, 0 unknown, 1 ok\n'.
 	'\[ 1\] procs PROCS OK: \d+ '.$procs_string.'$/',
-	"output correct - passed"
+	"output correct"
 );
 
 
@@ -110,13 +110,13 @@ $result = NPTest->testCmd(
 is(
 	$result->return_code, 
 	1, 
-	"report option 1 (non-OK service names in state list) - RC1 - passed"
+	"report option 1 (non-OK service names in state list) - RC1"
 );
 like(
 	$result->output,
 	'/^WARNING - 1 plugins checked, 1 warning \(procs\)\n'.
 	'\[ 1\] procs PROCS '.$procs_warning.': \d+ '.$procs_string.'$/',
-	"output correct - passed"
+	"output correct"
 );
 
 
@@ -129,13 +129,13 @@ $result = NPTest->testCmd(
 is(
 	$result->return_code, 
 	0, 
-	"report option 2 (HTML) - RC0 - passed"
+	"report option 2 (HTML) - RC0"
 );
 like(
 	$result->output,
 	'/^OK - 1 plugins checked, 0 critical, 0 warning, 0 unknown, 1 ok\n'.
 	'<SCRIPT LANGUAGE=\'JavaScript\'> function Toggle.*PROCS OK: \d+ '.$procs_string.'.*div>$/',
-	"output correct - passed"
+	"output correct"
 );
 
 #-------------------------------------------------------------------------------
@@ -147,13 +147,13 @@ $result = NPTest->testCmd(
 is(
 	$result->return_code, 
 	3, 
-	"report option 4 [error messages - stderr] - RC3 - passed"
+	"report option 4 [error messages - stderr] - RC3"
 );
 like(
 	$result->output,
 	'/^UNKNOWN - 1 plugins checked, 0 critical, 0 warning, 1 unknown, 0 ok\n'.
 	'\[ 1\] procs  \[ sh: check_prox: command not found RC was 127!\]$/',
-	"output correct - passed"
+	"output correct"
 );
 
 
@@ -166,14 +166,50 @@ $result = NPTest->testCmd(
 is(
 	$result->return_code, 
 	0, 
-	"report option 8 (check_multi perfdata) - RC0 - passed"
+	"report option 8 (check_multi perfdata) - RC0"
 );
 like(
 	$result->output,
 	'/^OK - 2 plugins checked, 0 critical, 0 warning, 0 unknown, 2 ok\n'.
 	'\[ 1\] eins 1\n'.
 	'\[ 2\] zwei 2\|check_multi::check_multi::plugins=2 time=\d+\.\d+ eins::echo::eins=1 zwei::echo::zwei=2 $/',
-	"output correct - passed"
+	"output correct"
+);
+
+#-------------------------------------------------------------------------------
+#--- perfdata tag ::plugin in command ------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi -x 'command [ eins::myplugin ] = echo \"1|eins=1\"' -r 8 $testopts"
+);
+is(
+	$result->return_code, 
+	0, 
+	"perfdata plugin specified by command [ tag::plugin ] - RC0"
+);
+like(
+	$result->output,
+	'/^OK - 1 plugins checked, 0 critical, 0 warning, 0 unknown, 1 ok\n'.
+	'\[ 1\] eins 1|check_multi::check_multi::plugins=1 time=\d+\.\d+ eins::myplugin::eins=1 $/',
+	"output correct"
+);
+
+#-------------------------------------------------------------------------------
+#--- perfdata tag ::plugin in eeval ---------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi -x 'eeval [ eins::myplugin ] = \"1|eins=1\"' -r 8 $testopts"
+);
+is(
+	$result->return_code, 
+	0, 
+	"perfdata plugin specified by eeval [ tag::plugin ] - RC0"
+);
+like(
+	$result->output,
+	'/^OK - 1 plugins checked, 0 critical, 0 warning, 0 unknown, 1 ok\n'.
+	'\[ 1\] eins 1|check_multi::check_multi::plugins=1 time=\d+\.\d+ eins::myplugin::eins=1 $/',
+	"output correct"
 );
 
 #-------------------------------------------------------------------------------
@@ -185,14 +221,14 @@ $result = NPTest->testCmd(
 is(
 	$result->return_code, 
 	0, 
-	"report option 8 (check_multi perfdata) - RC0 - passed"
+	"report option 8 (check_multi perfdata) - RC0"
 );
 like(
 	$result->output,
 	'/^OK - 2 plugins checked, 0 critical, 0 warning, 0 unknown, 2 ok\n'.
 	'\[ 1\] eins 1\n'.
 	'\[ 2\] zwei 2\|check_multi::check_multi::plugins=2 time=\d+\.\d+ check_multi_extended::check_multi_extended::count_ok=2 count_warning=0 count_critical=0 count_unknown=0 overall_state=0 eins::echo::eins=1 zwei::echo::zwei=2 $/',
-	"output correct - passed"
+	"output correct"
 );
 
 #-------------------------------------------------------------------------------
@@ -204,14 +240,14 @@ $result = NPTest->testCmd(
 is(
 	$result->return_code, 
 	0, 
-	"report option 32 (classical perfdata) - RC0 - passed"
+	"report option 32 (classical perfdata) - RC0"
 );
 like(
 	$result->output,
 	'/^OK - 2 plugins checked, 0 critical, 0 warning, 0 unknown, 2 ok\n'.
 	'\[ 1\] eins 1\n'.
 	'\[ 2\] zwei 2\|eins=1 zwei=2 $/',
-	"output correct - passed"
+	"output correct"
 );
 
 
@@ -224,14 +260,14 @@ $result = NPTest->testCmd(
 is(
 	$result->return_code, 
 	0, 
-	"report option 64 (state in front of output) - RC0 - passed"
+	"report option 64 (state in front of output) - RC0"
 );
 like(
 	$result->output,
 	'/^OK - 2 plugins checked, 0 critical, 0 warning, 0 unknown, 2 ok\n'.
 	'\[ 1\] eins OK 1\n'.
 	'\[ 2\] zwei OK 2$/',
-	"output correct - passed"
+	"output correct"
 );
 
 
@@ -244,14 +280,14 @@ $result = NPTest->testCmd(
 is(
 	$result->return_code, 
 	0, 
-	"report option 143 (HTML performance output with PNP link) - RC0 - passed"
+	"report option 143 (HTML performance output with PNP link) - RC0"
 );
 like(
 	$result->output,
 	'/^check_multi OK - 2 plugins checked, 2 ok\n'.
 	'.*<img src=.*Show performance chart.*'.
 	'.*zwei::echo::zwei=2 $/',
-	"output correct - passed"
+	"output correct"
 );
 
 #-------------------------------------------------------------------------------
@@ -263,12 +299,12 @@ $result = NPTest->testCmd(
 is(
 	$result->return_code, 
 	0, 
-	"report option 16384 - encode commands - RC0 - passed"
+	"report option 16384 - encode commands - RC0"
 );
 like(
 	$result->output,
 	'/command%20%5B%20encode%20%5D%20%3D%20echo%20encode%0A/',
-	"output correct - passed"
+	"output correct"
 );
 
 #-------------------------------------------------------------------------------
@@ -280,13 +316,13 @@ $result = NPTest->testCmd(
 is(
 	$result->return_code, 
 	1, 
-	"report option 32768 - hide OK states - RC1 - passed"
+	"report option 32768 - hide OK states - RC1"
 );
 like(
 	$result->output,
 	'/WARNING - 2 plugins checked, 0 critical, 1 warning, 0 unknown, 1 ok\n'.
 	'\[ 2\] WARNING 1/',
-	"output correct - passed"
+	"output correct"
 );
 
 #-------------------------------------------------------------------------------
@@ -298,13 +334,13 @@ $result = NPTest->testCmd(
 is(
 	$result->return_code, 
 	0, 
-	"decode encoded command - RC0 - passed"
+	"decode encoded command - RC0"
 );
 like(
 	$result->output,
 	'/OK - 1 plugins checked, 1 ok\n'. 
 	'\[ 1\] encode encode\|check_multi::check_multi::plugins=1 time=\d+\.\d+/',
-	"output correct - passed"
+	"output correct"
 );
 
 #-------------------------------------------------------------------------------
@@ -316,14 +352,14 @@ $result = NPTest->testCmd(
 is(
 	$result->return_code, 
 	0, 
-	"recursive (check_multi calls check_multi) - RC0 - passed"
+	"recursive (check_multi calls check_multi) - RC0"
 );
 like(
 	$result->output,
 	'/^OK - 1 plugins checked, 1 ok\n'.
 	'\[ 1\] child1 OK - 1 plugins checked, 1 ok\n'.
 	' \[ 1\] grandchild1 g1$/',
-	"output correct - passed"
+	"output correct"
 );
 
 #-------------------------------------------------------------------------------
@@ -335,13 +371,13 @@ $result = NPTest->testCmd(
 is(
 	$result->return_code, 
 	0, 
-	"discards invalid perfdata - RC0 - passed"
+	"discards invalid perfdata - RC0"
 );
 like(
 	$result->output,
 	'/^OK - 1 plugins checked, 1 ok \[eins perfdata discarded for eins: bad UOM \',\' in data \'1,1\' \]\n'.
 	'\[ 1\] eins eins\|check_multi::check_multi::plugins=1 time=\d+\.\d+ $/',
-	"output correct - passed"
+	"output correct"
 );
 
 #-------------------------------------------------------------------------------
@@ -355,13 +391,13 @@ $result = NPTest->testCmd(
 is(
 	$result->return_code, 
 	0, 
-	"accepting loose perfdata - RC0 - passed"
+	"accepting loose perfdata - RC0"
 );
 like(
 	$result->output,
 	'/^OK - 1 plugins checked, 1 ok\n'.
 	'\[ 1\] eins eins\|check_multi::check_multi::plugins=1 time=\d+\.\d+ eins::echo::eins=1\,1 $/',
-	"output correct - passed"
+	"output correct"
 );
 $ENV{LANG}=$old_ENV_LANG;
 
@@ -374,13 +410,13 @@ $result = NPTest->testCmd(
 is(
 	$result->return_code, 
 	0, 
-	"overloading commands - RC0 - passed"
+	"overloading commands - RC0"
 );
 like(
 	$result->output,
 	'/^OK - 1 plugins checked, 1 ok\n'.
 	'\[ 1\] eins overloaded$/',
-	"output correct - passed"
+	"output correct"
 );
 #-------------------------------------------------------------------------------
 #--- killing me softly - checking signal handler -------------------------------
@@ -391,13 +427,13 @@ $result = NPTest->testCmd(
 is(
 	$result->return_code, 
 	3, 
-	"testing signal handler - RC0 - passed"
+	"testing signal handler - RC0"
 );
 like(
 	$result->output,
 	'/^UNKNOWN - 1 plugins checked, 1 unknown \(killing_me_HUPly\) \[HUP generated at line 1 in.*\]\n'.
 	'\[ 1\] killing_me_HUPly $/',
-	"output correct - passed"
+	"output correct"
 );
 #-------------------------------------------------------------------------------
 #--- output / head -------------------------------------------------------------
@@ -408,13 +444,13 @@ $result = NPTest->testCmd(
 is(
 	$result->return_code, 
 	0, 
-	"custom output for header line - RC0 - passed"
+	"custom output for header line - RC0"
 );
 like(
 	$result->output,
 	'/\\d+ processes running\n'.
 	'\[ 1\] procs PROCS OK: \\d+ '.$procs_string.'$/',
-	"output correct - passed"
+	"output correct"
 );
 #-------------------------------------------------------------------------------
 #--- check_multi attribute -----------------------------------------------------
@@ -425,13 +461,13 @@ $result = NPTest->testCmd(
 is(
 	$result->return_code, 
 	0, 
-	"changes child check attributes - RC0 - passed"
+	"changes child check attributes - RC0"
 );
 like(
 	$result->output,
 	'/OK - 1 plugins checked, 1 ok\n'.
 	'\[ 1\] with_perfdata eins\|check_multi::check_multi::plugins=1 time=[\d\.]+ $/',
-	"output correct - passed"
+	"output correct"
 );
 #-------------------------------------------------------------------------------
 #--- check_multi cumulate ------------------------------------------------------
@@ -442,7 +478,7 @@ $result = NPTest->testCmd(
 is(
 	$result->return_code, 
 	0, 
-	"cumulates data like top - RC0 - passed"
+	"cumulates data like top - RC0"
 );
 like(
 	$result->output,
@@ -453,7 +489,7 @@ like(
 	'\[ 4\] \S+ \d+\n'.
 	'\[ 5\] \S+ \d+\|'.
 	'check_multi::check_multi::plugins=5 time=[\d\.]+ \S+::cumulate::\S+=\d+ \S+::cumulate::\S+=\d+ \S+::cumulate::\S+=\d+ \S+::cumulate::\S+=\d+ \S+::cumulate::\S+=\d+ $/',
-	"output correct - passed"
+	"output correct"
 );
 #-------------------------------------------------------------------------------
 #--- check_multi child and global timeout --------------------------------------
@@ -464,14 +500,14 @@ $result = NPTest->testCmd(
 is(
 	$result->return_code, 
 	3, 
-	"timeout check: child one killed, child two cancelled - RC3 - passed"
+	"timeout check: child one killed, child two cancelled - RC3"
 );
 like(
 	$result->output,
-	'/UNKNOWN - 2 plugins checked, 2 unknown \(one, two\) \[one: timeout after 1s\]\n'.
+	'/UNKNOWN - 2 plugins checked, 2 unknown \(one, two\) \[one: timeout after 1s, one: no output, no stderr - check your plugin and the tmp directory \/tmp\/check_multi\]\]\n'.
 	'\[ 1\] one \n'.
 	'\[ 2\] two UNKNOWN - execution cancelled due to global timeout \(2s\)/',
-	"output correct - passed"
+	"output correct"
 );
 #-------------------------------------------------------------------------------
 #--- check_multi cumulate ------------------------------------------------------
