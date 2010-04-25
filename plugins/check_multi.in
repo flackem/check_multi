@@ -26,7 +26,7 @@ use strict;
 use Getopt::Long qw(:config no_ignore_case bundling);
 use vars qw(
 $MYSELF @cmds %opt $returncode %def %rc $no $VERSION $tmp_stdout $tmp_stderr $xml $check_multi
-$NAGIOS $nagios $Nagios $status_dat $timezero
+$NAGIOS $nagios $Nagios $status_dat $livestatus $timezero
 $OK $WARNING $CRITICAL $UNKNOWN
 $DETAIL_LIST $DETAIL_LIST_FULL $DETAIL_HTML $DETAIL_STDERR $DETAIL_PERFORMANCE
 $DETAIL_PERFORMANCE_CLASSIC $DETAIL_STATUS $DETAIL_PERFORMANCE_LINK $DETAIL_XML $DETAIL_NAGIOS2
@@ -89,6 +89,7 @@ $DETAIL_HIDEIFOK=32768;
 $no=0;
 $returncode=0;
 $status_dat=undef;
+$livestatus=undef;
 $tmp_stdout="";
 $tmp_stderr="";
 %def=(
@@ -108,6 +109,7 @@ my %opt=(
 		"cumulate"	=> 1,
 		"eval"		=> 1,
 		"eeval"		=> 1,
+		"livestatus"	=> 1,
 		"snmp"		=> 1,
 		"statusdat"	=> 1,
 		"state"		=> 1, 
@@ -163,6 +165,8 @@ my %opt=(
 		indent_label	=> @indent_label@,
 		# plugin directory to be added to check_multi search path
 		libexec		=> "@libexecdir@",
+		# plugin directory to be added to check_multi search path
+		livestatus	=> "@localstatedir@/rw/live",
 		# pnp_version needed for mouseover: 0.6,0,4
 		pnp_version	=> "@pnp_version@",
 		# label to be shown in output: <name> OK, ...
@@ -807,6 +811,7 @@ Set options:
    indent=<characters> - string to indent child checks, default:$opt{set}{indent}
    indent_label=<0|1> - indentation width is child check label width (HTML), default:$opt{set}{indent_label}
    libexec=</path/to/plugins> - directory to be added to search path: default:$opt{set}{libexec}
+   livestatus=<livestatus_path> - Where is the livestatus Unix / TCP socket? default:$opt{set}{livestatus}
    loose_perfdata=<0|1> - accept non standard performance data, e.g. german commata, default:$opt{set}{loose_perfdata}
    pnp_version=<0.6|0.4> - pnp_version needed for mouseover popups? default:$opt{set}{pnp_version}
    name=<string> - label to be shown in output: <name> OK, default:$opt{set}{name}
@@ -1151,7 +1156,7 @@ sub parse_lines {
 		$line=~s/\\\s*$// if ($line=~/\\\s*/);
 
 		#--- header line (regex contains all allowed commands)
-		if (($type,$name,$cmd)=($line=~/^\s*(attribute|command|cumulate|eval|eeval|snmp|statusdat|state|output)\s*\[\s*(\S+)\s*\]\s*=\s*(.*)\s*/i)) {
+		if (($type,$name,$cmd)=($line=~/^\s*(attribute|command|cumulate|eval|eeval|livestatus|snmp|statusdat|state|output)\s*\[\s*(\S+)\s*\]\s*=\s*(.*)\s*/i)) {
 
 			#--- macros?
 			$name=substitute_macros($name);
@@ -1174,7 +1179,7 @@ sub parse_lines {
 
 		#--- proper header line with invalid keyword
 		} elsif ($line=~/^\s*(\w+)\s*\[\s*\S+\s*\]\s*=.*/) {
-			add_error("Invalid keyword \'$1\' specified, allowed are attribute,command,eval,eeval,statusdat,state,output");
+			add_error("Invalid keyword \'$1\' specified, allowed are attribute,command,eval,eeval,livestatus,statusdat,state,output");
 			return;
 
 		#--- continuation line for previous command
@@ -1215,7 +1220,7 @@ sub parse_header {
 
 	#--- overloading: if child check with same name exists, 
 	#--- overload its attributes. Otherwise append new check
-	} elsif ($type=~/(attribute|command|eval|snmp|statusdat|cumulate)/) {
+	} elsif ($type=~/(attribute|command|eval|livestatus|snmp|statusdat|cumulate)/) {
 		for ($i=1; $i<=$#cmds;$i++) {
 			last if ($cmds[$i]{name} eq $name);
 		}
@@ -1372,6 +1377,66 @@ sub parse_header {
 			DEBUG2("parse_header: perfdata of [ $name ] will be suppressed");
 		} else {
 			$cmds[$i]{process_perfdata}=1;
+		}
+
+	#--- format: 'livestatus [ tag[::plugin] ] = host'
+	#--- format: 'livestatus [ tag[::plugin] ] = host:service'
+	} elsif ($type eq "livestatus") {
+
+		if (!$opt{set}{use_monitoring_livestatus}) {
+			#--- try to load module Monitoring::Livestatus
+			$opt{set}{use_monitoring_livestatus}=1;
+			unless (eval "require Monitoring::Livestatus;1") {
+				$opt{set}{use_monitoring_livestatus} = 0;
+				DEBUG2("process_input: Monitoring::Livestatus not available:$@");
+				return -1;
+			}
+		}
+		#--- statusdat: split host and service from command, format: host:service
+		if ($cmd=~/\s*([^:]*)\s*\:\s*(.*)\s*/) {
+			DEBUG4("parse_header: expanding $1:$2");
+			my @result=expand_livestatus_service($opt{set}{livestatus}, $1, $2);
+
+			if (!defined($result[0])) {
+				add_error("Could not expand host:service $1:$2 from livestatus $opt{set}{livestatus}");
+				return -1;
+			}
+			while(@result) {
+				#--- increase counters if no overload
+				if (!defined($cmds[$i]{number})) {
+					$cmds[0]{nallchecks}++;
+					$cmds[0]{nchecks}++;
+					$cmds[$i]{number}=$cmds[0]{nchecks};
+				}
+
+				$cmds[$i]{type}=$type;
+				$cmds[$i]{command}=$cmd;
+				$cmds[$i]{plugin}=undef;
+				$cmds[$i]{pplugin}=undef;
+				$cmds[$i]{ok}=undef;
+				$cmds[$i]{warning}=undef;
+				$cmds[$i]{critical}=undef;
+				$cmds[$i]{unknown}=undef;
+				$cmds[$i]{displayed}=1;
+				$cmds[$i]{runtime}=0;
+				$cmds[$i]{error}="";
+				$cmds[$i]{host}=shift(@result);
+				$cmds[$i]{service}=shift(@result);
+				$cmds[$i]{rc}=shift(@result);
+				$cmds[$i]{output}=shift(@result);
+				#print "DEBUG parse_header: $cmds[$i]{host}-$cmds[$i]{service} -> $cmds[$i]{output}\n";
+				$cmds[$i]{performance}=shift(@result);
+				if ($cmds[$i]{host} eq "-1") {
+					$cmds[$i]{host}="UNKNOWN";
+					$cmds[$i]{service}="UNKNOWN";
+				}
+				$cmds[$i]{name}="${name}_$cmds[$i]{host}_$cmds[$i]{service}";
+				DEBUG4("parse_header: added host:$cmds[$i]{host} / service:$cmds[$i]{service} / output:$cmds[$i]{output}");
+				$i++;
+			}
+		} else {
+			add_error("parse_header: invalid host or service in livestatus line \'$lineno\', format should be \'livestatus [ name ] = host[:service]\'"); 
+			return -1;
 		}
 
 	#--- format: 'snmp   [ tag ] = OID'
@@ -1963,6 +2028,77 @@ sub read_status_dat {
 	}
 	close DAT;
 	return $status_dat;
+}
+
+sub expand_livestatus_service {
+	my ($livestatus_path, $host_name, $service_description)=@_;
+
+	DEBUG4("expand_livestatus_service: expanding $host_name:$service_description");
+	if (!$host_name || !$service_description) {
+		add_error("expand_livestatus_service: empty host_name=$host_name or service_description=$service_description specified");
+		return (undef,undef);
+	}
+	if (!$livestatus) {
+		DEBUG4("expand_livestatus_service: 1st read, creating service tree");
+		$livestatus=read_livestatus($livestatus_path);
+		if (!$livestatus) {
+			add_error("expand_livestatus_service: could not read $livestatus_path");
+			return (undef,undef);
+		}
+		DEBUG4("expand_livestatus_service: ".scalar(keys(%{$livestatus}))." results");
+	} else {
+		DEBUG4("expand_livestatus_service: subsequent read, reading from service tree");
+	}
+
+	#--- expand simple tokens to REGEX, if necessary
+	$host_name=($host_name=~/\/(.*)\//)?$1:'^'.$host_name.'$';
+	$service_description=($service_description=~/\/(.*)\//)?$1:'^'.$service_description.'$';
+	DEBUG4("expand_livestatus_service: $host_name:$service_description after REGEX preparation");
+
+	my @result=();
+	foreach my $host (sort keys(%{$livestatus})) {
+		if ($host=~/$host_name/) {
+			#--- $service points to an array item
+			foreach my $service (@{$livestatus->{$host}}) {
+				if ($service->{description}=~/$service_description/) {
+					push @result,$host;
+					push @result,$service->{description};
+					push @result,$service->{state};
+					my $output=defined($service->{plugin_output})?$service->{plugin_output}:"";
+					$output.=defined($service->{long_plugin_output})?"\n$service->{long_plugin_output}":"";
+					push @result,$output;
+					push @result,defined($service->{perf_data})?$service->{perf_data}:"";
+					DEBUG4("expand_livestatus_service: $host:$service->{description} matched $host_name:$service_description:$service->{state}");
+				} else {
+					DEBUG4("expand_livestatus_service: $host:$service->{description} did not match $host_name:$service_description");
+				}
+			}
+		} else {
+			DEBUG4("expand_livestatus_service: $host did not match $host_name");
+		}
+	}
+	DEBUG4("expand_livestatus_service returns " . ($#result+1)/5 . " results");
+	return @result;
+}
+
+sub read_livestatus {
+	my ($livestatus_path, $query)=@_;
+
+	my $ml=Monitoring::Livestatus->new(
+        	peer=>$livestatus_path,
+	);
+	if($Monitoring::Livestatus::ErrorCode) {
+		add_error("read_livestatus: $Monitoring::Livestatus::ErrorMessage");
+		return undef;
+	}
+	$ml->errors_are_fatal(0);
+	$livestatus=$ml->selectall_hashref("GET services\nColumns: host_name description state plugin_output long_plugin_output perf_data\n","host_name");
+	if($Monitoring::Livestatus::ErrorCode) {
+		add_error("read_livestatus: $Monitoring::Livestatus::ErrorMessage");
+		return undef;
+	}
+	DEBUG4("read_livestatus: ".scalar(keys(%{$livestatus}))." services read");
+	return $livestatus;
 }
 
 #---
