@@ -63,6 +63,7 @@ all:
 	@echo ""
 	@echo " *** Next step:  make test ***"
 	@echo ""
+	@echo "            or:  make test-livestatus    (requires livestatus module and Perl Module Monitoring::Livestatus)"
 	@echo "            or:  make test-statusdat     (requires running Nagios)"
 	@echo "            or:  make test-feeds-passive (requires Perl module XML::Simple)"
 	@echo "            or:  make test-all           (for all above tests)"
@@ -84,6 +85,10 @@ config:
 test:
 	cd $(SRC_PL_TEST)  && $(MAKE) $@
 test-all:
+	cd $(SRC_PL_TEST)  && $(MAKE) $@
+test-feeds-passive:
+	cd $(SRC_PL_TEST)  && $(MAKE) $@
+test-livestatus:
 	cd $(SRC_PL_TEST)  && $(MAKE) $@
 test-statusdat:
 	cd $(SRC_PL_TEST)  && $(MAKE) $@

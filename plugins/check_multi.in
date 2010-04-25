@@ -2045,7 +2045,7 @@ sub expand_livestatus_service {
 			add_error("expand_livestatus_service: could not read $livestatus_path");
 			return (undef,undef);
 		}
-		DEBUG4("expand_livestatus_service: ".scalar(keys(%{$livestatus}))." results");
+		DEBUG4("expand_livestatus_service: $#{$livestatus} results");
 	} else {
 		DEBUG4("expand_livestatus_service: subsequent read, reading from service tree");
 	}
@@ -2056,25 +2056,19 @@ sub expand_livestatus_service {
 	DEBUG4("expand_livestatus_service: $host_name:$service_description after REGEX preparation");
 
 	my @result=();
-	foreach my $host (sort keys(%{$livestatus})) {
-		if ($host=~/$host_name/) {
-			#--- $service points to an array item
-			foreach my $service (@{$livestatus->{$host}}) {
-				if ($service->{description}=~/$service_description/) {
-					push @result,$host;
-					push @result,$service->{description};
-					push @result,$service->{state};
-					my $output=defined($service->{plugin_output})?$service->{plugin_output}:"";
-					$output.=defined($service->{long_plugin_output})?"\n$service->{long_plugin_output}":"";
-					push @result,$output;
-					push @result,defined($service->{perf_data})?$service->{perf_data}:"";
-					DEBUG4("expand_livestatus_service: $host:$service->{description} matched $host_name:$service_description:$service->{state}");
-				} else {
-					DEBUG4("expand_livestatus_service: $host:$service->{description} did not match $host_name:$service_description");
-				}
-			}
+	#--- $service points to an array item
+	foreach my $service (@{$livestatus}) {
+		if ($service->{host_name}=~/$host_name/ && $service->{description}=~/$service_description/) {
+			push @result,$service->{host_name};
+			push @result,$service->{description};
+			push @result,$service->{state};
+			my $output=defined($service->{plugin_output})?$service->{plugin_output}:"";
+			$output.=defined($service->{long_plugin_output})?"\n$service->{long_plugin_output}":"";
+			push @result,$output;
+			push @result,defined($service->{perf_data})?$service->{perf_data}:"";
+			DEBUG4("expand_livestatus_service: $service->{host_name}:$service->{description} matched $host_name:$service_description:$service->{state}");
 		} else {
-			DEBUG4("expand_livestatus_service: $host did not match $host_name");
+			DEBUG4("expand_livestatus_service: $service->{host_name}:$service->{description} did not match $host_name:$service_description");
 		}
 	}
 	DEBUG4("expand_livestatus_service returns " . ($#result+1)/5 . " results");
@@ -2092,12 +2086,12 @@ sub read_livestatus {
 		return undef;
 	}
 	$ml->errors_are_fatal(0);
-	$livestatus=$ml->selectall_hashref("GET services\nColumns: host_name description state plugin_output long_plugin_output perf_data\n","host_name");
+	$livestatus=$ml->selectall_arrayref("GET services\nColumns: host_name description state plugin_output long_plugin_output perf_data\n",{Slice => 1});
 	if($Monitoring::Livestatus::ErrorCode) {
 		add_error("read_livestatus: $Monitoring::Livestatus::ErrorMessage");
 		return undef;
 	}
-	DEBUG4("read_livestatus: ".scalar(keys(%{$livestatus}))." services read");
+	DEBUG4("read_livestatus: $#{$livestatus} services read");
 	return $livestatus;
 }
 
