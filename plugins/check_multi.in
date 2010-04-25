@@ -1202,6 +1202,9 @@ sub parse_lines {
 	#DEBUG4("parse_lines:" . Dumper($check_multi));
 }
 
+#---
+#--- fills child check attributes related to the type of check
+#---
 sub parse_header {
 	my ($type,$name,$cmd,$lineno)=@_;
 
@@ -1379,7 +1382,6 @@ sub parse_header {
 			$cmds[$i]{process_perfdata}=1;
 		}
 
-	#--- format: 'livestatus [ tag[::plugin] ] = host'
 	#--- format: 'livestatus [ tag[::plugin] ] = host:service'
 	} elsif ($type eq "livestatus") {
 
@@ -1424,7 +1426,6 @@ sub parse_header {
 				$cmds[$i]{service}=shift(@result);
 				$cmds[$i]{rc}=shift(@result);
 				$cmds[$i]{output}=shift(@result);
-				#print "DEBUG parse_header: $cmds[$i]{host}-$cmds[$i]{service} -> $cmds[$i]{output}\n";
 				$cmds[$i]{performance}=shift(@result);
 				if ($cmds[$i]{host} eq "-1") {
 					$cmds[$i]{host}="UNKNOWN";
@@ -1685,9 +1686,7 @@ sub exec_command {
 				$cmds[$no]{rc}=$UNKNOWN;
 			}
 			
-			#--- remove white chars from output
-			#$cmds[$no]{error}=~s/[\s]+/ /g;
-			#DEBUG3("exec_command: raw stderr >$cmds[$no]{error}<");
+			#--- remove white chars from output (Wolfgang Barth)
 			$cmds[$no]{stdout}=HTML::Entities::encode_entities($cmds[$no]{stdout}) if ($opt{set}{use_html_entities} && $cmds[$no]{stdout});
 			$cmds[$no]{error}=HTML::Entities::encode_entities($cmds[$no]{error}) if ($opt{set}{use_html_entities} && $cmds[$no]{error});
 
@@ -1907,6 +1906,9 @@ sub get_cumulated_top {
 	@result;
 }
 
+#---
+#--- get attributes of a particular status.dat service
+#---
 sub get_status_dat_service {
 	my ($statusdat_path, $host_name, $service_description)=@_;
 
@@ -1937,6 +1939,9 @@ sub get_status_dat_service {
 	}
 }
 
+#---
+#--- reads list of status.dat services and returns all services which match host and service name
+#---
 sub expand_status_dat_service {
 	my ($statusdat_path, $host_name, $service_description)=@_;
 
@@ -1964,12 +1969,13 @@ sub expand_status_dat_service {
 	my @result=();
 	foreach my $host (sort keys(%{$status_dat})) {
 		foreach my $service (sort keys(%{$status_dat->{$host}})) {
+			#--- proceed if host and service names do fit
 			if ($host=~/$host_name/ && $service=~/$service_description/) {
 				push @result,$host;
 				push @result,$service;
 				DEBUG4("expand_status_dat_service: $host:$service matched $host_name:$service_description");
-			#} else {
-				#DEBUG4("expand_status_dat_service: $host:$service did not match $host_name:$service_description");
+			} else {
+				DEBUG4("expand_status_dat_service: $host:$service did not match $host_name:$service_description");
 			}
 		}
 	}
@@ -1977,6 +1983,9 @@ sub expand_status_dat_service {
 	return @result;
 }
 
+#---
+#--- status.dat parsing routing
+#---
 sub read_status_dat {
 	my ($statusdat_path)=@_;
 
@@ -2030,6 +2039,9 @@ sub read_status_dat {
 	return $status_dat;
 }
 
+#---
+#--- reads list of livestatus services and returns all services which match host and service name
+#---
 sub expand_livestatus_service {
 	my ($livestatus_path, $host_name, $service_description)=@_;
 
@@ -2038,6 +2050,7 @@ sub expand_livestatus_service {
 		add_error("expand_livestatus_service: empty host_name=$host_name or service_description=$service_description specified");
 		return (undef,undef);
 	}
+	#--- create livestatus array if not yet available
 	if (!$livestatus) {
 		DEBUG4("expand_livestatus_service: 1st read, creating service tree");
 		$livestatus=read_livestatus($livestatus_path);
@@ -2058,7 +2071,9 @@ sub expand_livestatus_service {
 	my @result=();
 	#--- $service points to an array item
 	foreach my $service (@{$livestatus}) {
+		#--- proceed if host and service names do fit
 		if ($service->{host_name}=~/$host_name/ && $service->{description}=~/$service_description/) {
+			#--- create array of 5 elements: host_name,service_description,state,output,perf_data
 			push @result,$service->{host_name};
 			push @result,$service->{description};
 			push @result,$service->{state};
@@ -2075,18 +2090,26 @@ sub expand_livestatus_service {
 	return @result;
 }
 
+#---
+#--- interface routine to read livestatus data
+#---
 sub read_livestatus {
 	my ($livestatus_path, $query)=@_;
 
+	#--- create Livestatus object
 	my $ml=Monitoring::Livestatus->new(
         	peer=>$livestatus_path,
+		errors_are_fatal=>0,
 	);
+	#--- catch object creation error
 	if($Monitoring::Livestatus::ErrorCode) {
 		add_error("read_livestatus: $Monitoring::Livestatus::ErrorMessage");
 		return undef;
 	}
-	$ml->errors_are_fatal(0);
+
+	#--- read large array of services, selection will be done later
 	$livestatus=$ml->selectall_arrayref("GET services\nColumns: host_name description state plugin_output long_plugin_output perf_data\n",{Slice => 1});
+	#--- catch read error
 	if($Monitoring::Livestatus::ErrorCode) {
 		add_error("read_livestatus: $Monitoring::Livestatus::ErrorMessage");
 		return undef;
@@ -2251,19 +2274,6 @@ sub get_state_token {
 
 	#--- return array
 	@token;
-}
-
-sub state_string_ascii {
-	my ($state)=@_;
-	my $output="";
-	my @token=get_state_token($state);
-	for (my $tno=0;$tno<=$#token;$tno++) {
-		$output.=sprintf "%11s. %-52s %s\n", 
-			chr(97+$tno), 	# 'a'+$tno
-			"'".$token[$tno]{token}."'" . " -> " .  "'".$token[$tno]{substituted}."'",
-			($token[$tno]{substate}) ? "TRUE" : "FALSE";
-	}
-	$output;
 }
 
 #---
@@ -2531,6 +2541,22 @@ sub report_ascii {
 	DEBUG1("-" x 80);
 	DEBUG1(sprintf "%8s %55s %s", "", "Overall state =>", $def{label}{$rc{head}});
 	DEBUG1("-" x 80);
+}
+
+#---
+#--- helper routine which provides single child check result
+#---
+sub state_string_ascii {
+	my ($state)=@_;
+	my $output="";
+	my @token=get_state_token($state);
+	for (my $tno=0;$tno<=$#token;$tno++) {
+		$output.=sprintf "%11s. %-52s %s\n", 
+			chr(97+$tno), 	# 'a'+$tno
+			"'".$token[$tno]{token}."'" . " -> " .  "'".$token[$tno]{substituted}."'",
+			($token[$tno]{substate}) ? "TRUE" : "FALSE";
+	}
+	$output;
 }
 
 #---
@@ -2879,6 +2905,9 @@ sub report_xml {
 	print $xmlstr;
 }
 
+#---
+#--- helper routine which encodes several XML specific characters
+#---
 sub xml_encode {
 	my $input=shift;
 	my %transtab=( '&'=>'&amp;','<'=>'&lt;','>'=>'&gt;',);
@@ -3089,6 +3118,9 @@ sub report_service_definition {
 
 
 
+#---
+#--- send check_multi results to NSCA daemon
+#---
 sub report_send_nsca {
 	# 
 	# NSCA Client 2.5
@@ -3189,7 +3221,7 @@ sub report_checkresult_file {
 		DEBUG3("report_checkresult_file: File::Temp module loaded");
 	}
 
-	# loop over child checks
+	#--- loop over child checks
 	for (my $i=1; $i<=$#cmds; $i++) {
 
 		#--- service will be suppressed if its mentioned in '-s suppress_service=<service1>,<service2>,...
@@ -3283,7 +3315,7 @@ while ($no<=$#cmds) {
 		$cmds[$no]{rc}=$UNKNOWN;
 		$cmds[$no]{runtime}=0;
 	} elsif ($cmds[$no]{feeded}) {
-		# do nothing - this cmd has been feeded in via STDIN
+		#--- do nothing - this cmd has been feeded in via STDIN
 	} else {
 		#--- wait interval between child checks if more than one check
 		if ($no>1) {
