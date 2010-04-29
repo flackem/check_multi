@@ -38,7 +38,7 @@ my $testopts="-s dont_be_paranoid=1";
 #--- service not found ---------------------------------------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi -x 'livestatus [ eins ] = host_not_there:service_not_there' $testopts",
+	"@PERL@ ../check_multi -x 'livestatus [ eins ] = Filter: not_there ~ something' $testopts",
 );
 is(
 	$result->return_code, 
@@ -47,6 +47,7 @@ is(
 );
 like(
 	$result->output,
-	'/UNKNOWN - 0 plugins checked,  \[Could not expand host:service host_not_there:service_not_there from livestatus.*/', 
+
+	'/UNKNOWN - 0 plugins checked,  \[read_livestatus: invalid filter: table \'services\' has no column \'not_there\'/', 
 	"output correct - passed"
 );

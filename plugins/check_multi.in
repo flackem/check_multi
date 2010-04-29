@@ -233,12 +233,11 @@ my %opt=(
 		eml_elements	=> "name,rc,output,error,plugin,command,performance,starttime,endtime,runtime,type",
 	},
 
-	"ok"		=> undef,
-	"warning"	=> undef,
-	"critical"	=> undef,
-	"unknown"	=> undef,
 );
+
+#--- Array of commands
 my @cmds=(
+	#--- 0: parent check
 	{
 		name	=> "",
 		error	=> [ ],		# stderr and other errors
@@ -252,7 +251,12 @@ my @cmds=(
 		number	=> 0,		# current number of check (0 for head)
 		output	=> "",		# output
 		rc	=> $OK,		# return code
+		ok	=> undef,	# state definition: OK
+		warning	=> undef,	# state definition: WARNING
+		critical => undef,	# state definition: CRITICAL
+		unknown	=> undef,	# state definition: UNKNOWN
 	}
+	#--- elements 1..x will be added by parse_lines / parse_header
 );
 my %rc=(
 	count	=> [ 0, 0, 0, 0, ],	# count displayed RCs
@@ -300,10 +304,10 @@ sub process_input {
 		"v|verbose:+"	=> \$opt{set}{verbose},
 		"V|version"	=> \$opt{version},
 		"x|execute=s"	=> \@{$opt{execute}},
-		"o|O|ok=s"	=> \$opt{ok},
-		"w|W|warning=s"	=> \$opt{warning},
-		"c|C|critical=s"=> \$opt{critical},
-		"u|U|unknown=s"	=> \$opt{unknown},)
+		"o|O|ok=s"	=> \$cmds[0]{ok},
+		"w|W|warning=s"	=> \$cmds[0]{warning},
+		"c|C|critical=s"=> \$cmds[0]{critical},
+		"u|U|unknown=s"	=> \$cmds[0]{unknown},)
 	) {
 		short_usage();
 		return $UNKNOWN;
@@ -580,29 +584,17 @@ sub process_input {
 		DEBUG3("process_input: IPC::Open3 and IO::Select modules loaded");
 	}
 
-	#--- set plugin_path at 2nd position of PATH var
-	if ($opt{set}{plugin_path}) {
-		$ENV{PATH}="$opt{set}{plugin_path}:$ENV{PATH}";
-	}
+	#--- set plugin_path at 2nd position of PATH variable
+	$ENV{PATH}="$opt{set}{plugin_path}:$ENV{PATH}" if ($opt{set}{plugin_path});
 
-	#--- set libexec-dir at the beginning of PATH var
-	if ($opt{set}{libexec}) {
-		$ENV{PATH}="$opt{set}{libexec}:$ENV{PATH}";
-	}
+	#--- set libexec directory at the beginning of PATH variable
+	$ENV{PATH}="$opt{set}{libexec}:$ENV{PATH}" if ($opt{set}{libexec});
 
 	#--- all state definitions can be set via command line
-	if ($opt{ok}) {
-		$rc{expr}[$OK]=$opt{ok};
-	}
-	if ($opt{warning}) {
-		$rc{expr}[$WARNING]=$opt{warning};
-	}
-	if ($opt{critical}) {
-		$rc{expr}[$CRITICAL]=$opt{critical};
-	}
-	if ($opt{unknown}) {
-		$rc{expr}[$UNKNOWN]=$opt{unknown};
-	}
+	$rc{expr}[$OK]=$cmds[0]{ok} if ($cmds[0]{ok});
+	$rc{expr}[$WARNING]=$cmds[0]{warning} if ($cmds[0]{warning});
+	$rc{expr}[$CRITICAL]=$cmds[0]{critical} if ($cmds[0]{critical});
+	$rc{expr}[$UNKNOWN]=$cmds[0]{unknown} if ($cmds[0]{unknown});
 
 	#--- timeout checking: overall TIMEOUT has to be greater than child check timeout
 	if ($opt{set}{timeout} && $opt{set}{TIMEOUT} && $opt{set}{timeout} > $opt{set}{TIMEOUT}) {
@@ -617,9 +609,7 @@ sub process_input {
 
 	#--- add _the_ parent pid as indicator of the absolute first instance in a check_multi tree
 	#--- there can be multiple recursive called instances and they need to detect which is the first
-	if (!defined($ENV{"MULTI_PPID"})) {
-		$ENV{"MULTI_PPID"}=$$;
-	}
+	$ENV{"MULTI_PPID"}=$$ if (!defined($ENV{"MULTI_PPID"}));
 
 	#--- persistency - on the way to check_multi 2.0
 	if ($opt{set}{persistent}) {
@@ -813,12 +803,12 @@ Set options:
    libexec=</path/to/plugins> - directory to be added to search path: default:$opt{set}{libexec}
    livestatus=<livestatus_path> - Where is the livestatus Unix / TCP socket? default:$opt{set}{livestatus}
    loose_perfdata=<0|1> - accept non standard performance data, e.g. german commata, default:$opt{set}{loose_perfdata}
-   pnp_version=<0.6|0.4> - pnp_version needed for mouseover popups? default:$opt{set}{pnp_version}
    name=<string> - label to be shown in output: <name> OK, default:$opt{set}{name}
    no_checks_rc=<RC> - which RC should be returned if no checks are defined, default:$opt{set}{no_checks_rc}
    notes_url=<URL> - URL to be added to child check, see Nagios notes_url
    persistent=<0|1> - run check_multi in persistent mode, default:$opt{set}{persistent}
    pnp_url=</path/to/PNP-CGIs> - specify PNP URL, default:$opt{set}{pnp_url}
+   pnp_version=<0.6|0.4> - pnp_version needed for mouseover popups? default:$opt{set}{pnp_version}
    report=<number> - binary coded report option, default:$opt{set}{report}
    send_nsca=<path/to/send_nsca> - path to send_nsca binary, default:$opt{set}{send_nsca}
    send_nsca_cfg=</path/to/send_nsca.cfg> -  path to send_nsca cfg file, default:$opt{set}{send_nsca_cfg}
@@ -1395,49 +1385,43 @@ sub parse_header {
 			}
 		}
 		#--- statusdat: split host and service from command, format: host:service
-		if ($cmd=~/\s*([^:]*)\s*\:\s*(.*)\s*/) {
-			DEBUG4("parse_header: expanding $1:$2");
-			my @result=expand_livestatus_service($opt{set}{livestatus}, $1, $2);
+		my @result=expand_livestatus_service($opt{set}{livestatus}, $cmd);
 
-			if (!defined($result[0])) {
-				add_error("Could not expand host:service $1:$2 from livestatus $opt{set}{livestatus}");
-				return -1;
-			}
-			while(@result) {
-				#--- increase counters if no overload
-				if (!defined($cmds[$i]{number})) {
-					$cmds[0]{nallchecks}++;
-					$cmds[0]{nchecks}++;
-					$cmds[$i]{number}=$cmds[0]{nchecks};
-				}
-
-				$cmds[$i]{type}=$type;
-				$cmds[$i]{command}=$cmd;
-				$cmds[$i]{plugin}=undef;
-				$cmds[$i]{pplugin}=undef;
-				$cmds[$i]{ok}=undef;
-				$cmds[$i]{warning}=undef;
-				$cmds[$i]{critical}=undef;
-				$cmds[$i]{unknown}=undef;
-				$cmds[$i]{displayed}=1;
-				$cmds[$i]{runtime}=0;
-				$cmds[$i]{error}="";
-				$cmds[$i]{host}=shift(@result);
-				$cmds[$i]{service}=shift(@result);
-				$cmds[$i]{rc}=shift(@result);
-				$cmds[$i]{output}=shift(@result);
-				$cmds[$i]{performance}=shift(@result);
-				if ($cmds[$i]{host} eq "-1") {
-					$cmds[$i]{host}="UNKNOWN";
-					$cmds[$i]{service}="UNKNOWN";
-				}
-				$cmds[$i]{name}="${name}_$cmds[$i]{host}_$cmds[$i]{service}";
-				DEBUG4("parse_header: added host:$cmds[$i]{host} / service:$cmds[$i]{service} / output:$cmds[$i]{output}");
-				$i++;
-			}
-		} else {
-			add_error("parse_header: invalid host or service in livestatus line \'$lineno\', format should be \'livestatus [ name ] = host[:service]\'"); 
+		if (!defined($result[0])) {
+			add_error("No results for query $cmd on $opt{set}{livestatus}");
 			return -1;
+		}
+		while(@result) {
+			#--- increase counters if no overload
+			if (!defined($cmds[$i]{number})) {
+				$cmds[0]{nallchecks}++;
+				$cmds[0]{nchecks}++;
+				$cmds[$i]{number}=$cmds[0]{nchecks};
+			}
+
+			$cmds[$i]{type}=$type;
+			$cmds[$i]{command}=$cmd;
+			$cmds[$i]{plugin}=undef;
+			$cmds[$i]{pplugin}=undef;
+			$cmds[$i]{ok}=undef;
+			$cmds[$i]{warning}=undef;
+			$cmds[$i]{critical}=undef;
+			$cmds[$i]{unknown}=undef;
+			$cmds[$i]{displayed}=1;
+			$cmds[$i]{runtime}=0;
+			$cmds[$i]{error}="";
+			$cmds[$i]{host}=shift(@result);
+			$cmds[$i]{service}=shift(@result);
+			$cmds[$i]{rc}=shift(@result);
+			$cmds[$i]{output}=shift(@result);
+			$cmds[$i]{performance}=shift(@result);
+			if ($cmds[$i]{host} eq "-1") {
+				$cmds[$i]{host}="UNKNOWN";
+				$cmds[$i]{service}="UNKNOWN";
+			}
+			$cmds[$i]{name}="${name}_$cmds[$i]{host}_$cmds[$i]{service}";
+			DEBUG4("parse_header: added host:$cmds[$i]{host} / service:$cmds[$i]{service} / output:$cmds[$i]{output}");
+			$i++;
 		}
 
 	#--- format: 'snmp   [ tag ] = OID'
@@ -2043,48 +2027,26 @@ sub read_status_dat {
 #--- reads list of livestatus services and returns all services which match host and service name
 #---
 sub expand_livestatus_service {
-	my ($livestatus_path, $host_name, $service_description)=@_;
+	my ($livestatus_path, $query)=@_;
 
-	DEBUG4("expand_livestatus_service: expanding $host_name:$service_description");
-	if (!$host_name || !$service_description) {
-		add_error("expand_livestatus_service: empty host_name=$host_name or service_description=$service_description specified");
+	$livestatus=read_livestatus($livestatus_path,$query);
+	if (!$livestatus) {
+		add_error("expand_livestatus_service: could not read $livestatus_path");
 		return (undef,undef);
 	}
-	#--- create livestatus array if not yet available
-	if (!$livestatus) {
-		DEBUG4("expand_livestatus_service: 1st read, creating service tree");
-		$livestatus=read_livestatus($livestatus_path);
-		if (!$livestatus) {
-			add_error("expand_livestatus_service: could not read $livestatus_path");
-			return (undef,undef);
-		}
-		DEBUG4("expand_livestatus_service: $#{$livestatus} results");
-	} else {
-		DEBUG4("expand_livestatus_service: subsequent read, reading from service tree");
-	}
-
-	#--- expand simple tokens to REGEX, if necessary
-	$host_name=($host_name=~/\/(.*)\//)?$1:'^'.$host_name.'$';
-	$service_description=($service_description=~/\/(.*)\//)?$1:'^'.$service_description.'$';
-	DEBUG4("expand_livestatus_service: $host_name:$service_description after REGEX preparation");
+	DEBUG4("expand_livestatus_service: $query -> $#{$livestatus} results");
 
 	my @result=();
 	#--- $service points to an array item
 	foreach my $service (@{$livestatus}) {
-		#--- proceed if host and service names do fit
-		if ($service->{host_name}=~/$host_name/ && $service->{description}=~/$service_description/) {
-			#--- create array of 5 elements: host_name,service_description,state,output,perf_data
-			push @result,$service->{host_name};
-			push @result,$service->{description};
-			push @result,$service->{state};
-			my $output=defined($service->{plugin_output})?$service->{plugin_output}:"";
-			$output.=defined($service->{long_plugin_output})?"\n$service->{long_plugin_output}":"";
-			push @result,$output;
-			push @result,defined($service->{perf_data})?$service->{perf_data}:"";
-			DEBUG4("expand_livestatus_service: $service->{host_name}:$service->{description} matched $host_name:$service_description:$service->{state}");
-		} else {
-			DEBUG4("expand_livestatus_service: $service->{host_name}:$service->{description} did not match $host_name:$service_description");
-		}
+		#--- create array of 5 elements: host_name,service_description,state,output,perf_data
+		push @result,$service->{host_name};
+		push @result,$service->{description};
+		push @result,$service->{state};
+		my $output=defined($service->{plugin_output})?$service->{plugin_output}:"";
+		$output.=defined($service->{long_plugin_output})?"\n$service->{long_plugin_output}":"";
+		push @result,$output;
+		push @result,defined($service->{perf_data})?$service->{perf_data}:"";
 	}
 	DEBUG4("expand_livestatus_service returns " . ($#result+1)/5 . " results");
 	return @result;
@@ -2096,6 +2058,7 @@ sub expand_livestatus_service {
 sub read_livestatus {
 	my ($livestatus_path, $query)=@_;
 
+	DEBUG1("read_livestatus: from $livestatus_path");
 	#--- create Livestatus object
 	my $ml=Monitoring::Livestatus->new(
         	peer=>$livestatus_path,
@@ -2108,7 +2071,14 @@ sub read_livestatus {
 	}
 
 	#--- read large array of services, selection will be done later
-	$livestatus=$ml->selectall_arrayref("GET services\nColumns: host_name description state plugin_output long_plugin_output perf_data\n",{Slice => 1});
+	DEBUG4("read_livestatus: query >$query<");
+	my $total_query="GET services\n".
+		"Columns: host_name description state plugin_output long_plugin_output perf_data\n";
+	foreach my $token (split(/\\n/,$query)) {
+		$total_query.="$token\n";
+	}
+	DEBUG4("read_livestatus: total_query >$total_query<");
+	$livestatus=$ml->selectall_arrayref($total_query,{Slice => 1});
 	#--- catch read error
 	if($Monitoring::Livestatus::ErrorCode) {
 		add_error("read_livestatus: $Monitoring::Livestatus::ErrorMessage");

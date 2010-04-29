@@ -1,5 +1,6 @@
 
 ===== Changelog =====
+	* second version of livestatus [ tag ] = Filter: field ~ pattern (needs Monitoring::Livestatus)
 	* added first version of livestatus [ tag ] = host:service (needs Monitoring::Livestatus)
 	* fixes for eval[ tag::plugin ]. thx again, Henry
 	* child checks are assigned to own process group (thx to Henry Rolofs)
