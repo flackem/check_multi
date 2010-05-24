@@ -12,18 +12,18 @@ INSTALL_OPTS=@INSTALL_OPTS@
 all: 
 
 clean:
-	cd notify_service && $(MAKE) $@
-	cd status_query   && $(MAKE) $@
+	cd notify_service && $(MAKE) -e $@
+	cd status_query   && $(MAKE) -e $@
 	
 
 distclean: clean
 	-rm -f Makefile
-	cd notify_service && $(MAKE) $@
-	cd status_query   && $(MAKE) $@
+	cd notify_service && $(MAKE) -e $@
+	cd status_query   && $(MAKE) -e $@
 
 devclean: distclean
 
 install-contrib: 
-	cd notify_service && $(MAKE) $@
-	cd status_query   && $(MAKE) $@
+	cd notify_service && $(MAKE) -e $@
+	cd status_query   && $(MAKE) -e $@
 

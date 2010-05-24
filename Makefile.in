@@ -53,10 +53,10 @@ none:
 #---
 #--- combination of all targets
 all:
-	cd $(SRC_PLUGINS) && $(MAKE) $@
-	cd $(SRC_PL_TEST) && $(MAKE) $@
-	cd $(SRC_CONTRIB) && $(MAKE) $@
-	cd $(SRC_CONFIG)  && $(MAKE) $@
+	cd $(SRC_PLUGINS) && $(MAKE) -e $@
+	cd $(SRC_PL_TEST) && $(MAKE) -e $@
+	cd $(SRC_CONTRIB) && $(MAKE) -e $@
+	cd $(SRC_CONFIG)  && $(MAKE) -e $@
 
 	@echo ""
 	@echo " Make process finished"
@@ -77,26 +77,26 @@ all:
 #---
 #--- here the different subsections follow
 contrib:
-	cd $(SRC_CONTRIB) && $(MAKE) $@
+	cd $(SRC_CONTRIB) && $(MAKE) -e $@
 
 config:
-	cd $(SRC_CONFIG)  && $(MAKE) $@
+	cd $(SRC_CONFIG)  && $(MAKE) -e $@
 
 test:
-	cd $(SRC_PL_TEST)  && $(MAKE) $@
+	cd $(SRC_PL_TEST)  && $(MAKE) -e $@
 test-all:
-	cd $(SRC_PL_TEST)  && $(MAKE) $@
+	cd $(SRC_PL_TEST)  && $(MAKE) -e $@
 test-feeds-passive:
-	cd $(SRC_PL_TEST)  && $(MAKE) $@
+	cd $(SRC_PL_TEST)  && $(MAKE) -e $@
 test-livestatus:
-	cd $(SRC_PL_TEST)  && $(MAKE) $@
+	cd $(SRC_PL_TEST)  && $(MAKE) -e $@
 test-statusdat:
-	cd $(SRC_PL_TEST)  && $(MAKE) $@
+	cd $(SRC_PL_TEST)  && $(MAKE) -e $@
 
 #---
 #--- install sections
 install:
-	cd $(SRC_PLUGINS) && $(MAKE) $@
+	cd $(SRC_PLUGINS) && $(MAKE) -e $@
 
 	@echo ""
 	@echo "Please run 'make install-contrib' to install contrib files"
@@ -104,30 +104,30 @@ install:
 	@echo ""
 
 install-contrib:
-	cd $(SRC_CONTRIB) && $(MAKE) $@
+	cd $(SRC_CONTRIB) && $(MAKE) -e $@
 
 install-config:
-	cd $(SRC_CONFIG) && $(MAKE) $@
+	cd $(SRC_CONFIG) && $(MAKE) -e $@
 
 fullinstall: install install-contrib install-config
 
 #---
 #--- cleanup sections
 clean:
-	cd $(SRC_PLUGINS) && $(MAKE) $@
-	cd $(SRC_PL_TEST) && $(MAKE) $@
-	cd $(SRC_CONTRIB) && $(MAKE) $@
-	cd $(SRC_CONFIG)  && $(MAKE) $@
+	cd $(SRC_PLUGINS) && $(MAKE) -e $@
+	cd $(SRC_PL_TEST) && $(MAKE) -e $@
+	cd $(SRC_CONTRIB) && $(MAKE) -e $@
+	cd $(SRC_CONFIG)  && $(MAKE) -e $@
 	#-rm -f *.cfg core
 	#-rm -f *~ *.*~ */*~ */*.*~
 	-rm -rf autom4te.cache
-	$(MAKE) distclean
+	$(MAKE) -e distclean
 
 distclean: 
-	cd $(SRC_PLUGINS) && $(MAKE) $@
-	cd $(SRC_PL_TEST) && $(MAKE) $@
-	cd $(SRC_CONTRIB) && $(MAKE) $@
-	cd $(SRC_CONFIG)  && $(MAKE) $@
+	cd $(SRC_PLUGINS) && $(MAKE) -e $@
+	cd $(SRC_PL_TEST) && $(MAKE) -e $@
+	cd $(SRC_CONTRIB) && $(MAKE) -e $@
+	cd $(SRC_CONFIG)  && $(MAKE) -e $@
 	-rm -f Makefile config.status config.log subst
 
 devclean: distclean

@@ -13,29 +13,29 @@ all:
 	echo "make install-config clean distclean"
 
 clean:
-	cd cluster		&& $(MAKE) $@
-	cd feed_passive		&& $(MAKE) $@
-	cd multi_long		&& $(MAKE) $@
-	cd network_interface	&& $(MAKE) $@
-	cd nagiostats		&& $(MAKE) $@
-	cd start_process	&& $(MAKE) $@
+	cd cluster		&& $(MAKE) -e $@
+	cd feed_passive		&& $(MAKE) -e $@
+	cd multi_long		&& $(MAKE) -e $@
+	cd network_interface	&& $(MAKE) -e $@
+	cd nagiostats		&& $(MAKE) -e $@
+	cd start_process	&& $(MAKE) -e $@
 	
 
 distclean: clean
-	cd cluster		&& $(MAKE) $@
-	cd feed_passive		&& $(MAKE) $@
-	cd multi_long		&& $(MAKE) $@
-	cd network_interface	&& $(MAKE) $@
-	cd nagiostats		&& $(MAKE) $@
-	cd start_process	&& $(MAKE) $@
+	cd cluster		&& $(MAKE) -e $@
+	cd feed_passive		&& $(MAKE) -e $@
+	cd multi_long		&& $(MAKE) -e $@
+	cd network_interface	&& $(MAKE) -e $@
+	cd nagiostats		&& $(MAKE) -e $@
+	cd start_process	&& $(MAKE) -e $@
 	-rm -f Makefile
 
 devclean: distclean
 
 install-config: 
-	cd cluster		&& $(MAKE) $@
-	cd feed_passive		&& $(MAKE) $@
-	cd multi_long		&& $(MAKE) $@
-	cd network_interface	&& $(MAKE) $@
-	cd nagiostats		&& $(MAKE) $@
-	cd start_process	&& $(MAKE) $@
+	cd cluster		&& $(MAKE) -e $@
+	cd feed_passive		&& $(MAKE) -e $@
+	cd multi_long		&& $(MAKE) -e $@
+	cd network_interface	&& $(MAKE) -e $@
+	cd nagiostats		&& $(MAKE) -e $@
+	cd start_process	&& $(MAKE) -e $@
