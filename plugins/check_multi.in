@@ -584,6 +584,9 @@ sub process_input {
 		DEBUG3("process_input: IPC::Open3 and IO::Select modules loaded");
 	}
 
+	#--- Initialize empty PATH if none defined
+	$ENV{PATH}="" unless ($ENV{PATH});
+
 	#--- set plugin_path at 2nd position of PATH variable
 	$ENV{PATH}="$opt{set}{plugin_path}:$ENV{PATH}" if ($opt{set}{plugin_path});
 
