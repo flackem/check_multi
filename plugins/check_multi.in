@@ -586,12 +586,13 @@ sub process_input {
 
 	#--- Initialize empty PATH if none defined
 	$ENV{PATH}="" unless ($ENV{PATH});
+	my $path_sep=($^O=~/Win32/)?';':':';
 
 	#--- set plugin_path at 2nd position of PATH variable
-	$ENV{PATH}="$opt{set}{plugin_path}:$ENV{PATH}" if ($opt{set}{plugin_path});
+	$ENV{PATH}="$opt{set}{plugin_path}${path_sep}$ENV{PATH}" if ($opt{set}{plugin_path});
 
 	#--- set libexec directory at the beginning of PATH variable
-	$ENV{PATH}="$opt{set}{libexec}:$ENV{PATH}" if ($opt{set}{libexec});
+	$ENV{PATH}="$opt{set}{libexec}${path_sep}$ENV{PATH}" if ($opt{set}{libexec});
 
 	#--- all state definitions can be set via command line
 	$rc{expr}[$OK]=$cmds[0]{ok} if ($cmds[0]{ok});
