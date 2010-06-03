@@ -1,5 +1,7 @@
 
 ===== Changelog =====
+	* splitted checkresults report sub to prepare host checkresult files
+
 **0.21**	03.06.2010
 	* second version of livestatus [ tag ] = Filter: field ~ pattern (needs Monitoring::Livestatus)
 	* added first version of livestatus [ tag ] = host:service (needs Monitoring::Livestatus)

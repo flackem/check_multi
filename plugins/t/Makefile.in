@@ -12,6 +12,7 @@ all:
 
 clean:
 	-rm -f check_multi.t
+	-rm -f check_multi_checkresults.t
 	-rm -f check_multi_feeds_passive.t
 	-rm -f check_multi_livestatus.t
 	-rm -f check_multi_statusdat.t
@@ -24,6 +25,9 @@ devclean: distclean
 test: 
 	@PERL@ check_multi.t
 
+test-checkresults:
+	@PERL@ check_multi_checkresults.t
+
 test-feeds-passive:
 	@PERL@ check_multi_feeds_passive.t
 
@@ -35,6 +39,7 @@ test-statusdat:
 
 test-all:
 	@PERL@ check_multi.t
+	@PERL@ check_multi_checkresults.t
 	@PERL@ check_multi_feeds_passive.t
 	@PERL@ check_multi_statusdat.t
 	@PERL@ check_multi_livestatus.t

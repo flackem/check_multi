@@ -3207,26 +3207,16 @@ sub report_checkresult_file {
 		#--- create checkresults file
 		my ($th,$tf)=File::Temp::tempfile("cXXXXXX",DIR=>"$opt{set}{checkresults_dir}");
 		my $escaped_output=$cmds[$i]{output}; $escaped_output=~s/\n/\\n/g;
-		my $content=
-		"### check_multi passive check result file $tf ###\n".
-		"file_time=".int(time)."\n\n".
-		"### child check result ###\n".
-		"# Time: ".scalar(localtime($cmds[$i]{starttime}))."\n" .
-		"host_name=".$opt{set}{HOSTNAME}."\n".
-		"service_description=$cmds[$i]{name}\n".
-		"check_type=1\n".
-		"check_options=0\n".
-		"scheduled_check=0\n".
-		"reschedule_check=0\n".
-		"latency=0\n".
-		"start_time=".sprintf("%17.6f",$cmds[$i]{starttime})."\n".
-		"finish_time=".sprintf("%17.6f",$cmds[$i]{endtime})."\n".
-		"early_timeout=0\n".
-		"exited_ok=1\n".
-		"return_code=".$cmds[$i]{rc}."\n".
-		"output=".$escaped_output;
-		$content.='|'.$cmds[$i]{performance} if ($cmds[$i]{process_perfdata} && defined($cmds[$i]{performance}) && $cmds[$i]{performance});
-		$content.="\n";
+		$escaped_output.='|'.$cmds[$i]{performance} if ($cmds[$i]{process_perfdata} && defined($cmds[$i]{performance}) && $cmds[$i]{performance});
+		my $content=checkresult(
+			"host_name=$opt{set}{HOSTNAME}",
+			"service_description=$cmds[$i]{name}",
+			"start_time=".sprintf("%17.6f",$cmds[$i]{starttime}),
+			"finish_time=".sprintf("%17.6f",$cmds[$i]{endtime}),
+			"return_code=".$cmds[$i]{rc},
+			"output=".$escaped_output,
+		);
+		DEBUG4("report_checkresults_file: file content is >$content<");
 		print $th $content;
 		close $th;
 
@@ -3238,7 +3228,63 @@ sub report_checkresult_file {
 			close OKFILE;
 		}
 	}
+}
 
+#---
+#--- helper routine to build up checkresult output
+#---
+sub checkresult {
+	my (@parms)=@_;
+
+	my %att=(
+		"host_name"		=> undef,
+		"service_description"	=> undef,
+		"check_type"		=> 1,
+		"check_options"		=> 0,
+		"scheduled_check"	=> 0,
+		"reschedule_check"	=> 0,
+		"latency"		=> 0,
+		"start_time"		=> undef,
+		"finish_time"		=> undef,
+		"early_timeout"		=> 0,
+		"exited_ok"		=> 1,
+		"return_code"		=> undef,
+		"output"		=> undef,
+	);
+	#--- read and check parameter pairs (should be key=value)
+	foreach my $parameter (@parms) {
+		if (my ($key,$val)=($parameter=~/\s*(\S+)\s*=\s*(.*)\s*/)) {
+			#--- perform only allowed (= already defined) pairs
+			if (exists($att{$key})) {
+				$att{$key}=$val;
+				DEBUG4("checkresult: add key $key ($val) to attributes");
+			} else {
+				add_error("checkresult: unknown attribute $key");
+			}
+		} else {
+			add_error("checkresult: unknown attribute specification $parameter");
+		}
+	}
+
+	#--- create checkresult content
+	my $checkresult=sprintf(
+		"### check_multi passive check result file ###\n".
+		"file_time=%ld\n\n".
+		"### child check result ###\n".
+		"# Time: %s\n",
+			int(time),
+			scalar(localtime($att{start_time})) 
+	);
+	#--- add attributes, output at last
+	foreach my $attribute (sort keys %att) {
+		#--- skip output, append later
+		next if ($attribute eq "output"); 
+		#--- add attribute to checkresult
+		$checkresult.="$attribute=$att{$attribute}\n" if (defined($att{$attribute}));
+	}
+	#--- at last: output
+	$checkresult.="output=$att{output}";
+	return $checkresult;
 }
 
 #-------------------------------------------------------------------------------
