@@ -379,18 +379,14 @@ sub process_input {
 					DEBUG3("process_input: Data::Dumper available");
 					DEBUG3("XML input after XMLin:\n" . Dumper($in));
 				}
-				#--- restore some values from parent
-				$cmds[0]{nchecks}=$in->{PARENT}->{nchecks};
-				$cmds[0]{nallchecks}=$in->{PARENT}->{nallchecks};
 
 				#--- child values
-				for my $i (keys %{$in->{PARENT}->{CHILD}}) {
+				for my $i (keys %{$in->{$MYSELF}->{CHILD}}) {
 					#DEBUG4("key $i");
 					$cmds[$i]{no}=$i;	# index itself as 'no'
 					$cmds[$i]{feeded}=1;	# mark this cmd as feeded
-					foreach my $att (keys %{$in->{PARENT}->{CHILD}->{$i}}) {
-						#print " att $att -> $in->{PARENT}->{CHILD}->{$i}->{$att}\n";
-						$cmds[$i]{$att}=$in->{PARENT}->{CHILD}->{$i}->{$att};
+					foreach my $att (keys %{$in->{$MYSELF}->{CHILD}->{$i}}) {
+						$cmds[$i]{$att}=$in->{$MYSELF}->{CHILD}->{$i}->{$att};
 					}
 				}
 				DEBUG3("\@cmds after filling from XML input\n" . Dumper(\@cmds));
@@ -2814,23 +2810,30 @@ sub report_html {
 #---
 sub report_xml {
 
+	#--- xml header
 	my $xmlstr="<?xml version=\"1.0\"?>\n";
 	$xmlstr.="<?xml-stylesheet type=\"text/xsl\" href=\"extinfo.xsl\"?>\n";
 	$xmlstr.="<div id=\"check_multi_xml\" style='display:none'>\n";
-	$xmlstr.="<PARENT>\n";
-	foreach my $token (sort keys %{$cmds[0]}) {
-		if (defined($cmds[0]{$token})) {
-			$xmlstr.=sprintf "\t<%s>%s</%s>\n",$token,$cmds[0]{$token},$token;
+
+	#--- begin with cmds[0] - parent
+	my $no=0;
+	$xmlstr.="<$MYSELF>\n";
+	$xmlstr.="\t<CHILD>\n";
+	$xmlstr.="\t\t<no>$no</no>\n";
+	foreach my $token (sort keys %{$cmds[$no]}) {
+		next if ($token=~/output|error/);
+		if (defined($cmds[$no]{$token})) {
+			if (ref($cmds[$no]{$token}) eq "ARRAY") {
+				$xmlstr.="\t\t<$token>" . join("</$token>\n\t\t<$token>",@{$cmds[$no]{$token}}) . "</$token>\n";
+			} else {
+				$xmlstr.=sprintf "\t\t<%s>%s</%s>\n",$token,xml_encode($cmds[$no]{$token}),$token;
+			}
 		} else {
 			add_error("report_xml: XML element $token not found");
 		}
 	}
-	$xmlstr.="\t<name>$cmds[0]{name}</name>\n";
-	$xmlstr.="\t<plugins>$cmds[0]{nchecks}</plugins>\n";
-	$xmlstr.="\t<starttime>$cmds[0]{starttime}</starttime>\n";
-	$xmlstr.="\t<endtime>$cmds[0]{endtime}</endtime>\n";
-	$xmlstr.="\t<runtime>$cmds[0]{runtime}</runtime>\n";
-	$xmlstr.="\t<output>";
+	#--- extra: output 
+	$xmlstr.="\t\t<output>";
 	if (defined($cmds[0]{fmtstr})) {
 		my $output="sprintf " . $cmds[0]{fmtstr};
 	 	$output.="," . join(",",@{$cmds[0]{parms}}) if (defined($cmds[0]{parms}));
@@ -2859,23 +2862,28 @@ sub report_xml {
 		}
 	}
 	$xmlstr.="</output>\n";
-	$xmlstr.="\t<error>" . join(", ",@{$cmds[0]{error}}) . "</error>\n" if (defined($cmds[0]{error}[0]));
+	$xmlstr.="\t\t<error>" . join("</error>\n\t\t<error>",@{$cmds[0]{error}}) . "</error>\n" if (defined($cmds[0]{error}[0]));
+	$xmlstr.="\t</CHILD>\n";
 
+	#--- loop over child checks
 	for ($no=1;$no<=$#cmds;$no++) {
 		next if (!$cmds[$no]{displayed});
 		$xmlstr.="\t<CHILD>\n";
 		$xmlstr.="\t\t<no>$cmds[$no]{number}</no>\n";
-		#foreach my $token (split(/,/,$opt{set}{xml_elements})) {
 		foreach my $token (sort keys %{$cmds[$no]}) {
 			if (defined($cmds[$no]{$token})) {
-				$xmlstr.=sprintf "\t\t<%s>%s</%s>\n",$token,xml_encode($cmds[$no]{$token}),$token;
+				if (ref($cmds[$no]{$token}) eq "ARRAY") {
+					$xmlstr.="\t\t<$token>" . join("</$token>\n\t\t<$token>",@{$cmds[$no]{$token}}) . "</$token>\n";
+				} else {
+					$xmlstr.=sprintf "\t\t<%s>%s</%s>\n",$token,xml_encode($cmds[$no]{$token}),$token;
+				}
 			} else {
 				add_error("report_xml: XML element $token not found");
 			}
 		}
 		$xmlstr.="\t</CHILD>\n";
 	}
-	$xmlstr.="</PARENT>\n</div>\n";
+	$xmlstr.="</$MYSELF>\n</div>\n";
 	print $xmlstr;
 }
 

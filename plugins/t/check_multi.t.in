@@ -37,7 +37,7 @@ if ($procs_output=~/PROCS (\S+): \d+ (\S+)/) {
 } else {
 	plan skip_all => "tests because check_procs output ($procs_output) does not match pattern (PROCS (\\S+): \\d+ (\\s+))";
 }
-plan tests => 50;
+plan tests => 52;
 
 my $result;
 my $testopts="-s dont_be_paranoid=1 -s tmp_dir=/tmp/check_multi";
@@ -287,6 +287,71 @@ like(
 	'/^check_multi OK - 2 plugins checked, 2 ok\n'.
 	'.*<img src=.*Show performance chart.*'.
 	'.*zwei::echo::zwei=2 $/',
+	"output correct"
+);
+
+#-------------------------------------------------------------------------------
+#--- report option 256 ---------------------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi -x 'command [ proc ] = check_procs' -r 256 $testopts"
+);
+is(
+	$result->return_code, 
+	0, 
+	"report option 256 (XML output) - RC0"
+);
+
+#?xml version="1.0"?>
+#<?xml-stylesheet type="text/xsl" href="extinfo.xsl"?>
+#<div id="check_multi_xml" style='display:none'>
+#<check_multi>
+#        <CHILD>
+#                <no>0</no>
+#                <endtime>1275582892.30824</endtime>
+#                <nallchecks>1</nallchecks>
+#                <name></name>
+#                <nchecks>1</nchecks>
+#                <number>0</number>
+#                <rc>0</rc>
+#                <runtime>0.0230729579925537</runtime>
+#                <sleeped>0</sleeped>
+#                <starttime>1275582892.28517</starttime>
+#                <timeouttime>1275582952.28517</timeouttime>
+#                <output>0 critical, 0 warning, 0 unknown, 1 ok</output>
+#                <error>report_xml: XML element critical not found</error>
+#                <error>report_xml: XML element ok not found</error>
+#                <error>report_xml: XML element unknown not found</error>
+#                <error>report_xml: XML element warning not found</error>
+#        </CHILD>
+#        <CHILD>
+#                <no>1</no>
+#                <command>check_procs</command>
+#                <displayed>1</displayed>
+#                <endtime>1275582892.30783</endtime>
+#                <error></error>
+#                <name>procs</name>
+#                <number>1</number>
+#                <output>PROCS OK: 152 processes</output>
+#                <plugin>check_procs</plugin>
+#                <pplugin>check_procs</pplugin>
+#                <process_perfdata>1</process_perfdata>
+#                <rc>0</rc>
+#                <runtime>0.0226080417633057</runtime>
+#                <starttime>1275582892.28522</starttime>
+#                <type>command</type>
+#        </CHILD>
+#</check_multi>
+#</div>
+like(
+	$result->output,
+	'/^<\?xml version'.
+	'.*<no>0<\/no>'.
+	'.*<rc>0<\/rc>'.
+	'.*<no>1<\/no>'.
+	'.*<command>check_procs<\/command>'.
+	'.*<output>PROCS.*<\/output>'.
+	'.*<type>command<\/type>.*$/s',
 	"output correct"
 );
 
