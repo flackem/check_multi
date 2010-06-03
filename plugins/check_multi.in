@@ -382,7 +382,6 @@ sub process_input {
 
 				#--- child values
 				for my $i (keys %{$in->{$MYSELF}->{CHILD}}) {
-					#DEBUG4("key $i");
 					$cmds[$i]{no}=$i;	# index itself as 'no'
 					$cmds[$i]{feeded}=1;	# mark this cmd as feeded
 					foreach my $att (keys %{$in->{$MYSELF}->{CHILD}->{$i}}) {
@@ -2828,8 +2827,6 @@ sub report_xml {
 			} else {
 				$xmlstr.=sprintf "\t\t<%s>%s</%s>\n",$token,xml_encode($cmds[$no]{$token}),$token;
 			}
-		} else {
-			add_error("report_xml: XML element $token not found");
 		}
 	}
 	#--- extra: output 
