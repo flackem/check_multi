@@ -1479,12 +1479,12 @@ sub parse_header {
 				return -1;
 			}
 			while(@result) {
-		#--- increase counters if no overload
-		if (!defined($cmds[$i]{number})) {
-			$cmds[0]{nallchecks}++;
-			$cmds[0]{nchecks}++;
-			$cmds[$i]{number}=$cmds[0]{nchecks};
-		}
+				#--- increase counters if no overload
+				if (!defined($cmds[$i]{number})) {
+					$cmds[0]{nallchecks}++;
+					$cmds[0]{nchecks}++;
+					$cmds[$i]{number}=$cmds[0]{nchecks};
+				}
 
 				$cmds[$i]{type}=$type;
 				$cmds[$i]{command}=$cmd;
@@ -1892,6 +1892,79 @@ sub get_cumulated_top {
 #---
 #--- get attributes of a particular status.dat service
 #---
+sub get_status_dat_host {
+	my ($statusdat_path, $host_name)=@_;
+
+	if (!$host_name) {
+		add_error("get_status_dat_host: empty host_name=$host_name specified");
+		return (-1,"");
+	}
+	if (!$status_dat) {
+		DEBUG4("get_status_dat_host: 1st read, creating service tree");
+		$status_dat=read_status_dat($statusdat_path);
+		if (!$status_dat) {
+			add_error("get_status_dat_host: could not read $statusdat_path");
+			return (-1,"");
+		}
+	} else {
+		DEBUG4("get_status_dat_host: subsequent read, reading from service tree");
+	}
+	if (! defined($status_dat->{$host_name})) {
+		DEBUG2("get_status_dat_host: did not found RC and output for $host_name");
+		return (-1,"");
+	} else {
+		DEBUG4("get_status_dat_host: found data for $host_name: RC $status_dat->{$host_name}->{current_state} and output \'$status_dat->{$host_name}->{plugin_output}\', long_output \'$status_dat->{$host_name}->{long_plugin_output}\'");
+		return (
+			$status_dat->{$host_name}->{current_state}, 
+			$status_dat->{$host_name}->{plugin_output}."\n".
+			$status_dat->{$host_name}->{long_plugin_output}
+		);
+	}
+}
+
+#---
+#--- reads list of status.dat hosts and returns all hosts which match host name
+#---
+sub expand_status_dat_host {
+	my ($statusdat_path, $host_name)=@_;
+
+	DEBUG4("expand_status_dat_host: expanding $host_name");
+	if (!$host_name) {
+		add_error("expand_status_dat_host: empty host_name=$host_name specified");
+		return (undef,undef);
+	}
+	if (!$status_dat) {
+		DEBUG4("expand_status_dat_host: 1st read, creating tree");
+		$status_dat=read_status_dat($statusdat_path);
+		if (!$status_dat) {
+			add_error("expand_status_dat_host: could not read $statusdat_path");
+			return (undef,undef);
+		}
+	} else {
+		DEBUG4("expand_status_dat_host: subsequent read, reading from tree");
+	}
+
+	#--- expand simple tokens to REGEX, if necessary
+	$host_name=($host_name=~/\/(.*)\//)?$1:'^'.$host_name.'$';
+	DEBUG4("expand_status_dat_host: $host_name after REGEX preparation");
+
+	my @result=();
+	foreach my $host (sort keys(%{$status_dat})) {
+		#--- proceed if host and service names do fit
+		if ($host=~/$host_name/) {
+			push @result,$host;
+			DEBUG4("expand_status_dat_host: $host matched $host_name");
+		} else {
+			DEBUG4("expand_status_dat_host: $host did not match $host_name");
+		}
+	}
+	DEBUG4("expand_status_dat_host returns " . ($#result+1)/2 . " results");
+	return @result;
+}
+
+#---
+#--- get attributes of a particular status.dat service
+#---
 sub get_status_dat_service {
 	my ($statusdat_path, $host_name, $service_description)=@_;
 
@@ -1979,8 +2052,39 @@ sub read_status_dat {
 
 	#--- outer loop: look for type ${type}status
 	while (<DAT>) {
+		#--- read hosts
+		if (/^hoststatus\s+\{/) {
+			my $plugin_output="";
+			my $long_plugin_output="";
+			my $current_state=0;
+			my $host_name="";
+
+			while (<DAT>) {
+				NEXT: if (/\thost_name=(.+)$/) {
+					$host_name=$1;
+				} elsif (/\tcurrent_state=(.*)/) {
+					$current_state=$1;
+				} elsif (/\tplugin_output=(.*)/) {
+					$plugin_output=$1;
+				} elsif (/\tlong_plugin_output=(.*)/) {
+					chomp($long_plugin_output=$1);
+					while (<DAT>) {
+						if (/^\t/) {
+							goto NEXT;
+						} else {
+							chomp;
+							$long_plugin_output.="\n$_";
+						}
+					}
+				} elsif (/^\t\}$/) {
+					$status_dat->{$host_name}->{current_state}=$current_state;
+					$status_dat->{$host_name}->{plugin_output}=$plugin_output;
+					$status_dat->{$host_name}->{long_plugin_output}=$long_plugin_output;
+					last;
+				}
+			}
 		#--- read only services
-		if (/^servicestatus\s+\{/) {
+		} elsif (/^servicestatus\s+\{/) {
 			my $plugin_output="";
 			my $long_plugin_output="";
 			my $current_state=0;
