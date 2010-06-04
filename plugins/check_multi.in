@@ -1658,8 +1658,6 @@ sub exec_command {
 					alarm(0);
 				}
 				$cmds[$no]{rc}=$? >> 8;
-				$ENV{"MULTI_${no}_RC"}=$cmds[$no]{rc};
-				$ENV{"MULTI_${no}_RC_label"}=($cmds[$no]{rc}<=$UNKNOWN)?$def{label}{$cmds[$no]{rc}}:"INVALID";
 
 				#--- store stdout/stderr and cleanup tmpfiles
 				$cmds[$no]{output}=readfile($tmp_stdout);
@@ -1773,7 +1771,6 @@ sub exec_command {
 			} else {
 				chomp($cmds[$no]{output});
 			}
-			$ENV{"MULTI_".$cmds[$no]{name}}="$cmds[$no]{output}";
 			#--- split performance data from standard output
 			if ($cmds[$no]{output}=~/\|/) {
 				($cmds[$no]{output},$cmds[$no]{performance})=split(/\|/,$cmds[$no]{output});
@@ -1815,16 +1812,20 @@ sub exec_command {
 				$cmds[$no]{rc}=$UNKNOWN;
 			}
 		}
-		$ENV{"MULTI_".$cmds[$no]{name}}="$cmds[$no]{output}";
 	} elsif ($cmds[$no]{type} eq "snmp") {
 		local $SIG{ALRM} = sub {
 			add_error("$cmds[$no]{name}: timeout after $opt{set}{timeout}s");
 		};
 		alarm($opt{set}{timeout});
 		($cmds[$no]{rc},$cmds[$no]{output})=get_snmp($cmds[$no]{host},$opt{set}{snmp_port},$opt{set}{snmp_community},$cmds[$no]{command},$cmds[$no]{translate});
-		$ENV{"MULTI_".$cmds[$no]{name}}="$cmds[$no]{output}";
 		alarm(0);
 	}
+
+	#--- set MULTI environment vars (e.g. for subsequent state evaluation)
+	$ENV{"MULTI_${no}_RC"}=$cmds[$no]{rc};
+	$ENV{"MULTI_${no}_RC_label"}=($cmds[$no]{rc}<=$UNKNOWN)?$def{label}{$cmds[$no]{rc}}:"INVALID";
+	$ENV{"MULTI_".$cmds[$no]{name}}="$cmds[$no]{output}";
+
 	$cmds[$no]{endtime}=time;
 	$cmds[$no]{runtime}=$cmds[$no]{endtime}-$cmds[$no]{starttime};
 
@@ -2453,11 +2454,12 @@ sub single_result_rating {
 			DEBUG4("single_result_rating: no expression for $def{llabel}{$state} -> no evaluation");
 			next;
 		} else {
-			DEBUG4("single_result_rating: expression found for $def{llabel}{$state}: >>>\'$cmds[$no]{output}\'$cmds[$no]{$def{llabel}{$state}}<<<");
+			DEBUG4("single_result_rating: expression found for $def{llabel}{$state}: >>>$cmds[$no]{$def{llabel}{$state}}<<<");
 		}
 
-		my ($result,$message)=eval_result("\'$cmds[$no]{output}\'$cmds[$no]{$def{llabel}{$state}}");
-		DEBUG4("single_result_rating: evaluating expression \'$cmds[$no]{output}\'$cmds[$no]{$def{llabel}{$state}}, result is $result");
+		#my ($result,$message)=eval_result("\'$cmds[$no]{output}\'$cmds[$no]{$def{llabel}{$state}}");
+		my ($result,$message)=eval_result("$cmds[$no]{$def{llabel}{$state}}");
+		DEBUG4("single_result_rating: evaluating expression \'$cmds[$no]{$def{llabel}{$state}}\', result is $result");
 
 		if (! defined($result) || $result eq "") {
 			; # do nothing
