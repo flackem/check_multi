@@ -29,7 +29,7 @@ foreach my $plugin (@plugins) {
 		plan skip_all => "tests because status.dat \'@localstatedir@/status.dat\' not found or not readable - is @nagios_name@ running?";
 	}
 }
-plan tests => 2;
+plan tests => 6;
 
 my $result;
 my $testopts="-s dont_be_paranoid=1";
@@ -49,4 +49,38 @@ like(
 	$result->output,
 	'/UNKNOWN - 0 plugins checked,  \[Could not expand host:service host_not_there:service_not_there from status_dat.*/', 
 	"output correct - passed"
+);
+
+#-------------------------------------------------------------------------------
+#--- services all --------------------------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi -x 'statusdat [ svc ] = /.*/:/.*/' $testopts",
+);
+is(
+	$result->return_code, 
+	$result->return_code, 
+	"check_multi finds numerous services in status.dat - RC".$result->return_code." - passed"
+);
+like(
+	$result->output,
+	'/\d+ plugins checked.*\|check_multi\:\:check_multi\:\:plugins=\d+/s', 
+	"services output correct - passed"
+);
+
+#-------------------------------------------------------------------------------
+#--- hosts all -----------------------------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi -x 'statusdat [ host ] = /.*/' $testopts",
+);
+is(
+	$result->return_code, 
+	$result->return_code, 
+	"check_multi finds numerous hosts in status.dat - RC".$result->return_code." - passed"
+);
+like(
+	$result->output,
+	'/\d+ plugins checked.*\|check_multi\:\:check_multi\:\:plugins=\d+/s', 
+	"hosts output correct - passed"
 );

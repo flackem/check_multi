@@ -1383,7 +1383,7 @@ sub parse_header {
 				return -1;
 			}
 		}
-		#--- statusdat: split host and service from command, format: host:service
+		#--- livestatus: split host and service from command, format: host:service
 		my @result=expand_livestatus_service($opt{set}{livestatus}, $cmd);
 
 		if (!defined($result[0])) {
@@ -1467,12 +1467,13 @@ sub parse_header {
 			$cmds[$i]{process_perfdata}=1;
 		}
 
+	#--- format: 'statusdat [ tag[::plugin] ] = host'
 	#--- format: 'statusdat [ tag[::plugin] ] = host, service'
 	} elsif ($type eq "statusdat") {
 
 		#--- statusdat: split host and service from command, format: host:service
 		if ($cmd=~/\s*([^:]*)\s*\:\s*(.*)\s*/) {
-			DEBUG4("parse_header: expanding $1:$2");
+			DEBUG4("parse_header: host:service format - expanding $1:$2");
 			my @result=expand_status_dat_service($opt{set}{status_dat}, $1, $2);
 			if (!defined($result[0])) {
 				add_error("Could not expand host:service $1:$2 from status_dat $opt{set}{status_dat}");
@@ -1509,8 +1510,45 @@ sub parse_header {
 				DEBUG4("parse_header: added host:$cmds[$i]{host} / service:$cmds[$i]{service}");
 				$i++;
 			}
+		#--- statusdat: split host from command, format: host
+		} elsif ($cmd=~/\s*([^:]*)\s*/) {
+			DEBUG4("parse_header: host format - expanding $1");
+			my @result=expand_status_dat_host($opt{set}{status_dat}, $1);
+			if (!defined($result[0])) {
+				add_error("Could not expand host $1 from status_dat $opt{set}{status_dat}");
+				return -1;
+			}
+			while(@result) {
+				#--- increase counters if no overload
+				if (!defined($cmds[$i]{number})) {
+					$cmds[0]{nallchecks}++;
+					$cmds[0]{nchecks}++;
+					$cmds[$i]{number}=$cmds[0]{nchecks};
+				}
+
+				$cmds[$i]{type}=$type;
+				$cmds[$i]{command}=$cmd;
+				$cmds[$i]{plugin}=undef;
+				$cmds[$i]{pplugin}=undef;
+				$cmds[$i]{ok}=undef;
+				$cmds[$i]{warning}=undef;
+				$cmds[$i]{critical}=undef;
+				$cmds[$i]{unknown}=undef;
+				$cmds[$i]{rc}=$UNKNOWN;
+				$cmds[$i]{displayed}=1;
+				$cmds[$i]{output}="";
+				$cmds[$i]{error}="";
+				$cmds[$i]{runtime}=0;
+				$cmds[$i]{host}=shift(@result);
+				if ($cmds[$i]{host} eq "-1") {
+					$cmds[$i]{host}="UNKNOWN";
+				}
+				$cmds[$i]{name}="${name}_$cmds[$i]{host}";
+				DEBUG4("parse_header: added host:$cmds[$i]{host}");
+				$i++;
+			}
 		} else {
-			add_error("parse_header: invalid host or service in statusdat line \'$lineno\', format should be \'statusdat [ name ] = host:service\'"); 
+			add_error("parse_header: invalid host [or service] in statusdat line \'$lineno\', format should be \'statusdat [ name ] = host[:service]\'"); 
 			return -1;
 		}
 
@@ -1764,10 +1802,18 @@ sub exec_command {
 			add_error("$cmds[$no]{name}: timeout after $opt{set}{timeout}s");
 		};
 		alarm($opt{set}{timeout});
-		($cmds[$no]{rc},$cmds[$no]{output})=get_status_dat_service($opt{set}{status_dat},$cmds[$no]{host},$cmds[$no]{service});
-		if ($cmds[$no]{rc} == -1) {
-			add_error("statusdat $cmds[$no]{name}: cannot find service \'$cmds[$no]{service}\' on host \'$cmds[$no]{host}\' in \'$opt{set}{status_dat}\'");
-			$cmds[$no]{rc}=$UNKNOWN;
+		if (!defined($cmds[$no]{service})) {
+			($cmds[$no]{rc},$cmds[$no]{output})=get_status_dat_host($opt{set}{status_dat},$cmds[$no]{host},$cmds[$no]{service});
+			if ($cmds[$no]{rc} == -1) {
+				add_error("statusdat $cmds[$no]{name}: cannot find service \'$cmds[$no]{service}\' on host \'$cmds[$no]{host}\' in \'$opt{set}{status_dat}\'");
+				$cmds[$no]{rc}=$UNKNOWN;
+			}
+		} else {
+			($cmds[$no]{rc},$cmds[$no]{output})=get_status_dat_service($opt{set}{status_dat},$cmds[$no]{host});
+			if ($cmds[$no]{rc} == -1) {
+				add_error("statusdat $cmds[$no]{name}: cannot find host \'$cmds[$no]{host}\' in \'$opt{set}{status_dat}\'");
+				$cmds[$no]{rc}=$UNKNOWN;
+			}
 		}
 		$ENV{"MULTI_".$cmds[$no]{name}}="$cmds[$no]{output}";
 	} elsif ($cmds[$no]{type} eq "snmp") {
