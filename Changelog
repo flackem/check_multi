@@ -1,5 +1,6 @@
 
 ===== Changelog =====
+	* fix for correct treatment of empty lines in encoded configurations, thx to Frank Plab
 	* state evaluation for child checks now works as global state evaluation\\ - with complete expression, e.g. '$child$=~/expr/'
 	* statusdat [ test ] = /host.*/ - now supports also including host checks
 	* splitted checkresults report sub to prepare host checkresult files

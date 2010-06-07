@@ -1085,6 +1085,7 @@ sub parse_files {
 		#--- encoded flat file
 		if ($filename=~/%0A/) {
 			$filename=~s/\%([A-Fa-f0-9]{2})/pack('C', hex($1))/seg;
+			$filename=~s/(\n){2,}/\n/sg; # remove empty lines
 			@lines=(split(/\n/,$filename));
 			DEBUG3("-" x 80);
 			DEBUG3("parse_files: parsing encoded $filename with $#lines lines");
