@@ -381,12 +381,15 @@ sub process_input {
 				}
 
 				#--- child values
-				for my $i (keys %{$in->{$MYSELF}->{CHILD}}) {
-					$cmds[$i]{no}=$i;	# index itself as 'no'
-					$cmds[$i]{feeded}=1;	# mark this cmd as feeded
-					foreach my $att (keys %{$in->{$MYSELF}->{CHILD}->{$i}}) {
-						$cmds[$i]{$att}=$in->{$MYSELF}->{CHILD}->{$i}->{$att};
+				for my $no (keys %{$in->{$MYSELF}->{CHILD}}) {
+					$cmds[$no]{no}=$no;	# index itself as 'no'
+					$cmds[$no]{feeded}=1;	# mark this cmd as feeded
+					foreach my $att (keys %{$in->{$MYSELF}->{CHILD}->{$no}}) {
+						$cmds[$no]{$att}=$in->{$MYSELF}->{CHILD}->{$no}->{$att};
 					}
+					$ENV{"MULTI_${no}_NAME"}="$cmds[$no]{name}";
+					$ENV{"MULTI_${no}_STATE"}="$cmds[$no]{rc}";
+					$ENV{"MULTI_${no}_LABEL"}="$def{label}{$cmds[$no]{rc}}";
 				}
 				DEBUG3("\@cmds after filling from XML input\n" . Dumper(\@cmds));
 			}
