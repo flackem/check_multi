@@ -1085,8 +1085,8 @@ sub parse_files {
 		#--- encoded flat file
 		if ($filename=~/%0A/) {
 			$filename=~s/\%([A-Fa-f0-9]{2})/pack('C', hex($1))/seg;
-			$filename=~s/(\n){2,}/\n/sg; # remove empty lines
 			@lines=(split(/\n/,$filename));
+			push @lines, ""; # add empty line to avoid last line eval problem
 			DEBUG3("-" x 80);
 			DEBUG3("parse_files: parsing encoded $filename with $#lines lines");
 			DEBUG3("-" x 80);
@@ -1123,7 +1123,9 @@ sub parse_lines {
 
 	$lineno=0;	# count sourcefile lines
 	DEBUG4("parse_lines: starting with " . $#cmds . " command(s)");
-	LINE: while ($line=shift(@lines)) {
+	LINE: while (@lines) {
+
+		$line = shift(@lines);
 
 		#--- encode lines
 		if ($opt{set}{report} & $DETAIL_ENCODE_COMMANDS) {
