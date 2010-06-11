@@ -1801,6 +1801,9 @@ sub exec_command {
 		#--- evaluate single command RC rating
 		single_result_rating($no);
 
+		#--- set environment variable states
+		set_env_vars($no);
+
 		#--- prior exit
 		return $cmds[$no]{rc};
 

@@ -37,7 +37,7 @@ if ($procs_output=~/PROCS (\S+): \d+ (\S+)/) {
 } else {
 	plan skip_all => "tests because check_procs output ($procs_output) does not match pattern (PROCS (\\S+): \\d+ (\\s+))";
 }
-plan tests => 54;
+plan tests => 56;
 
 my $result;
 my $testopts="-s dont_be_paranoid=1 -s tmp_dir=/tmp/check_multi";
@@ -64,7 +64,7 @@ like(
 );
 
 #-------------------------------------------------------------------------------
-#--- ENV vars MULTI_... --------------------------------------------------------
+#--- ENV vars MULTI_... via command --------------------------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
 	"@PERL@ ../check_multi -x 'command [ echo ] = echo \"Hello World\"' -x 'command [ env ] = env | grep MULTI | sort' -r 1 $testopts",
@@ -72,7 +72,32 @@ $result = NPTest->testCmd(
 is(
 	$result->return_code, 
 	0, 
-	"environment variables assignment - RC0"
+	"environment variables assignment via command - RC0"
+);
+like(
+	$result->output,
+	'/^OK - 2 plugins checked, 2 ok\n'.
+	'\[ 1\] echo Hello World\n'.
+	'\[ 2\] env MULTI_1=Hello World\n'.
+	' MULTI_1_LABEL=OK\n'.
+	' MULTI_1_NAME=echo\n'.
+	' MULTI_1_RC=0\n'.
+	' MULTI_1_RC_LABEL=OK\n'.
+	' MULTI_1_STATE=0\n'.
+	' MULTI_2_NAME=env\n'.
+	'.*$/s',
+	"output correct"
+);
+#-------------------------------------------------------------------------------
+#--- ENV vars MULTI_... via eval -----------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi -x 'eeval [ echo ] = \"Hello World\";' -x 'command [ env ] = env | grep MULTI | sort' -r 1 $testopts",
+);
+is(
+	$result->return_code, 
+	0, 
+	"environment variables assignment via eeval - RC0"
 );
 like(
 	$result->output,
