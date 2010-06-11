@@ -928,7 +928,9 @@ sub set_env_vars {
 	$ENV{"MULTI_LABEL_$name"}="$def{label}{$cmds[$no]{rc}}";
 	$ENV{"MULTI_${no}"}="$cmds[$no]{output}";
 	$ENV{"MULTI_${no}_STATE"}="$cmds[$no]{rc}";
+	$ENV{"MULTI_${no}_RC"}="$cmds[$no]{rc}";
 	$ENV{"MULTI_${no}_LABEL"}="$def{label}{$cmds[$no]{rc}}";
+	$ENV{"MULTI_${no}_RC_LABEL"}=($cmds[$no]{rc}<=$UNKNOWN)?$def{label}{$cmds[$no]{rc}}:"INVALID";
 
 	DEBUG4("set_env_vars: 6 environment vars set\n" . 
 		"1. MULTI_$name=$cmds[$no]{output}\n" . 
@@ -1799,7 +1801,9 @@ sub exec_command {
 		#--- evaluate single command RC rating
 		single_result_rating($no);
 
+		#--- prior exit
 		return $cmds[$no]{rc};
+
 	} elsif ($cmds[$no]{type} eq "statusdat") {
 		local $SIG{ALRM} = sub {
 			add_error("$cmds[$no]{name}: timeout after $opt{set}{timeout}s");
@@ -1826,11 +1830,6 @@ sub exec_command {
 		($cmds[$no]{rc},$cmds[$no]{output})=get_snmp($cmds[$no]{host},$opt{set}{snmp_port},$opt{set}{snmp_community},$cmds[$no]{command},$cmds[$no]{translate});
 		alarm(0);
 	}
-
-	#--- set MULTI environment vars (e.g. for subsequent state evaluation)
-	$ENV{"MULTI_${no}_RC"}=$cmds[$no]{rc};
-	$ENV{"MULTI_${no}_RC_label"}=($cmds[$no]{rc}<=$UNKNOWN)?$def{label}{$cmds[$no]{rc}}:"INVALID";
-	$ENV{"MULTI_".$cmds[$no]{name}}="$cmds[$no]{output}";
 
 	$cmds[$no]{endtime}=time;
 	$cmds[$no]{runtime}=$cmds[$no]{endtime}-$cmds[$no]{starttime};
