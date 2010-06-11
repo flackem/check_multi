@@ -1772,7 +1772,7 @@ sub exec_command {
 			$cmds[$no]{output}.="[$@]";
 			$cmds[$no]{rc}=$WARNING;
 		} else {
-			if (!$cmds[$no]{output}) {
+			if (!defined($cmds[$no]{output})) {
 				$cmds[$no]{output}="";
 			} else {
 				chomp($cmds[$no]{output});
