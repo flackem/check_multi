@@ -58,7 +58,7 @@ is(
 );
 like(
 	$result->output,
-	'/^check_multi.*Revision.*Date.*Author: flackem.*\n'.
+	'/^Version: check_multi-[a-z0-9]{7}-\d{4}-\d{2}-\d{2}\n'.
 	'configure.*$/',
 	"output correct"
 );

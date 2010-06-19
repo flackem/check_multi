@@ -19,9 +19,6 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #
-#
-# $Id$
-#
 use strict; 
 use Getopt::Long qw(:config no_ignore_case bundling);
 use vars qw(
@@ -58,7 +55,7 @@ $MYSELF="check_multi";
 $nagios=lc("@nagios_name@");
 $NAGIOS=uc("@nagios_name@");
 $Nagios=ucfirst(lc("@nagios_name@"));
-$VERSION='$Revision$ $Date$ $Author$'.
+$VERSION='@CM_VERSION@'.
 	"\nconfigure @configure_args@";
 #
 #--- RC defines
@@ -321,7 +318,7 @@ sub process_input {
 
 	#--- -V(ersion) option
 	if ($opt{version}) {
-		print "$MYSELF: v$VERSION\n";
+		print "Version: $VERSION\n";
 		return $UNKNOWN;
 	}
 
