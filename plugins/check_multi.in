@@ -323,7 +323,7 @@ sub process_input {
 	}
 
 	#--- -h/--help shows long usage, -hh extended usage
-	DEBUG3("opt{help}=$opt{help}");
+	DEBUG3("process_input: opt{help}=$opt{help}");
 	if ($opt{help} == 1) {
 		short_usage();
 		long_usage();
@@ -467,7 +467,7 @@ sub process_input {
 
 		#--- 1. filename URL found
 		if ($opt{filename}[$i]=~/\/\//) {
-			DEBUG3("http/ftp URL specified: $opt{filename}[$i]");
+			DEBUG3("process_input: http/ftp URL specified: $opt{filename}[$i]");
 
 			#--- LWP module NOT loaded?
 			if (!$opt{set}{use_lwp_simple}) {
@@ -487,7 +487,7 @@ sub process_input {
 					print "$MYSELF error: empty path or filename specified in URL $opt{filename}[$i]\n";
 					return $UNKNOWN;
 				}
-				DEBUG4("URL:$opt{filename}[$i] hostname:$host path:$path file:$file");
+				DEBUG4("process_input: URL:$opt{filename}[$i] hostname:$host path:$path file:$file");
 			}
 			
 			#--- create directory to store saved config files
@@ -499,17 +499,17 @@ sub process_input {
 			my $cmdfile_age=time-(stat("$cmdfile_path/$file"))[10] if (-f "$cmdfile_path/$file");
 			if (!-f "$cmdfile_path/$file" ||
 			    $cmdfile_age>$opt{set}{cmdfile_update_interval}) {
-				DEBUG3("$cmdfile_path/$file age is $cmdfile_age, greater than allowed interval $opt{set}{cmdfile_update_interval}");
+				DEBUG3("process_input: $cmdfile_path/$file age is $cmdfile_age, greater than allowed interval $opt{set}{cmdfile_update_interval}");
 				my $RC=LWP::Simple::mirror($opt{filename}[$i],"$cmdfile_path/$file");
 				if (LWP::Simple::is_success($RC) || $RC == 304) {
 					DEBUG3("Mirroring $opt{filename}[$i] to $cmdfile_path/$file OK: RC $RC");
 					$opt{filename}[$i]="$cmdfile_path/$file";
 					`touch $opt{filename}[$i]`;
 				} else {
-					DEBUG2("Error: mirroring $opt{filename}[$i] to $cmdfile_path/$file failed: $RC");
+					DEBUG2("process_input: Error: mirroring $opt{filename}[$i] to $cmdfile_path/$file failed: $RC");
 				}
 			} else {
-				DEBUG3("$opt{filename}[$i] is already downloaded $cmdfile_path/$file");
+				DEBUG3("process_input: $opt{filename}[$i] is already downloaded $cmdfile_path/$file");
 				$opt{filename}[$i]="$cmdfile_path/$file";
 			}
 
@@ -520,7 +520,7 @@ sub process_input {
 		#--- 3. and at last: the simple filename
 		} else {
 			if (! -f $opt{filename}[$i] || ! -r $opt{filename}[$i]) {
-				DEBUG2("Error: filename $opt{filename}[$i] not existing or not readable");
+				DEBUG2("process_input: Error: filename $opt{filename}[$i] not existing or not readable");
 			}
 		}
 	}
@@ -658,6 +658,10 @@ sub process_input {
 		}
 	}
 
+	#--- do some debug output
+	DEBUG3("process_input: $MYSELF - $VERSION");
+	DEBUG3("process_input: command line: $0 >".join('< >',@SAVEARGV)."<");
+
 	#--- any remaining parameters are orphaned - tell the caller what's going wrong here
 	if (@ARGV) {
 		print "Error: orphaned parameters found on command line:";
@@ -667,10 +671,6 @@ sub process_input {
 		print "\n";
 		return $UNKNOWN;
 	}
-
-	#--- do some debug output
-	DEBUG3("$MYSELF - $VERSION");
-	DEBUG3("Command line: $0 ".join(' ',@SAVEARGV));
 
 	#--- just debugging: print options
 	foreach my $option (sort keys(%opt)) {
@@ -1142,7 +1142,7 @@ sub parse_lines {
 		
 		#--- remove unwanted characters from input line
 		if ($line=~/$opt{set}{illegal_chars}/) {
-			DEBUG2("Found illegal characters in line $lineno, removing them");
+			DEBUG2("parse_lines: found illegal characters in line $lineno, removing them");
 			$line=~s/$opt{set}{illegal_chars}//g;
 		}
 
@@ -1192,8 +1192,6 @@ sub parse_lines {
 		}
 	}
 	DEBUG4("parse_lines: end - now we have " . $#cmds . " command(s)");
-	#use Data::Dumper;
-	#DEBUG4("parse_lines:" . Dumper($check_multi));
 }
 
 #---
@@ -1385,7 +1383,7 @@ sub parse_header {
 			$opt{set}{use_monitoring_livestatus}=1;
 			unless (eval "require Monitoring::Livestatus;1") {
 				$opt{set}{use_monitoring_livestatus} = 0;
-				DEBUG2("process_input: Monitoring::Livestatus not available:$@");
+				DEBUG2("parse_header: Monitoring::Livestatus not available:$@");
 				return -1;
 			}
 		}
@@ -1421,7 +1419,6 @@ sub parse_header {
 				$cmds[$i]{service}=shift(@result);
 				$cmds[$i]{rc}=shift(@result);
 				$cmds[$i]{output}=shift(@result);
-				#print "DEBUG parse_header: $cmds[$i]{host}-$cmds[$i]{service} -> $cmds[$i]{output}\n";
 				$cmds[$i]{performance}=shift(@result);
 				if ($cmds[$i]{host} eq "-1") {
 					$cmds[$i]{host}="UNKNOWN";
@@ -1687,7 +1684,7 @@ sub exec_command {
 				close(CIN); # not needed: close STDIN filehandle
 				$SIG{CHLD}=sub {
 					$cmds[$no]{rc}=$?>>8 if waitpid($pid, 0) > 0;
-					DEBUG4("REAPER: status $cmds[$no]{rc} on $pid");
+					DEBUG4("exec_command: REAPER status $cmds[$no]{rc} on $pid");
 				};
 
 				my $sel=IO::Select->new();
@@ -2194,8 +2191,6 @@ sub read_status_dat {
 		}
 	}
 	close DAT;
-	#use Data::Dumper;
-	#DEBUG1("read_status_dat:" . Dumper($status_dat));
 	return $status_dat;
 }
 
