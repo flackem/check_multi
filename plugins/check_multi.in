@@ -2049,7 +2049,6 @@ sub get_status_dat_service {
 		DEBUG2("get_status_dat_service: did not found RC and output for $host_name:$service_description");
 		return (-1,"");
 	} else {
-		print ref($status_dat);
 		DEBUG4("get_status_dat_service: found data for $host_name:$service_description: RC $status_dat->{servicestatus}->{$host_name}->{$service_description}->{current_state} and output \'$status_dat->{servicestatus}->{$host_name}->{$service_description}->{plugin_output}\', long_output \'$status_dat->{servicestatus}->{$host_name}->{$service_description}->{long_plugin_output}\'");
 		return (
 			$status_dat->{servicestatus}->{$host_name}->{$service_description}->{current_state},
