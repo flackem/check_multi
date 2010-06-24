@@ -10,29 +10,10 @@ use NPTest;
 
 my $t;
 
-#--- add $libexec_dir to PATH to be sure that plugins will be called from libexec_dir
-my $libexec_dir="@libexecdir@";
-$ENV{PATH}="$libexec_dir:$ENV{PATH}";
-
-#--- check needed plugins for tests
-my @plugins=(
-	"check_procs",
-	"echo",
-	"@PERL@",
-);
-foreach my $plugin (@plugins) {
-	my $path_to_plugin=`which $plugin`; chomp $path_to_plugin;
-	if (! -x "$path_to_plugin") {
-		plan skip_all => "tests because component $plugin not found or not executable as \'$path_to_plugin\'";
-	}
-	if (! -r "@localstatedir@/status.dat") {
-		plan skip_all => "tests because status.dat \'@localstatedir@/status.dat\' not found or not readable - is @nagios_name@ running?";
-	}
-}
-plan tests => 6;
+plan tests => 12;
 
 my $result;
-my $testopts="-s dont_be_paranoid=1";
+my $testopts="-s status_dat=status.dat -s dont_be_paranoid=1";
 
 #-------------------------------------------------------------------------------
 #--- service not found ---------------------------------------------------------
@@ -69,6 +50,40 @@ like(
 );
 
 #-------------------------------------------------------------------------------
+#--- service Total Processes ---------------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi -x 'statusdat [ svc ] = localhost:Total Processes' $testopts",
+);
+is(
+	$result->return_code, 
+	$result->return_code, 
+	"check_multi finds service in status.dat - RC".$result->return_code." - passed"
+);
+like(
+	$result->output,
+	'/OK - 1 plugins checked, 1 ok\n\[ 1\] svc_localhost_Total Processes PROCS OK.*/s', 
+	"service output correct - passed"
+);
+
+#-------------------------------------------------------------------------------
+#--- service Total Processes REGEX ---------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi -x 'statusdat [ svc ] = localhost:/Processes/' $testopts",
+);
+is(
+	$result->return_code, 
+	$result->return_code, 
+	"check_multi finds service with REGEX in status.dat - RC".$result->return_code." - passed"
+);
+like(
+	$result->output,
+	'/OK - 1 plugins checked, 1 ok\n\[ 1\] svc_localhost_Total Processes PROCS OK.*/s', 
+	"service output correct - passed"
+);
+
+#-------------------------------------------------------------------------------
 #--- hosts all -----------------------------------------------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
@@ -82,5 +97,23 @@ is(
 like(
 	$result->output,
 	'/\d+ plugins checked.*\|check_multi\:\:check_multi\:\:plugins=\d+/s', 
+	"hosts output correct - passed"
+);
+
+#-------------------------------------------------------------------------------
+#--- host localhost ------------------------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi -x 'statusdat [ host ] = localhost' $testopts",
+);
+is(
+	$result->return_code, 
+	$result->return_code, 
+	"check_multi finds localhost in status.dat - RC".$result->return_code." - passed"
+);
+like(
+	$result->output,
+	#'/OK - 1 plugins checked, 1 ok\n\[ 1\] test_localhost.*PING OK.*\|check_multi\:\:check_multi\:\:plugins=1/s', 
+	'/OK - 1 plugins checked, 1 ok\n\[ 1\] host_localhost PING OK.*/s', 
 	"hosts output correct - passed"
 );
