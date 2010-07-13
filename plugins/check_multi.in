@@ -462,6 +462,12 @@ sub process_input {
 		}
 	}
 
+	#--- allowed characters: 'a-zA-Z0-9_-'
+	if ($opt{set}{name}!~/^[\w-]*$/) {
+		print "$MYSELF error: name \'$opt{set}{name}\' invalid - using non allowed characters (allowed are A-Za-z0-9_-)\n";
+		return $UNKNOWN;
+	}
+
 	#--- loop over filename / URL / directory array
 	for (my $i=0;$i<@{$opt{filename}}; $i++) {
 

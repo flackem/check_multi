@@ -37,7 +37,7 @@ if ($procs_output=~/PROCS (\S+): \d+ (\S+)/) {
 } else {
 	plan skip_all => "tests because check_procs output ($procs_output) does not match pattern (PROCS (\\S+): \\d+ (\\s+))";
 }
-plan tests => 56;
+plan tests => 60;
 
 my $result;
 my $testopts="-s dont_be_paranoid=1 -s tmp_dir=/tmp/check_multi";
@@ -113,6 +113,43 @@ like(
 	'.*$/s',
 	"output correct"
 );
+
+#-------------------------------------------------------------------------------
+#--- valid name option -------------------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi -n test -x 'command [ procs ] = check_procs' $testopts"
+);
+is(
+	$result->return_code, 
+	0, 
+	"valid name option - RC0"
+);
+like(
+	$result->output,
+	'/^test OK - 1 plugins checked, 1 ok\n'.
+	'\[ 1\] procs PROCS OK: \d+ '.$procs_string.'|check_multi::check_multi::plugins=1 time=\d+$/',
+	"output correct"
+);
+
+#-------------------------------------------------------------------------------
+#--- invalid name option -----------------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi -n test: -x 'command [ procs ] = check_procs' $testopts"
+);
+is(
+	$result->return_code, 
+	3, 
+	"invalid name option - RC3"
+);
+like(
+	$result->output,
+	'/^check_multi error: name \'test:\' invalid - using non allowed characters/',
+	"output correct"
+);
+
+
 #-------------------------------------------------------------------------------
 #--- simple OK output with 1 plugin --------------------------------------------
 #-------------------------------------------------------------------------------
