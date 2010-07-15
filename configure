@@ -632,6 +632,8 @@ ignore_missing_cmd_file
 gunzip
 file_extension
 findbin
+feed_passive_dir
+feed_passive_autocreate
 exec_open3
 ethtool
 extended_perfdata
@@ -721,6 +723,8 @@ with_ethtool
 with_exec_open3
 with_extended_perfdata
 with_extinfo_in_status
+with_feed_passive_autocreate
+with_feed_passive_dir
 with_findbin
 with_file_extension
 with_ignore_missing_cmd_file
@@ -1386,13 +1390,15 @@ detail settings:
   --with-collapse=<0|1>                    HTML javascript tree collapse option (default:1)
   --with-checkresults_dir=<path>           directory for Nagios checkresults (default:${localstatedir}/spool/checkresults)
   --with-child_interval=<time>             time between child checks, fractions of seconds allowed (default:0.0)
-  --with-config_dir=<path>                 directory for check_multi configuration files (default:${sysconfdir}/multi)
+  --with-config_dir=<path>                 directory for check_multi configuration files (default:${sysconfdir}/check_multi)
   --with-cumulate_ignore_zero=<0|1>        cumulate ignores zero values (default:1)
   --with-empty_output_is_unknown=<0|1>     should empty output be flagged as UNKNOWN (default:1)
   --with-ethtool=</path/to/ethtool>        define path to ethtool (default:/sbin/ethtool)
   --with-exec_open3=<0|1>                  use new exec method with function open3
   --with-extended_perfdata=<0|1>           provide extended check_multi perfdata
   --with-extinfo_in_status=<0|1>           display check_multi output in status.cgi
+  --with-feed_passive_autocreate=<0|1>>    flag, if feed passive service definitions should be created automatically (default:1)
+  --with-feed_passive_dir=<path>           directory for automatically created feed passive service definitions (default:${sysconfdir}/check_multi/feed_passive)
   --with-findbin=<0|1>                     use Perl module FindBin for addressing plugins (default:1)
   --with-file_extension=<ext>              default extension for check_multi command files (default:"cmd")
   --with-ignore_missing_cmd_file=<0|1>     if missing cmd files should be ignored (default:0)
@@ -2466,6 +2472,22 @@ else
 fi
 
 
+# Check whether --with-feed_passive_autocreate was given.
+if test "${with_feed_passive_autocreate+set}" = set; then
+  withval=$with_feed_passive_autocreate; feed_passive_autocreate=$withval
+else
+  feed_passive_autocreate="1"
+fi
+
+
+# Check whether --with-feed_passive_dir was given.
+if test "${with_feed_passive_dir+set}" = set; then
+  withval=$with_feed_passive_dir; feed_passive_dir=$withval
+else
+  feed_passive_dir="${sysconfdir}/check_multi/feed_passive"
+fi
+
+
 # Check whether --with-findbin was given.
 if test "${with_findbin+set}" = set; then
   withval=$with_findbin; findbin=$withval
@@ -2716,6 +2738,8 @@ fi
 
 
 #--- substitutions
+
+
 
 
 
@@ -4029,6 +4053,10 @@ $as_echo " illegal chars in cmdfile $illegal_chars" >&6; }
 $as_echo " check_multi persistent?  $persistent" >&6; }
 { $as_echo "$as_me:$LINENO: result:  cmdfile update interval  $cmdfile_update_interval" >&5
 $as_echo " cmdfile update interval  $cmdfile_update_interval" >&6; }
+{ $as_echo "$as_me:$LINENO: result:  Feed_passive autocreate  $feed_passive_autocreate" >&5
+$as_echo " Feed_passive autocreate  $feed_passive_autocreate" >&6; }
+{ $as_echo "$as_me:$LINENO: result:  Feed_passive directory   $feed_passive_dir" >&5
+$as_echo " Feed_passive directory   $feed_passive_dir" >&6; }
 echo
 echo
 echo "*** Next step:  type 'make all'. ***"

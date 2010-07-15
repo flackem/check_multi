@@ -1,5 +1,6 @@
 
 ===== Changelog =====
+	* passive feeded service definitions can be created automatically now
 	* added check for invalid name characters (allowed are A-Za-z0-9_-)
 **0.23**	20.06.2010
 	* fixed statusdat for hosts and added numerous test cases

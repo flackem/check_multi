@@ -66,7 +66,7 @@ AC_ARG_WITH(cmdfile_update_interval,	[  --with-cmdfile_update_interval=<seconds>
 AC_ARG_WITH(collapse,			[  --with-collapse=<0|1>                    HTML javascript tree collapse option (default:1)],collapse=$withval,collapse="1")
 AC_ARG_WITH(checkresults_dir,		[  --with-checkresults_dir=<path>           directory for Nagios checkresults (default:${localstatedir}/spool/checkresults)],checkresults_dir=$withval,checkresults_dir="${localstatedir}/spool/checkresults")
 AC_ARG_WITH(child_interval,		[  --with-child_interval=<time>             time between child checks, fractions of seconds allowed (default:0.0)],child_interval=$withval,child_interval=0.0)
-AC_ARG_WITH(config_dir,			[  --with-config_dir=<path>                 directory for check_multi configuration files (default:${sysconfdir}/multi)],config_dir=$withval,config_dir="${sysconfdir}/check_multi")
+AC_ARG_WITH(config_dir,			[  --with-config_dir=<path>                 directory for check_multi configuration files (default:${sysconfdir}/check_multi)],config_dir=$withval,config_dir="${sysconfdir}/check_multi")
 AC_ARG_WITH(cumulate_ignore_zero,	[  --with-cumulate_ignore_zero=<0|1>        cumulate ignores zero values (default:1)],cumulate_ignore_zero=$withval,cumulate_ignore_zero="1")
 AC_ARG_WITH(empty_output_is_unknown,	[  --with-empty_output_is_unknown=<0|1>     should empty output be flagged as UNKNOWN (default:1)],empty_output_is_unknown=$withval,empty_output_is_unknown="1")
 if test ethtool=""; then
@@ -75,6 +75,8 @@ fi
 AC_ARG_WITH(exec_open3,			[  --with-exec_open3=<0|1>                  use new exec method with function open3],exec_open3=$withval,exec_open3=0)
 AC_ARG_WITH(extended_perfdata,		[  --with-extended_perfdata=<0|1>           provide extended check_multi perfdata],extended_perfdata=$withval,extended_perfdata=0)
 AC_ARG_WITH(extinfo_in_status,		[  --with-extinfo_in_status=<0|1>           display check_multi output in status.cgi],extinfo_in_status=$withval,extinfo_in_status=0)
+AC_ARG_WITH(feed_passive_autocreate,	[  --with-feed_passive_autocreate=<0|1>>    flag, if feed passive service definitions should be created automatically (default:1)],feed_passive_autocreate=$withval,feed_passive_autocreate="1")
+AC_ARG_WITH(feed_passive_dir,		[  --with-feed_passive_dir=<path>           directory for automatically created feed passive service definitions (default:${sysconfdir}/check_multi/feed_passive)],feed_passive_dir=$withval,feed_passive_dir="${sysconfdir}/check_multi/feed_passive")
 AC_ARG_WITH(findbin,			[  --with-findbin=<0|1>                     use Perl module FindBin for addressing plugins (default:1)],findbin=$withval,findbin=1)
 AC_ARG_WITH(file_extension,		[  --with-file_extension=<ext>              default extension for check_multi command files (default:"cmd")],file_extension=$withval,file_extension="cmd")
 AC_ARG_WITH(ignore_missing_cmd_file,	[  --with-ignore_missing_cmd_file=<0|1>     if missing cmd files should be ignored (default:0)],ignore_missing_cmd_file=$withval,ignore_missing_cmd_file="0")
@@ -133,6 +135,8 @@ AC_SUBST(extinfo_in_status)
 AC_SUBST(extended_perfdata)
 AC_SUBST(ethtool)
 AC_SUBST(exec_open3)
+AC_SUBST(feed_passive_autocreate)
+AC_SUBST(feed_passive_dir)
 AC_SUBST(findbin)
 AC_SUBST(file_extension)
 AC_SUBST(gunzip)
@@ -275,6 +279,8 @@ echo " -------------------------------------------------------------------"
 AC_MSG_RESULT([ illegal chars in cmdfile $illegal_chars])
 AC_MSG_RESULT([ check_multi persistent?  $persistent])
 AC_MSG_RESULT([ cmdfile update interval  $cmdfile_update_interval])
+AC_MSG_RESULT([ Feed_passive autocreate  $feed_passive_autocreate])
+AC_MSG_RESULT([ Feed_passive directory   $feed_passive_dir])
 echo
 echo
 echo "*** Next step:  type 'make all'. ***"

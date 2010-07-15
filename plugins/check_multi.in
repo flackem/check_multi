@@ -143,6 +143,12 @@ my %opt=(
 		extinfo_in_status => "@extinfo_in_status@",
 		# print extended perfdata, count of states and overall state
 		extended_perfdata => "@extended_perfdata@",
+		# flag which determines if feed_passive services should be autocreated
+		# based on multi-child tags
+		feed_passive_autocreate => "@feed_passive_autocreate@",
+		# directory to contain automatically created service definitions 
+		# for passive feeded check_multi services
+		feed_passive_dir => "@feed_passive_dir@",
 		# standard extension of check_multi command files,
 		# to be searched in directories
 		file_extension	=> "@file_extension@",
@@ -194,6 +200,20 @@ my %opt=(
 		send_nsca_delim => ";",
 		# name of the file which contains template for '-r 2048'
 		service_definition_template => "@service_definition_template@",
+		# service definition template default
+		#service_definition_template_default => "@service_definition_template_default@",
+		service_definition_template_default => 
+			"# service \'\$SERVICEDESC\$\' for host \'\$HOSTNAME\$\'\n#\n".
+			"# This definition was automatically created by check_multi,\n".
+			"# so please don't edit manually.\n\n".
+			"define service {\n".
+			" service_description \$SERVICEDESC\$\n".
+			" host_name \$HOSTNAME\$\n".
+			" passive_checks_enabled 1\n".
+			" active_checks_enabled 0\n".
+			" check_command check_dummy!3 'Error: passive check has been called actively - check your config'\n".
+			" use local-service\n".
+			"}\n",
 		# signals to cover
 		signals		=> ["DUMMY","INT","TERM","QUIT","HUP","__WARN__"],
 		# which RC if caught signal
@@ -799,6 +819,8 @@ Set options:
    empty_output_is_unknown=<0|1> - should empty output be flagged as UNKNOWN?, default:$opt{set}{empty_output_is_unknown}
    exec_open3=<0|1> - use open3 method to exec child checks (to be tested though), default:$opt{set}{exec_open3}
    extinfo_in_status=<0|1> - show child checks also in Nagios status.cgi (HTML), default:$opt{set}{extinfo_in_status}
+   feed_passive_autocreate=<0|1> - determines if passive feeded service descriptions should be created automatically, default:$opt{set}{feed_passive_autocreate}
+   feed_passive_dir=<path> - path to passive service definition tree, default:$opt{set}{feed_passive_dir}
    file_extension=<ext> - standard file extension for config files, default:$opt{set}{file_extension}
    ignore_missing_cmd_file=<0|1> - do not complain if config file missing, default:$opt{set}{ignore_missing_cmd_file}
    illegal_chars=<characters> - specify characters to cleanup from command files
@@ -1071,7 +1093,7 @@ sub readfile {
 #---
 sub writefile {
 	my ($filename,@lines)=@_;
-	open(FILE,"$filename") || add_error("writefile: error opening $filename:$!") && return "";
+	open(FILE,">$filename") || add_error("writefile: error opening $filename:$!") && return "";
 	print FILE @lines;
 	close(FILE);
 	return join("", @lines);
@@ -3390,6 +3412,12 @@ sub report_checkresult_file {
 			DEBUG2("report_checkresult_file: checkresult file of [ $cmds[$i]{name} ] will be suppressed");
 			next;
 		}
+
+		#--- create service definition file (if enabled)
+		if ($opt{set}{feed_passive_autocreate}) {
+			check_and_create_service_definition($opt{set}{HOSTNAME}, $cmds[$i]{name});
+		}
+
 		#--- create checkresults file
 		my ($th,$tf)=File::Temp::tempfile("cXXXXXX",DIR=>"$opt{set}{checkresults_dir}");
 		my $escaped_output=$cmds[$i]{output}; $escaped_output=~s/\n/\\n/g;
@@ -3471,6 +3499,44 @@ sub checkresult {
 	#--- at last: output
 	$checkresult.="output=$att{output}";
 	return $checkresult;
+}
+
+#
+# helper routine which automatically creates 
+# service definitions for passive feeded services
+#
+sub check_and_create_service_definition {
+	my ($hostname, $service_definition)=@_;
+
+	#--- check / create directory for passive feeded services
+	if (! -d "$opt{set}{feed_passive_dir}") {
+		mkdir "$opt{set}{feed_passive_dir}" or add_error("check_and_create_service_definition: cannot create directory $opt{set}{feed_passive_dir}: $?");
+		DEBUG4("check_and_create_service_definition: created directory $opt{set}{feed_passive_dir}");
+	} else {
+		DEBUG4("check_and_create_service_definition: directory $opt{set}{feed_passive_dir} already there");
+	}
+	#--- check / create directory for particular host
+	if (! -d "$opt{set}{feed_passive_dir}/$hostname") {
+		mkdir "$opt{set}{feed_passive_dir}/$hostname" or add_error("check_and_create_service_definition: cannot create directory $opt{set}{feed_passive_dir}/$hostname: $?");
+		DEBUG4("check_and_create_service_definition: created directory $opt{set}{feed_passive_dir}/$hostname");
+	} else {
+		DEBUG4("check_and_create_service_definition: directory $opt{set}{feed_passive_dir}/$hostname already there");
+	}
+	#--- create service definition in host directory
+	if (! -f "$opt{set}{feed_passive_dir}/$hostname/${service_definition}.cfg") {
+		my $content=$opt{set}{service_definition_template_default};
+		$content=~s/\$HOSTNAME\$/$hostname/g;
+		$content=~s/\$SERVICEDESC\$/$service_definition/g;
+		writefile(
+			"$opt{set}{feed_passive_dir}/$hostname/${service_definition}.cfg", 
+			($content)
+		);
+		DEBUG4("check_and_create_service_definition: created service definition file for service ${service_definition}");
+		return 1;
+	} else {
+		DEBUG4("check_and_create_service_definition: service definition file $opt{set}{feed_passive_dir}/$hostname/${service_definition}.cfg already there");
+		return 0;
+	}
 }
 
 #-------------------------------------------------------------------------------
