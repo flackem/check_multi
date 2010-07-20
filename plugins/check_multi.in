@@ -397,16 +397,31 @@ sub process_input {
 					DEBUG3("XML input after XMLin:\n" . Dumper($in));
 				}
 
-				#--- child values
-				for my $no (keys %{$in->{$MYSELF}->{CHILD}}) {
-					$cmds[$no]{no}=$no;	# index itself as 'no'
-					$cmds[$no]{feeded}=1;	# mark this cmd as feeded
-					foreach my $att (keys %{$in->{$MYSELF}->{CHILD}->{$no}}) {
-						$cmds[$no]{$att}=$in->{$MYSELF}->{CHILD}->{$no}->{$att};
+				if (exists($in->{PARENT})) {
+					#--- restore some values from parent
+					$cmds[0]{nchecks}=$in->{PARENT}->{nchecks};
+					$cmds[0]{nallchecks}=$in->{PARENT}->{nallchecks};
+
+					#--- child values
+					for my $i (keys %{$in->{PARENT}->{CHILD}}) {
+						$cmds[$i]{no}=$i; # index itself as 'no'
+						$cmds[$i]{feeded}=1; # mark this cmd as feeded
+						foreach my $att (keys %{$in->{PARENT}->{CHILD}->{$i}}) {
+							$cmds[$i]{$att}=$in->{PARENT}->{CHILD}->{$i}->{$att};
+						}
 					}
-					$ENV{"MULTI_${no}_NAME"}="$cmds[$no]{name}";
-					$ENV{"MULTI_${no}_STATE"}="$cmds[$no]{rc}";
-					$ENV{"MULTI_${no}_LABEL"}="$def{label}{$cmds[$no]{rc}}";
+				} else {
+					#--- child values
+					for my $no (keys %{$in->{$MYSELF}->{CHILD}}) {
+						$cmds[$no]{no}=$no;	# index itself as 'no'
+						$cmds[$no]{feeded}=1;	# mark this cmd as feeded
+						foreach my $att (keys %{$in->{$MYSELF}->{CHILD}->{$no}}) {
+							$cmds[$no]{$att}=$in->{$MYSELF}->{CHILD}->{$no}->{$att};
+						}
+						$ENV{"MULTI_${no}_NAME"}="$cmds[$no]{name}";
+						$ENV{"MULTI_${no}_STATE"}="$cmds[$no]{rc}";
+						$ENV{"MULTI_${no}_LABEL"}="$def{label}{$cmds[$no]{rc}}";
+					}
 				}
 				DEBUG3("\@cmds after filling from XML input\n" . Dumper(\@cmds));
 			}
