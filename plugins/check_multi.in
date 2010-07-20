@@ -2686,8 +2686,8 @@ sub report_ascii {
 		} else {
 			$cmds[$no]{output}=~s/\n/\n$opt{set}{indent}/g;
 
-			#--- hide all OK results if there is any check not OK  (by Timo Kempkens)
-			next if (($opt{set}{report} & $DETAIL_HIDEIFOK) && ($cmds[$no]{rc} == $OK && $rc{head} != $OK));
+			#--- hide all OK results if there is any check not OK
+			next if ($opt{set}{report} & $DETAIL_HIDEIFOK && $cmds[$no]{rc} == $OK);
 
 			printf "%s[%2.d] %s %s%s%s",
 				($opt{set}{report} & $DETAIL_NAGIOS2) ? ", " : "\n",
