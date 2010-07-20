@@ -2722,7 +2722,7 @@ sub report_ascii {
 	DEBUG1(sprintf "%-8s %-55s %s", "State","Expression","Evaluates to");
 	DEBUG1("-" x 80);
 	foreach my $s (sort numerically keys %{$def{s2r}}) {
-		DEBUG1(sprintf "%-8s %-55s %s", $def{label}{$def{s2r}{$s}}, $rc{expr}[$def{s2r}{$s}], ($rc{match}[$def{s2r}{$s}]) ? "TRUE" : "FALSE");
+		DEBUG1(sprintf "%-8s %-55s %s", $def{label}{$def{s2r}{$s}}, chomp($rc{expr}[$def{s2r}{$s}]), ($rc{match}[$def{s2r}{$s}]) ? "TRUE" : "FALSE");
 		DEBUG2(state_string_ascii($rc{expr}[$def{s2r}{$s}]));
 	}
 	DEBUG1("-" x 80);
