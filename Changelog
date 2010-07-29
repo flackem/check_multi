@@ -1,5 +1,6 @@
 
 ===== Changelog =====
+	* now accepting perfdata with trailing semicolons (like in PNP)
 	* report mode 32768 now suppresses all OK states in ASCII mode, thx to Joel Brooks
 	* added old XML structure input mode for upgrade issues, thx to Joerg Krueger
 	* passive feeded service definitions can be created automatically now

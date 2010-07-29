@@ -572,6 +572,24 @@ like(
 $ENV{LANG}=$old_ENV_LANG;
 
 #-------------------------------------------------------------------------------
+#--- accepting trailing semicolon (e.g. nsclient++ -----------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi -x 'command [ eins ] = echo \"eins|eins=1;2;3;4;5;\"' -r 9 -s loose_perfdata=1 $testopts",
+);
+is(
+	$result->return_code, 
+	0, 
+	"accepting loose perfdata with trailing semicolon - RC0"
+);
+like(
+	$result->output,
+	'/^OK - 1 plugins checked, 1 ok\n'.
+	'\[ 1\] eins eins\|check_multi::check_multi::plugins=1 time=\d+\.\d+ eins::echo::eins=1\;2\;3\;4\;5\; $/',
+	"output correct"
+);
+
+#-------------------------------------------------------------------------------
 #--- overloading ---------------------------------------------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(

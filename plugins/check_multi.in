@@ -3263,7 +3263,7 @@ sub parse_perfdata {
 		#--- invalid perfdata with trailing ';' after max value
 		if (($data=~tr/;//)>=5) {
 			DEBUG2("parse_perfdata: invalid ';' after max value $max");	
-			return "error in '$data': invalid ';' after max value $max";
+			return "error in '$data': invalid ';' after max value $max" if (! $opt{set}{loose_perfdata});
 		} else {
 			DEBUG4("parse_perfdata: number of ';' ok in $data: " . scalar($data=~tr/;//));	
 		}
