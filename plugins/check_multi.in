@@ -377,7 +377,7 @@ sub process_input {
 			$opt{set}{use_xml_simple} = 1;
 			unless (eval "require XML::Simple;1") {
 				$opt{set}{use_xml_simple} = 0;
-				add_error("process_input: XML::Simple not available: $@");
+				add_error(0,"process_input: XML::Simple not available: $@");
 			}
 
 			#--- read in XML data and feed cmds structure
@@ -512,7 +512,7 @@ sub process_input {
 
 			#--- LWP module NOT loaded?
 			if (!$opt{set}{use_lwp_simple}) {
-				add_error("LWP::Simple module not available, could not get command file $opt{filename}[$i]");
+				add_error(0,"LWP::Simple module not available, could not get command file $opt{filename}[$i]");
 				next;
 			}
 			#--- split path components of URL
@@ -592,7 +592,7 @@ sub process_input {
 			$opt{set}{notes_url}=$ENV{"${NAGIOS}_SERVICENOTESURL"};
 			DEBUG3("process_input: notes report option set - taking $Nagios SERVICENOTESURL ".$ENV{"${NAGIOS}_SERVICENOTESURL"});
 		} else {
-			add_error("process_input: Notes link report option chosen, but no $Nagios environment variable SERVICENOTESURL found and no parameter notes_url specified");
+			add_error(0,"process_input: Notes link report option chosen, but no $Nagios environment variable SERVICENOTESURL found and no parameter notes_url specified");
 		}
 	}
 
@@ -1034,7 +1034,7 @@ sub signal_handler {
 	install_signal_handler(\install_signal_handler, $signal);
 
 	#--- do reports before quitting
-	add_error("$signal generated at line $loc[2] in $loc[1] ($loc[3])");
+	add_error(0,"$signal generated at line $loc[2] in $loc[1] ($loc[3])");
 	DEBUG4("signal_handler - with message $signal");
 	&global_result_rating;
 	DEBUG4("signal_handler - RC code $rc{head}");
@@ -1050,11 +1050,34 @@ sub signal_handler {
 }
 
 #---
-#--- add error(s) to global error list
+#--- add error(s) to error list
 #---
 sub add_error {
-	push @{$cmds[0]{error}}, @_;
-	DEBUG3("add_error: added error message \'@_\'");
+	my ($no)=shift;
+	while (@_) {
+		my $error=shift;
+		next if (!$error);	# skip empty entries
+		$error=~s/[$opt{set}{illegal_chars}]*//g; 
+		$error=~s/\n//g;
+		chomp($error);
+		HTML::Entities::encode_entities($error) if ($opt{set}{use_html_entities});
+		if ($no >= 0 && $no <= $#cmds) {
+			push @{$cmds[$no]{error}}, $error;
+			DEBUG3("add_error[$no]: added error message \'$error\'");
+		} else {
+			add_error(0,"add_error: invalid check index $no encountered");
+		}
+	}
+}
+
+#---
+#--- return error from error list
+#---
+sub error {
+	my ($no)=shift;
+	return "" if ($no < 0 || $no > $#cmds);
+        my $errmsg=join(',',@{$cmds[$no]{error}});
+	return ($errmsg)?" [$errmsg]":"";
 }
 
 #---
@@ -1075,7 +1098,7 @@ sub get_tmpfile {
 	my $tmpfile="";
 	#--- check existance of path and create it if necessary
 	if (! -d $path && ! mkdir($path,0700)) {
-		add_error("get_tmpfile: error creating tmp_path $path:$!");
+		add_error(0,"get_tmpfile: error creating tmp_path $path:$!");
 		return "";
 	}
 	#--- do 5 attempts to create tmpfile
@@ -1097,7 +1120,10 @@ sub get_tmpfile {
 #---
 sub readfile {
 	my ($filename)=@_;
-	open(FILE,$filename) || add_error("readfile: error opening $filename:$!") && return "";
+	unless (open(FILE,$filename)) {
+		add_error(0,"readfile: error opening $filename:$!");
+	       	return "";
+	}
 	my @lines=<FILE>;
 	close(FILE);
 	return join("", @lines);
@@ -1108,7 +1134,10 @@ sub readfile {
 #---
 sub writefile {
 	my ($filename,@lines)=@_;
-	open(FILE,">$filename") || add_error("writefile: error opening $filename:$!") && return "";
+	unless (open(FILE,">$filename")) {
+		add_error(0,"writefile: error opening $filename:$!");
+	       	return "";
+	}
 	print FILE @lines;
 	close(FILE);
 	return join("", @lines);
@@ -1135,7 +1164,7 @@ sub parse_files {
 		#--- error opening file
 		} elsif (!open(FILE, $filename)) {
 			next if ($opt{set}{ignore_missing_cmd_file});
-			add_error("parse_files: cannot open config file $filename: $!");
+			add_error(0,"parse_files: cannot open config file $filename: $!");
 			$rc{head}=$UNKNOWN;	# head RC to UNKNOWN
 			$rc{expr}[$OK]="0==1";	# OK: false
 			next;
@@ -1202,11 +1231,11 @@ sub parse_lines {
 			if ($name!~/^[\w:-]+$/) {
 				#--- still macro '$' in name? then macro was not substituted
 				if ($name=~/\$([^\$]+)\$/) {
-					add_error("parse_lines: tag \'$name\' invalid - macro \$$1\$ not found");
+					add_error(0,"parse_lines: tag \'$name\' invalid - macro \$$1\$ not found");
 				} elsif ($name eq "") {
-					add_error("parse_lines: empty tag \'\' invalid");
+					add_error(0,"parse_lines: empty tag \'\' invalid");
 				} else {
-					add_error("parse_lines: tag \'$name\' invalid - using non allowed characters");
+					add_error(0,"parse_lines: tag \'$name\' invalid - using non allowed characters");
 				}
 				next LINE;
 			}
@@ -1216,20 +1245,20 @@ sub parse_lines {
 
 		#--- proper header line with invalid keyword
 		} elsif ($line=~/^\s*(\w+)\s*\[\s*\S+\s*\]\s*=.*/) {
-			add_error("Invalid keyword \'$1\' specified, allowed are attribute,command,eval,eeval,livestatus,statusdat,state,output");
+			add_error(0,"Invalid keyword \'$1\' specified, allowed are attribute,command,eval,eeval,livestatus,statusdat,state,output");
 			return;
 
 		#--- continuation line for previous command
 		} else {
 			if (!defined($last_command)) {
-				add_error("parse_lines: invalid format in line $lineno: $line");
+				add_error(0,"parse_lines: invalid format in line $lineno: $line");
 				next LINE;
 			} elsif ($last_command=~/OK|UNKNOWN|WARNING|CRITICAL/i) {
 				$rc{expr}[$def{code}{lc($last_command)}].=$line;
 			} elsif ($last_command > 0) {
 				$cmds[$last_command]{command}.=$line;
 			} else {
-				add_error("parse_lines: invalid format in line $lineno: $line");
+				add_error(0,"parse_lines: invalid format in line $lineno: $line");
 				next LINE;
 			}
 		}
@@ -1273,11 +1302,11 @@ sub parse_header {
 	#--- format: 'attribute [ tag::variable ] = value'
 	if ($type eq "attribute") {
 		if ($key eq "") {
-			add_error("parse_header: invalid statement \'attribute [ $name ] = ...\', correct is \'attribute [ TAG::key ] = value\'");
+			add_error(0,"parse_header: invalid statement \'attribute [ $name ] = ...\', correct is \'attribute [ TAG::key ] = value\'");
 			return undef;
 		}
 		if (! defined($cmds[$i]{name})) {
-			add_error("parse_header: attribute [ ${name}::${key} ] can not be set: child check with name \'$name\' not found");
+			add_error(0,"parse_header: attribute [ ${name}::${key} ] can not be set: child check with name \'$name\' not found");
 			return undef;
 		} else {
 			if (!defined($cmds[$i]{$key})) {
@@ -1315,10 +1344,10 @@ sub parse_header {
 		$cmds[$i]{warning}=undef;
 		$cmds[$i]{critical}=undef;
 		$cmds[$i]{unknown}=undef;
-		$cmds[$i]{rc}=$UNKNOWN;
+		$cmds[$i]{rc}=$OK;
 		$cmds[$i]{displayed}=1;
 		$cmds[$i]{output}="";
-		$cmds[$i]{error}="";
+		$cmds[$i]{error}=[];
 		$cmds[$i]{runtime}=0;
 		if ($opt{set}{suppress_perfdata} &&
 			$opt{set}{suppress_perfdata}=~/\b$name\b/i) {
@@ -1347,10 +1376,10 @@ sub parse_header {
 		$cmds[$i]{warning}=undef;
 		$cmds[$i]{critical}=undef;
 		$cmds[$i]{unknown}=undef;
-		$cmds[$i]{rc}=$UNKNOWN;
+		$cmds[$i]{rc}=$OK;
 		$cmds[$i]{displayed}=1;
 		$cmds[$i]{output}="";
-		$cmds[$i]{error}="";
+		$cmds[$i]{error}=[];
 		$cmds[$i]{runtime}=0;
 		if ($opt{set}{suppress_perfdata} &&
 			$opt{set}{suppress_perfdata}=~/\b$name\b/i) {
@@ -1372,11 +1401,11 @@ sub parse_header {
 		$cmds[$i]{warning}=undef;
 		$cmds[$i]{critical}=undef;
 		$cmds[$i]{unknown}=undef;
-		$cmds[$i]{rc}=$UNKNOWN;
+		$cmds[$i]{rc}=$OK;
 		$cmds[0]{nallchecks}++;
 		$cmds[$i]{displayed}=0;
 		$cmds[$i]{output}="";
-		$cmds[$i]{error}="";
+		$cmds[$i]{error}=[];
 		$cmds[$i]{runtime}=0;
 		if ($opt{set}{suppress_perfdata} &&
 			$opt{set}{suppress_perfdata}=~/\b$name\b/i) {
@@ -1404,10 +1433,10 @@ sub parse_header {
 		$cmds[$i]{warning}=undef;
 		$cmds[$i]{critical}=undef;
 		$cmds[$i]{unknown}=undef;
-		$cmds[$i]{rc}=$UNKNOWN;
+		$cmds[$i]{rc}=$OK;
 		$cmds[$i]{displayed}=1;
 		$cmds[$i]{output}="";
-		$cmds[$i]{error}="";
+		$cmds[$i]{error}=[];
 		$cmds[$i]{runtime}=0;
 		if ($opt{set}{suppress_perfdata} &&
 			$opt{set}{suppress_perfdata}=~/\b$name\b/i) {
@@ -1436,7 +1465,7 @@ sub parse_header {
 			my @result=expand_livestatus_service($opt{set}{livestatus}, $1, $2);
 
 			if (!defined($result[0])) {
-				add_error("Could not expand host:service $1:$2 from livestatus $opt{set}{livestatus}");
+				add_error(0,"Could not expand host:service $1:$2 from livestatus $opt{set}{livestatus}");
 				return -1;
 			}
 			while(@result) {
@@ -1457,7 +1486,7 @@ sub parse_header {
 				$cmds[$i]{unknown}=undef;
 				$cmds[$i]{displayed}=1;
 				$cmds[$i]{runtime}=0;
-				$cmds[$i]{error}="";
+				$cmds[$i]{error}=[];
 				$cmds[$i]{host}=shift(@result);
 				$cmds[$i]{service}=shift(@result);
 				$cmds[$i]{rc}=shift(@result);
@@ -1472,7 +1501,7 @@ sub parse_header {
 				$i++;
 			}
 		} else {
-			add_error("parse_header: invalid host or service in livestatus line \'$lineno\', format should be \'livestatus [ name ] = host[:service]\'");
+			add_error(0,"parse_header: invalid host or service in livestatus line \'$lineno\', format should be \'livestatus [ name ] = host[:service]\'");
 			return -1;
 		}
 
@@ -1503,14 +1532,14 @@ sub parse_header {
 		}
 		$cmds[$i]{plugin}="snmp";
 		$cmds[$i]{pplugin}=($key)?$key:"snmp";
-		$cmds[$i]{rc}=$UNKNOWN;
+		$cmds[$i]{rc}=$OK;
 		$cmds[$i]{ok}=undef;
 		$cmds[$i]{warning}=undef;
 		$cmds[$i]{critical}=undef;
 		$cmds[$i]{unknown}=undef;
 		$cmds[$i]{displayed}=1;
 		$cmds[$i]{output}="";
-		$cmds[$i]{error}="";
+		$cmds[$i]{error}=[];
 		$cmds[$i]{runtime}=0;
 		if ($opt{set}{suppress_perfdata} &&
 			$opt{set}{suppress_perfdata}=~/\b$name\b/i) {
@@ -1529,7 +1558,7 @@ sub parse_header {
 			DEBUG4("parse_header: host:service format - expanding $1:$2");
 			my @result=expand_status_dat_service($opt{set}{status_dat}, $1, $2);
 			if (!defined($result[0])) {
-				add_error("Could not expand host:service $1:$2 from status_dat $opt{set}{status_dat}");
+				add_error(0,"Could not expand host:service $1:$2 from status_dat $opt{set}{status_dat}");
 				return -1;
 			}
 			while(@result) {
@@ -1548,10 +1577,10 @@ sub parse_header {
 				$cmds[$i]{warning}=undef;
 				$cmds[$i]{critical}=undef;
 				$cmds[$i]{unknown}=undef;
-				$cmds[$i]{rc}=$UNKNOWN;
+				$cmds[$i]{rc}=$OK;
 				$cmds[$i]{displayed}=1;
 				$cmds[$i]{output}="";
-				$cmds[$i]{error}="";
+				$cmds[$i]{error}=[];
 				$cmds[$i]{runtime}=0;
 				$cmds[$i]{host}=shift(@result);
 				$cmds[$i]{service}=shift(@result);
@@ -1568,7 +1597,7 @@ sub parse_header {
 			DEBUG4("parse_header: host format - expanding $1");
 			my @result=expand_status_dat_host($opt{set}{status_dat}, $1);
 			if (!defined($result[0])) {
-				add_error("Could not expand host $1 from status_dat $opt{set}{status_dat}");
+				add_error(0,"Could not expand host $1 from status_dat $opt{set}{status_dat}");
 				return -1;
 			}
 			while(@result) {
@@ -1587,10 +1616,10 @@ sub parse_header {
 				$cmds[$i]{warning}=undef;
 				$cmds[$i]{critical}=undef;
 				$cmds[$i]{unknown}=undef;
-				$cmds[$i]{rc}=$UNKNOWN;
+				$cmds[$i]{rc}=$OK;
 				$cmds[$i]{displayed}=1;
 				$cmds[$i]{output}="";
-				$cmds[$i]{error}="";
+				$cmds[$i]{error}=[];
 				$cmds[$i]{runtime}=0;
 				$cmds[$i]{host}=shift(@result);
 				if ($cmds[$i]{host} eq "-1") {
@@ -1601,7 +1630,7 @@ sub parse_header {
 				$i++;
 			}
 		} else {
-			add_error("parse_header: invalid host [or service] in statusdat line \'$lineno\', format should be \'statusdat [ name ] = host[:service]\'");
+			add_error(0,"parse_header: invalid host [or service] in statusdat line \'$lineno\', format should be \'statusdat [ name ] = host[:service]\'");
 			return -1;
 		}
 
@@ -1609,7 +1638,7 @@ sub parse_header {
 	} elsif ($type eq "state") {
 		#DEBUG1("def{code}{$name}:$def{code}{$name}");
 		if (!defined($def{code}{$name})) {
-			add_error("parse_header: invalid state code specified in line $lineno: $cmd");
+			add_error(0,"parse_header: invalid state code specified in line $lineno: $cmd");
 			return -1;
 		}
 		#--- store state expression only if NOT set via commandline
@@ -1646,7 +1675,7 @@ sub parse_header {
 
 	#--- no type found? then its invalid
 	} else {
-		add_error("store_header: unknown command type \'$type\'");
+		add_error(0,"store_header: unknown command type \'$type\'");
 		return -1;
 	}
 
@@ -1695,7 +1724,8 @@ sub exec_command {
 				#--- parent - start timeout for child
 				} else {
 					$SIG{'ALRM'} = sub {
-						add_error("$cmds[$no]{name}: timeout after $opt{set}{timeout}s");
+						add_error($no,"timeout after $opt{set}{timeout}s");
+						$cmds[$no]{rc}=$UNKNOWN;
 						#--- kill both ways: with prepended minus some perl versions kill the
 						#--- whole process group while positive numbers kill exact one process
 						#--- we want to end all child check processes in order to clean up
@@ -1710,16 +1740,15 @@ sub exec_command {
 					waitpid($child,0);
 					alarm(0);
 				}
-				$cmds[$no]{rc}=$? >> 8;
+				$cmds[$no]{rc}=($cmds[$no]{rc})?$cmds[$no]{rc}:$? >> 8;
 
 				#--- store stdout/stderr and cleanup tmpfiles
 				$cmds[$no]{output}=readfile($tmp_stdout);
-				DEBUG3("exec_command: raw output >$cmds[$no]{output}<");
-				$cmds[$no]{error}=readfile($tmp_stderr);
-				DEBUG3("exec_command: raw stderr >$cmds[$no]{error}<");
-				unlink $tmp_stdout, $tmp_stderr;
 				$cmds[$no]{output}=~s/[$opt{set}{illegal_chars}]*//g; chomp $cmds[$no]{output};	
-				$cmds[$no]{error}=~s/[$opt{set}{illegal_chars}]*//g; chomp $cmds[$no]{error};
+				DEBUG3("exec_command: raw output >$cmds[$no]{output}<");
+				add_error($no,readfile($tmp_stderr));
+				DEBUG3("exec_command: raw stderr >".join(',',@{$cmds[$no]{error}})."<");
+				unlink $tmp_stdout, $tmp_stderr;
 
 			#--- new open3 exec (to be tested carefully before getting standard ;-))
 			} else {
@@ -1735,7 +1764,7 @@ sub exec_command {
 				while (my @ready = $sel->can_read) {
 					foreach my $fh (@ready) {
 						if (fileno($fh) == fileno(CERR)) {
-							$cmds[$no]{error}.=scalar <CERR>;
+							add_error($no,scalar <CERR>);
 						} else {
 							$cmds[$no]{output}.=scalar <COUT>;
 						}
@@ -1744,23 +1773,21 @@ sub exec_command {
 				}
 				close(COUT);
 				close(CERR);
-				DEBUG3("exec_command: open3 raw output >$cmds[$no]{output}<");
-				DEBUG3("exec_command: open3 raw stderr >$cmds[$no]{error}<");
 				chomp $cmds[$no]{output};	
-				chomp $cmds[$no]{error};
+				DEBUG3("exec_command: open3 raw output >$cmds[$no]{output}<");
+				DEBUG3("exec_command: open3 raw stderr >".join(',',$cmds[$no]{error})."<");
 			}
 
 			#--- unknown return code? change it explicitly to UNKNOWN and add error
 			#---    this prevents the result rating routine from dealing with erraneous RCs
 			#---    but keeps the information
 			if (! defined($def{r2s}{$cmds[$no]{rc}})) {
-				$cmds[$no]{error}.=" RC was $cmds[$no]{rc}!";
+				add_error($no,"RC was $cmds[$no]{rc}!");
 				$cmds[$no]{rc}=$UNKNOWN;
 			}
 			
 			#--- remove white chars from output (Wolfgang Barth)
 			$cmds[$no]{stdout}=HTML::Entities::encode_entities($cmds[$no]{stdout}) if ($opt{set}{use_html_entities} && $cmds[$no]{stdout});
-			$cmds[$no]{error}=HTML::Entities::encode_entities($cmds[$no]{error}) if ($opt{set}{use_html_entities} && $cmds[$no]{error});
 
 			#--- split performance data from standard output
 			if ($cmds[$no]{output}=~/\|/) {
@@ -1789,7 +1816,7 @@ sub exec_command {
 				#--- check performance data and suppress if found errors
 				if (($opt{set}{report} & $DETAIL_PERFORMANCE) && $cmds[$no]{process_perfdata}) {
 					if (my $errstr=parse_perfdata($cmds[$no]{performance})) {
-						add_error("$cmds[$no]{name} perfdata discarded for $errstr");
+						add_error($no,"$cmds[$no]{name} perfdata discarded for $errstr");
 						$cmds[$no]{performance}=undef;
 					}
 				}
@@ -1801,7 +1828,7 @@ sub exec_command {
 		};
 	} elsif ($cmds[$no]{type} eq "eval" || $cmds[$no]{type} eq "eeval") {
 		local $SIG{ALRM} = sub {
-			add_error("$cmds[$no]{name}: timeout after $opt{set}{timeout}s");
+			add_error($no,"timeout after $opt{set}{timeout}s");
 		};
 		alarm($opt{set}{timeout});
 		$cmds[$no]{output}=eval($cmds[$no]{command});
@@ -1809,7 +1836,7 @@ sub exec_command {
 			$cmds[$no]{rc}=$?>>8;
 			#--- unknown return code? change it explicitly to UNKNOWN
 			if (! defined($def{r2s}{$cmds[$no]{rc}})) {
-				$cmds[$no]{error}.=" RC was $cmds[$no]{rc}!";
+				add_error($no,"RC was $cmds[$no]{rc}!");
 				$cmds[$no]{rc}=$UNKNOWN;
 			}
 		} elsif ($cmds[$no]{type} eq "eval") {
@@ -1832,7 +1859,7 @@ sub exec_command {
 				#--- check performance data and suppress if found errors
 				if (($opt{set}{report} & $DETAIL_PERFORMANCE) && $cmds[$no]{process_perfdata}) {
 					if (my $errstr=parse_perfdata($cmds[$no]{performance})) {
-						add_error("$cmds[$no]{name} perfdata discarded for $errstr");
+						add_error($no,"$cmds[$no]{name} perfdata discarded for $errstr");
 						$cmds[$no]{performance}=undef;
 					}
 				}
@@ -1854,27 +1881,27 @@ sub exec_command {
 
 	} elsif ($cmds[$no]{type} eq "statusdat") {
 		local $SIG{ALRM} = sub {
-			add_error("$cmds[$no]{name}: timeout after $opt{set}{timeout}s");
+			add_error($no,"$cmds[$no]{name}: timeout after $opt{set}{timeout}s");
 		};
 		alarm($opt{set}{timeout});
 		#--- service check
 		if (defined($cmds[$no]{service})) {
 			($cmds[$no]{rc},$cmds[$no]{output})=get_status_dat_service($opt{set}{status_dat},$cmds[$no]{host},$cmds[$no]{service});
 			if ($cmds[$no]{rc} == -1) {
-				add_error("statusdat $cmds[$no]{name}: cannot find service \'$cmds[$no]{service}\' on host \'$cmds[$no]{host}\' in \'$opt{set}{status_dat}\'");
+				add_error($no,"statusdat $cmds[$no]{name}: cannot find service \'$cmds[$no]{service}\' on host \'$cmds[$no]{host}\' in \'$opt{set}{status_dat}\'");
 				$cmds[$no]{rc}=$UNKNOWN;
 			}
 		#--- host check
 		} else {
 			($cmds[$no]{rc},$cmds[$no]{output})=get_status_dat_host($opt{set}{status_dat},$cmds[$no]{host});
 			if ($cmds[$no]{rc} == -1) {
-				add_error("statusdat $cmds[$no]{name}: cannot find host \'$cmds[$no]{host}\' in \'$opt{set}{status_dat}\'");
+				add_error($no,"statusdat $cmds[$no]{name}: cannot find host \'$cmds[$no]{host}\' in \'$opt{set}{status_dat}\'");
 				$cmds[$no]{rc}=$UNKNOWN;
 			}
 		}
 	} elsif ($cmds[$no]{type} eq "snmp") {
 		local $SIG{ALRM} = sub {
-			add_error("$cmds[$no]{name}: timeout after $opt{set}{timeout}s");
+			add_error($no,"$cmds[$no]{name}: timeout after $opt{set}{timeout}s");
 		};
 		alarm($opt{set}{timeout});
 		($cmds[$no]{rc},$cmds[$no]{output})=get_snmp($cmds[$no]{host},$opt{set}{snmp_port},$opt{set}{snmp_community},$cmds[$no]{command},$cmds[$no]{translate});
@@ -1891,12 +1918,12 @@ sub exec_command {
 			$cmds[$no]{output}="UNKNOWN - $cmds[$no]{plugin} cancelled after timeout ($opt{set}{timeout}s)";
 			$cmds[$no]{rc}=$UNKNOWN;
 			$cmds[$no]{output}.=readfile($tmp_stdout);
-			$cmds[$no]{error}.=readfile($tmp_stderr);
+			add_error($no,readfile($tmp_stderr));
 		#--- catchall for unknown errors
 		} else {
 			alarm(0);
 			$cmds[$no]{rc}=$UNKNOWN;
-			add_error("unexpected exception encountered:$@");
+			add_error($no,"unexpected exception encountered:$@");
 		}
 		unlink $tmp_stdout, $tmp_stderr;
 	} else {
@@ -1904,9 +1931,9 @@ sub exec_command {
 		#--- probably the temporary directory is full ;)
 		if ($opt{set}{empty_output_is_unknown} &&
 			$cmds[$no]{output} eq "" &&
-			$cmds[$no]{error} eq "") {
+			error($no) eq "" ) {
 			$cmds[$no]{rc}=$UNKNOWN;
-			add_error("$cmds[$no]{name}: no output, no stderr - check your plugin and the tmp directory $opt{set}{tmp_dir}]");
+			add_error($no,"$cmds[$no]{name}: no output, no stderr - check your plugin and the tmp directory $opt{set}{tmp_dir}]");
 		}
 		#--- postprocessing for cumulate
 		if ($cmds[$no]{type} eq "cumulate") {
@@ -1930,7 +1957,7 @@ sub exec_command {
 					$top[$i]{rc}=$OK;
 					$top[$i]{number}=$no+$i;
 					$top[$i]{displayed}=1;
-					$top[$i]{error}="";
+					$top[$i]{error}=[];
 					$top[$i]{feeded}=1;
 					$top[$i]{runtime}=0;
 					$top[$i]{type}=$cmds[$no]{type};
@@ -1998,14 +2025,14 @@ sub get_status_dat_host {
 	my ($statusdat_path, $host_name)=@_;
 
 	if (!$host_name) {
-		add_error("get_status_dat_host: empty host_name=$host_name specified");
+		add_error(0,"get_status_dat_host: empty host_name=$host_name specified");
 		return (-1,"");
 	}
 	if (!defined($status_dat) || !$status_dat) {
 		DEBUG4("get_status_dat_host: 1st read, creating service tree");
 		$status_dat=read_status_dat($statusdat_path);
 		if (!defined($status_dat) || !$status_dat) {
-			add_error("get_status_dat_host: could not read $statusdat_path");
+			add_error(0,"get_status_dat_host: could not read $statusdat_path");
 			return (-1,"");
 		}
 	} else {
@@ -2032,14 +2059,14 @@ sub expand_status_dat_host {
 
 	DEBUG4("expand_status_dat_host: expanding $host_name");
 	if (!$host_name) {
-		add_error("expand_status_dat_host: empty host_name=$host_name specified");
+		add_error(0,"expand_status_dat_host: empty host_name=$host_name specified");
 		return (undef,undef);
 	}
 	if (!defined($status_dat) || !$status_dat) {
 		DEBUG4("expand_status_dat_host: 1st read, creating tree");
 		$status_dat=read_status_dat($statusdat_path);
 		if (!defined($status_dat) || !$status_dat) {
-			add_error("expand_status_dat_host: could not read $statusdat_path");
+			add_error(0,"expand_status_dat_host: could not read $statusdat_path");
 			return (undef,undef);
 		}
 	} else {
@@ -2071,18 +2098,18 @@ sub get_status_dat_service {
 	my ($statusdat_path, $host_name, $service_description)=@_;
 
 	if (!defined($host_name) || !$host_name) {
-		add_error("get_status_dat_service: empty host_name specified");
+		add_error(0,"get_status_dat_service: empty host_name specified");
 		return (-1,"");
 	}
 	if (!defined($service_description) || !$service_description) {
-		add_error("get_status_dat_service: empty service_description specified");
+		add_error(0,"get_status_dat_service: empty service_description specified");
 		return (-1,"");
 	}
 	if (!$status_dat) {
 		DEBUG4("get_status_dat_service: 1st read, creating service tree");
 		$status_dat=read_status_dat($statusdat_path);
 		if (!$status_dat) {
-			add_error("get_status_dat_service: could not read $statusdat_path");
+			add_error(0,"get_status_dat_service: could not read $statusdat_path");
 			return (-1,"");
 		}
 	} else {
@@ -2109,18 +2136,18 @@ sub expand_status_dat_service {
 
 	DEBUG4("expand_status_dat_service: expanding $host_name:$service_description");
 	if (!defined($host_name) || !$host_name) {
-		add_error("expand_status_dat_service: empty host_name specified");
+		add_error(0,"expand_status_dat_service: empty host_name specified");
 		return (undef,undef);
 	}
 	if (!defined($service_description) || !$service_description) {
-		add_error("expand_status_dat_service: empty service_description specified");
+		add_error(0,"expand_status_dat_service: empty service_description specified");
 		return (undef,undef);
 	}
 	if (!$status_dat) {
 		DEBUG4("expand_status_dat_service: 1st read, creating service tree");
 		$status_dat=read_status_dat($statusdat_path);
 		if (!$status_dat) {
-			add_error("expand_status_dat_service: could not read $statusdat_path");
+			add_error(0,"expand_status_dat_service: could not read $statusdat_path");
 			return (undef,undef);
 		}
 	} else {
@@ -2156,7 +2183,7 @@ sub read_status_dat {
 	my ($statusdat_path)=@_;
 
 	if (!open(DAT,$statusdat_path)) {
-		add_error("read_status_dat: cannot open $statusdat_path:$!");
+		add_error(0,"read_status_dat: cannot open $statusdat_path:$!");
 		return undef;
 	}
 
@@ -2244,14 +2271,14 @@ sub expand_livestatus_service {
 
 	DEBUG4("expand_livestatus_service: expanding $host_name:$service_description");
 	if (!$host_name || !$service_description) {
-		add_error("expand_livestatus_service: empty host_name=$host_name or service_description=$service_description specified");
+		add_error(0,"expand_livestatus_service: empty host_name=$host_name or service_description=$service_description specified");
 		return (undef,undef);
 	}
 	if (!$livestatus) {
 		DEBUG4("expand_livestatus_service: 1st read, creating service tree");
 		$livestatus=read_livestatus($livestatus_path);
 		if (!$livestatus) {
-			add_error("expand_livestatus_service: could not read $livestatus_path");
+			add_error(0,"expand_livestatus_service: could not read $livestatus_path");
 			return (undef,undef);
 		}
 		DEBUG4("expand_livestatus_service: $#{$livestatus} results");
@@ -2291,13 +2318,13 @@ sub read_livestatus {
         	peer=>$livestatus_path,
 	);
 	if($Monitoring::Livestatus::ErrorCode) {
-		add_error("read_livestatus: $Monitoring::Livestatus::ErrorMessage");
+		add_error(0,"read_livestatus: $Monitoring::Livestatus::ErrorMessage");
 		return undef;
 	}
 	$ml->errors_are_fatal(0);
 	$livestatus=$ml->selectall_arrayref("GET services\nColumns: host_name description state plugin_output long_plugin_output perf_data\n",{Slice => 1});
 	if($Monitoring::Livestatus::ErrorCode) {
-		add_error("read_livestatus: $Monitoring::Livestatus::ErrorMessage");
+		add_error(0,"read_livestatus: $Monitoring::Livestatus::ErrorMessage");
 		return undef;
 	}
 	DEBUG4("read_livestatus: $#{$livestatus} services read");
@@ -2495,7 +2522,7 @@ sub global_result_rating {
 		if (! defined($result) || $result eq "") {
 			; # do nothing
 		} elsif ($result < 0) {
-			add_error("global_result_rating: parsing error ($message)");
+			add_error(0,"global_result_rating: parsing error ($message)");
 		} else {
 			$rc{match}[$state]=1;
 			$rc{head}=$state;
@@ -2530,11 +2557,11 @@ sub single_result_rating {
 		if (! defined($result) || $result eq "") {
 			; # do nothing
 		} elsif ($result < 0) {
-			add_error("single_result_rating: parsing error $message");
+			add_error(0,"single_result_rating: parsing error $message");
 			DEBUG4("single_result_rating: parsing error expresstion ($cmds[$no]{output}$cmds[$no]{$state})->($message)");
 		} else {
 			$cmds[$no]{rc}=$state;
-			$cmds[$no]{error}.="Output matched rule \'$cmds[$no]{$def{llabel}{$state}}\' -> RC is set to $def{label}{$state}";
+			add_error($no,"Output matched rule \'$cmds[$no]{$def{llabel}{$state}}\' -> RC is set to $def{label}{$state}");
 			DEBUG4("single_result_rating: setting RC of cmds[$no] to $state");
 		}
 	}
@@ -2655,7 +2682,7 @@ sub report_ascii {
 		}
 	}
 	#--- print general errors if any occured
-	print " [" . join(", ",@{$cmds[0]{error}}) . "]" if (defined($cmds[0]{error}[0]));
+	print error(0);
 
 	#--- loop over commands: report particular results for long plugin output
 	for ($no=1;$no<=$#cmds;$no++) {
@@ -2677,12 +2704,10 @@ sub report_ascii {
 		if ($opt{set}{report} & $DETAIL_NAGIOS2) {
 			next if ($cmds[$no]{rc} == $OK);
 			$cmds[$no]{output}=~s/\n//g;
-			$cmds[$no]{error}=~s/\n//g;
 			printf ", %s %s%s",
 				$cmds[$no]{name},
 				$cmds[$no]{output},
-				(defined($cmds[$no]{error}) && $cmds[$no]{error} ne "" && ($opt{set}{report} & $DETAIL_STDERR)) ?
-			 	" [ " . $cmds[$no]{error} . ']' : "";
+				($opt{set}{report} & $DETAIL_STDERR) ?  error($no) : "";
 		} else {
 			$cmds[$no]{output}=~s/\n/\n$opt{set}{indent}/g;
 
@@ -2698,8 +2723,7 @@ sub report_ascii {
 					? "$def{label}{$cmds[$no]{rc}} "
 					: "",
 				($cmds[$no]{output}=~/\<!--(.*?)--\>/sg) ? $1 : $cmds[$no]{output},
-				(defined($cmds[$no]{error}) && $cmds[$no]{error} ne "" && ($opt{set}{report} & $DETAIL_STDERR)) ?
-			 	" [ " . $cmds[$no]{error} . ']' : "";
+				($opt{set}{report} & $DETAIL_STDERR) ? error($no) : "";
 		}
 	}
 
@@ -2785,7 +2809,7 @@ sub report_html {
 	}
 
 	#--- print general errors if any occured
-	$output.=" [" . join(", ",@{$cmds[0]{error}}) . "]" if (defined($cmds[0]{error}[0]));
+	$output.=error(0);
 	$output.=($opt{set}{extinfo_in_status})?"<br />":"\n";
 
 	#--- collapse of contents with javascript
@@ -2866,7 +2890,7 @@ sub report_html {
 			} elsif ($opt{set}{pnp_version}=~/0.4/) {
 				$mouseover_url="$opt{set}{pnp_url}/index.php?host=${hostname}&srv=$cmds[$no]{name}\' onmouseout=\'clear_g()\' onmouseover=\"get_g(\'$opt{set}{HOSTNAME}\',\'$cmds[$no]{name}\')\"";
 			} else {
-				add_error("Invalid mouseover URL type $opt{set}{pnp_version}, allowed are '0.6' and '0.4'");
+				add_error(0,"Invalid mouseover URL type $opt{set}{pnp_version}, allowed are '0.6' and '0.4'");
 				$mouseover_url="$pnp_url/graph?host=${hostname}&srv=$cmds[$no]{name}";
 			}
 			$output.=sprintf "<td nowrap>%s</td>",
@@ -2920,12 +2944,7 @@ sub report_html {
 						: "${rclabel}$1</td></tr><tr><td></td><td colspan='5'>$2")
 					: "${rclabel}$cmds[$no]{output}";
 		}
-		if (	defined($cmds[$no]{error}) &&
-			$cmds[$no]{error} ne "" &&
-			($opt{set}{report} & $DETAIL_STDERR)) {
-
-			$output.=" [ " . join('<br>',$cmds[$no]{error}) . "]";
-		}
+		$output.=error($no) if ($opt{set}{report} & $DETAIL_STDERR);
 		$output.="</tr>";
 	}
 	$output.="</table></div>";
@@ -3077,7 +3096,7 @@ sub report_xml {
 		}
 	}
 	$xmlstr.="</output>\n";
-	$xmlstr.="\t\t<error>" . join("</error>\n\t\t<error>",@{$cmds[0]{error}}) . "</error>\n" if (defined($cmds[0]{error}[0]));
+	$xmlstr.="\t\t<error>" . join("</error>\n\t\t<error>",error(0)) . "</error>\n" if (error(0) ne "");
 	$xmlstr.="\t</CHILD>\n";
 
 	#--- loop over child checks
@@ -3093,7 +3112,7 @@ sub report_xml {
 					$xmlstr.=sprintf "\t\t<%s>%s</%s>\n",$token,xml_encode($cmds[$no]{$token}),$token;
 				}
 			} else {
-				add_error("report_xml: XML element $token not found");
+				add_error($no,"report_xml: XML element $token not found");
 			}
 		}
 		$xmlstr.="\t</CHILD>\n";
@@ -3199,7 +3218,7 @@ sub report_perfdata {
 
 			if (defined($cmds[$no]{performance})) {
 				if (my $errstr=parse_perfdata($cmds[$no]{performance})) {
-					add_error("$cmds[$no]{name} perfdata discarded for $errstr");
+					add_error($no,"$cmds[$no]{name} perfdata discarded for $errstr");
 				} else {
 					print "$cmds[$no]{performance} ";
 				}
@@ -3351,11 +3370,11 @@ sub report_send_nsca {
 	my $sent=0;
 
 	if (! -x "$opt{set}{send_nsca}") {
-		add_error("report_send_nsca: $opt{set}{send_nsca} not found or not executable:$!");
+		add_error(0,"report_send_nsca: $opt{set}{send_nsca} not found or not executable:$!");
 		return $sent;
 	}
 	if (! -f "$opt{set}{send_nsca_cfg}") {
-		add_error("report_send_nsca: $opt{set}{send_nsca_cfg} not found or not readable for UID $>:$!");
+		add_error(0,"report_send_nsca: $opt{set}{send_nsca_cfg} not found or not readable for UID $>:$!");
 		return $sent;
 	}
 	#--- determine hostname
@@ -3387,7 +3406,7 @@ sub report_send_nsca {
 		
 		#--- call send_ncsa
 		if (!open(SEND_NSCA, "|$nsca_cmdline >/dev/null")) {
-			add_error("report_send_nsca: error calling command line $nsca_cmdline");
+			add_error(0,"report_send_nsca: error calling command line $nsca_cmdline");
 			return $sent;
 		}
 		printf SEND_NSCA "%s;%s;%s;%s\n",
@@ -3396,7 +3415,7 @@ sub report_send_nsca {
 			$cmds[$i]{rc},
 			$cmds[$i]{output};
 		if ($?) {
-			add_error("report_send_nsca: error sending data to nsca:$?");
+			add_error(0,"report_send_nsca: error sending data to nsca:$?");
 		} else {
 			$sent++;
 		}
@@ -3412,7 +3431,7 @@ sub report_checkresult_file {
 
 	#--- use File::Temp for generation of temp file, its available in standard perl
 	unless (eval "use File::Temp qw/tempfile/;1") {
-		add_error("report_checkresult_file error: check_multi needs module File::Temp");
+		add_error(0,"report_checkresult_file error: check_multi needs module File::Temp");
 		return 0;
 	} else {
 		DEBUG3("report_checkresult_file: File::Temp module loaded");
@@ -3451,7 +3470,7 @@ sub report_checkresult_file {
 
 		#--- write OK file
 		if (!open(OKFILE, ">$tf.ok")) {
-			 add_error("report_checkresult_file: Cannot write OK file to $tf.ok:$!");
+			 add_error(0,"report_checkresult_file: Cannot write OK file to $tf.ok:$!");
 		} else {
 			DEBUG4("report_checkresult_file: $tf.ok written");
 			close OKFILE;
@@ -3488,10 +3507,10 @@ sub checkresult {
 				$att{$key}=$val;
 				DEBUG4("checkresult: add key $key ($val) to attributes");
 			} else {
-				add_error("checkresult: unknown attribute $key");
+				add_error(0,"checkresult: unknown attribute $key");
 			}
 		} else {
-			add_error("checkresult: unknown attribute specification $parameter");
+			add_error(0,"checkresult: unknown attribute specification $parameter");
 		}
 	}
 
@@ -3525,14 +3544,14 @@ sub check_and_create_service_definition {
 
 	#--- check / create directory for passive feeded services
 	if (! -d "$opt{set}{feed_passive_dir}") {
-		mkdir "$opt{set}{feed_passive_dir}" or add_error("check_and_create_service_definition: cannot create directory $opt{set}{feed_passive_dir}: $?");
+		mkdir "$opt{set}{feed_passive_dir}" or add_error(0,"check_and_create_service_definition: cannot create directory $opt{set}{feed_passive_dir}: $?");
 		DEBUG4("check_and_create_service_definition: created directory $opt{set}{feed_passive_dir}");
 	} else {
 		DEBUG4("check_and_create_service_definition: directory $opt{set}{feed_passive_dir} already there");
 	}
 	#--- check / create directory for particular host
 	if (! -d "$opt{set}{feed_passive_dir}/$hostname") {
-		mkdir "$opt{set}{feed_passive_dir}/$hostname" or add_error("check_and_create_service_definition: cannot create directory $opt{set}{feed_passive_dir}/$hostname: $?");
+		mkdir "$opt{set}{feed_passive_dir}/$hostname" or add_error(0,"check_and_create_service_definition: cannot create directory $opt{set}{feed_passive_dir}/$hostname: $?");
 		DEBUG4("check_and_create_service_definition: created directory $opt{set}{feed_passive_dir}/$hostname");
 	} else {
 		DEBUG4("check_and_create_service_definition: directory $opt{set}{feed_passive_dir}/$hostname already there");
@@ -3565,7 +3584,7 @@ install_signal_handler(\install_signal_handler, @{$opt{set}{signals}});
 exit $UNKNOWN if (&process_input != $OK);
 
 #--- don't run this as root ;-)
-add_error("please don't run plugins as root!") if ($opt{set}{user}=~/root/ && !$opt{set}{dont_be_paranoid});
+add_error(0,"please don't run plugins as root!") if ($opt{set}{user}=~/root/ && !$opt{set}{dont_be_paranoid});
 
 #--- parse command file (nrpe format)
 &parse_files($opt{filename});
@@ -3581,7 +3600,7 @@ if ($opt{set}{report} & $DETAIL_ENCODE_COMMANDS) {
 
 #--- no child checks defined yet? Throw UNKNOWN
 if ($#cmds<1) {
-	add_error("no checks defined");
+	add_error(0,"no checks defined");
 	$rc{head}=$opt{set}{no_checks_rc};
 	$rc{expr}[$OK]="0==1" if ($opt{set}{no_checks_rc} != $OK);
 } else {

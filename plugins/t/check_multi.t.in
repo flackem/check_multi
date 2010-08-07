@@ -37,7 +37,7 @@ if ($procs_output=~/PROCS (\S+): \d+ (\S+)/) {
 } else {
 	plan skip_all => "tests because check_procs output ($procs_output) does not match pattern (PROCS (\\S+): \\d+ (\\s+))";
 }
-plan tests => 62;
+plan tests => 64;
 
 my $result;
 my $testopts="-s dont_be_paranoid=1 -s tmp_dir=/tmp/check_multi";
@@ -239,7 +239,7 @@ is(
 like(
 	$result->output,
 	'/^UNKNOWN - 1 plugins checked, 0 critical, 0 warning, 1 unknown, 0 ok\n'.
-	'\[ 1\] procs  \[ sh: check_prox: (command )?not found RC was 127!\]$/',
+	'\[ 1\] procs  \[sh: check_prox: (command )?not found,RC was 127!\]$/',
 	"output correct"
 );
 
@@ -536,7 +536,7 @@ like(
 #--- discarding perfdata  ------------------------------------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi -x 'command [ eins ] = echo \"eins|eins=1,1\"' -r 9 -s loose_perfdata=0 $testopts",
+	"@PERL@ ../check_multi -x 'command [ eins ] = echo \"eins|eins=1,1\"' -r 1+4+8  $testopts -s loose_perfdata=0",
 );
 is(
 	$result->return_code, 
@@ -545,8 +545,8 @@ is(
 );
 like(
 	$result->output,
-	'/^OK - 1 plugins checked, 1 ok \[eins perfdata discarded for eins: bad UOM \',\' in data \'1,1\' \]\n'.
-	'\[ 1\] eins eins\|check_multi::check_multi::plugins=1 time=\d+\.\d+ $/',
+	'/^OK - 1 plugins checked, 1 ok\n'.
+	'\[ 1\] eins eins \[eins perfdata discarded for eins: bad UOM \',\' in data \'1,1\' \]\|check_multi::check_multi::plugins=1 time=\d+\.\d+ $/',
 	"output correct"
 );
 
@@ -619,7 +619,7 @@ is(
 );
 like(
 	$result->output,
-	'/^UNKNOWN - 1 plugins checked, 1 unknown \(killing_me_HUPly\) \[HUP generated at line 1 in.*\]\n'.
+	'/^OK - 1 plugins checked, 1 ok \[HUP generated at line 1 in.*\]\n'.
 	'\[ 1\] killing_me_HUPly $/',
 	"output correct"
 );
@@ -683,7 +683,7 @@ like(
 #--- check_multi child and global timeout --------------------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi -x 'command [ one ] = ( sleep 2; echo one)' -x 'command [ two ] = echo two' -r 1 -t 1 -T 2 $testopts",
+	"@PERL@ ../check_multi -x 'command [ one ] = ( sleep 2; echo one)' -x 'command [ two ] = echo two' -r 5 -t 1 -T 2 $testopts",
 );
 is(
 	$result->return_code, 
@@ -692,8 +692,8 @@ is(
 );
 like(
 	$result->output,
-	'/UNKNOWN - 2 plugins checked, 2 unknown \(one, two\) \[one: timeout after 1s, one: no output, no stderr - check your plugin and the tmp directory \/tmp\/check_multi\]\]\n'.
-	'\[ 1\] one \n'.
+	'/UNKNOWN - 2 plugins checked, 2 unknown \(one, two\)\n'.
+	'\[ 1\] one  \[timeout after 1s\]\n'.
 	'\[ 2\] two UNKNOWN - execution cancelled due to global timeout \(2s\)/',
 	"output correct"
 );
