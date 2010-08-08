@@ -941,7 +941,7 @@ sub substitute_macros {
 sub objects_cache_query {
 	my ($input)=@_;
 	my $query=undef;
-	if ($input=~/([a-z_]+):([a-z_]+):([a-z_]+:[a-z_]+.*)/) {
+	if ($input=~/([a-z_]+):([a-z_]+):([a-z_]+:\S+.*)/) {
 		$query->{type}=$1;
 		$query->{target}=$2;
 		$input=$3;
