@@ -37,7 +37,7 @@ if ($procs_output=~/PROCS (\S+): \d+ (\S+)/) {
 } else {
 	plan skip_all => "tests because check_procs output ($procs_output) does not match pattern (PROCS (\\S+): \\d+ (\\s+))";
 }
-plan tests => 64;
+plan tests => 70;
 
 my $result;
 my $testopts="-s dont_be_paranoid=1 -s tmp_dir=/tmp/check_multi";
@@ -698,5 +698,54 @@ like(
 	"output correct"
 );
 #-------------------------------------------------------------------------------
-#--- check_multi cumulate ------------------------------------------------------
+#--- check_multi object cache macros - objects.cache does not exist ------------
 #-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi -x 'command [ hostgroup_members ] = echo \$hostgroup:members:hostgroup_name:linux-servers\$' -r 5 $testopts -s objects_cache=not.there",
+);
+is(
+	$result->return_code, 
+	3, 
+	"object cache macro check - non existing objects.cache file - RC3"
+);
+like(
+	$result->output,
+	'/UNKNOWN - 1 plugins checked, 1 unknown \(hostgroup_members\) \[parse_objects_cache: error opening file not.there:No such file or directory\]\n'.
+	'\[ 1\] hostgroup_members/',
+	"output correct"
+);
+#-------------------------------------------------------------------------------
+#--- check_multi object cache macros with invalid object -----------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi -x 'command [ invalid ] = echo \$invalid:members:hostgroup_name:linux-servers\$' -r 5 $testopts -s objects_cache=objects.cache",
+);
+is(
+	$result->return_code, 
+	3, 
+	"object cache macro check - invalid object name - RC3"
+);
+like(
+	$result->output,
+	'/UNKNOWN - 1 plugins checked, 1 unknown \(invalid\) \[parse_objects_cache: unknown object type \"invalid\" - valid types are command,contact,contactgroup,host,hostgroup,service,timeperiod\]\n'.
+	'\[ 1\] invalid/', 
+	"output correct"
+);
+#-------------------------------------------------------------------------------
+#--- check_multi object cache macros -------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi -x 'command [ hostgroup_members ] = echo \$hostgroup:members:hostgroup_name:linux-servers\$' -x 'command [ services ] = echo \$service:service_description:host_name:localhost\$' -r 5 $testopts -s objects_cache=objects.cache",
+);
+is(
+	$result->return_code, 
+	0, 
+	"object cache macro check - hostgroup and services - RC0"
+);
+like(
+	$result->output,
+	'/OK - 2 plugins checked, 2 ok\n'.
+	'\[ 1\] hostgroup_members localhost\n'.
+	'\[ 2\] services Current Load,Current Users,HTTP,PING,Root Partition,SSH,Swap Usage,Total Processes/',
+	"output correct"
+);

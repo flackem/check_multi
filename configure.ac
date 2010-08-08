@@ -24,6 +24,7 @@ PKG_AUTHOR="$Author$"
 PKG_HOME_URL="http://my-plugin.de/check_multi/"
 PKG_REL_DATE="$Date$"
 PKG_ID="$Id$"
+COMMA=","
 
 AC_SUBST(PKG_NAME)
 AC_SUBST(PKG_VERSION)
@@ -31,6 +32,7 @@ AC_SUBST(PKG_AUTHOR)
 AC_SUBST(PKG_HOME_URL)
 AC_SUBST(PKG_REL_DATE)
 AC_SUBST(PKG_ID)
+AC_SUBST(COMMA)
 
 #---
 #--- checks for programs
@@ -88,6 +90,8 @@ AC_ARG_WITH(loose_perfdata,		[  --with-loose_perfdata=1                  loose p
 AC_ARG_WITH(name,			[  --with-name=<name>                       default name for check_multi label (default:"")],name=$withval,name="")
 AC_ARG_WITH(no_checks_rc,		[  --with-no_checks_rc=<RC>                 RC if no checks are specified (default:3-UNKNOWN)],no_checks_rc=$withval,no_checks_rc=3)
 AC_ARG_WITH(notes_url,			[  --with-notes_url=<URL>                   notes URL (default:"")],notes_url=$withval,notes_url="")
+AC_ARG_WITH(objects_cache,		[  --with-objects_cache=</path/to/objects.cache>    path to objects.cache (default:"/usr/local/nagios/var/objects.cache")],objects_cache=$withval,objects_cache="/usr/local/nagios/var/objects.cache")
+AC_ARG_WITH(objects_cache_delimiter,	[  --with-objects_cache_delimiter=<char>    character to separate objects.cache results (default:",")],objects_cache_delimiter=$withval,objects_cache_delimiter=${COMMA})
 AC_ARG_WITH(persistent,			[  --with-persistent=<0|1>                  persistency: saving of state data between two calls (default:0)],persisent=$withval,persistent=0)
 AC_ARG_WITH(plugin_path,		[  --with-plugin_path=</path/to/plugins>    path to plugins (default:"/usr/local/nagios/libexec")],plugin_path=$withval,plugin_path="/usr/local/nagios/libexec")
 AC_ARG_WITH(pnp_url,			[  --with-pnp_url=<URL>                     relative URL to PNP (default for PNP 0.6:"/pnp4nagios")],pnp_url=$withval,pnp_url="/pnp4nagios")
@@ -148,6 +152,8 @@ AC_SUBST(indent)
 AC_SUBST(pnp_version)
 AC_SUBST(name)
 AC_SUBST(no_checks_rc)
+AC_SUBST(objects_cache)
+AC_SUBST(objects_cache_delimiter)
 AC_SUBST(notes_url)
 AC_SUBST(persistent)
 AC_SUBST(plugin_path)

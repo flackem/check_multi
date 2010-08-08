@@ -178,6 +178,10 @@ my %opt=(
 		no_checks_rc	=> @no_checks_rc@,
 		# see tag_notes_link: URL to be added
 		notes_url	=> "@notes_url@",
+		# objects.cache path
+		objects_cache	=> "@objects_cache@",
+		# objects.cache delimiter character
+		objects_cache_delimiter	=> "@objects_cache_delimiter@",
 		# create persistent data
 		persistent	=> @persistent@,
 		# path to additional plugins
@@ -848,6 +852,8 @@ Set options:
    name=<string> - label to be shown in output: <name> OK, default:$opt{set}{name}
    no_checks_rc=<RC> - which RC should be returned if no checks are defined, default:$opt{set}{no_checks_rc}
    notes_url=<URL> - URL to be added to child check, see Nagios notes_url
+   objects_cache=</path/to/objects.cache> - position of nagios objects.cache file, default:$opt{set}{objects_cache}
+   objects_cache_delimiter=<delimiter character> - character to separate object cache results, default:$opt{set}{objects_cache_delimiter}
    persistent=<0|1> - run check_multi in persistent mode, default:$opt{set}{persistent}
    pnp_url=</path/to/PNP-CGIs> - specify PNP URL, default:$opt{set}{pnp_url}
    pnp_version=<0.6|0.4> - pnp_version needed for mouseover popups? default:$opt{set}{pnp_version}
@@ -900,9 +906,10 @@ sub substitute_macros {
 		return $input;
 	}
 
-	DEBUG3("substitute_macros: checking $input");
-	while ((my $var)=($input=~/\$([A-Za-z0-9_^\-\$]+)\$/)) {
+	DEBUG3("substitute_macros: checking line $input");
+	while ((my $var)=($input=~/\$([A-Za-z0-9_:^\-\$]+)\$/)) {
 
+		DEBUG3("substitute_macros: checking var $var");
 		#--- 1. check for MULTI var
 		if (defined($ENV{"MULTI_${var}"})) {
 			DEBUG3("substitute_macros: replacing env var MULTI_${var} with $ENV{\"MULTI_${var}\"}");
@@ -911,7 +918,14 @@ sub substitute_macros {
 		} elsif (defined($ENV{"${NAGIOS}_${var}"})) {
 			DEBUG3("substitute_macros: replacing env var ${NAGIOS}_${var} with $ENV{\"${NAGIOS}_${var}\"}");
 			$input=~s/\$$var\$/$ENV{"${NAGIOS}_${var}"}/g;
-		#--- 3. nothing to substitute
+		#--- 3. objects.cache substitution
+		} elsif ($var=~/^[a-z_]+:[a-z_]+:[a-z_]+:/) {
+			DEBUG3("substitute_macros: checking objects_cache var $var");
+			my $query=objects_cache_query($var);
+			my $substitution=parse_objects_cache($opt{set}{objects_cache},$query);
+			DEBUG3("substitute_macros: replacing objects_cache var $var with $substitution");
+			$input=~s/\$$var\$/$substitution/g;
+		#--- 4. nothing to substitute
 		} else {
 			$input=~s/\$$var\$//g;
 			DEBUG3("substitute_macros: var ${NAGIOS}_${var}/MULTI_${var} not defined: removed \$$var\$");
@@ -920,6 +934,99 @@ sub substitute_macros {
 	return $input;
 }
 
+#---
+#--- creates query object to search in objects.cache
+#--- macro format: $type:return-field:search-field:search-value$
+#--- 
+sub objects_cache_query {
+	my ($input)=@_;
+	my $query=undef;
+	if ($input=~/([a-z_]+):([a-z_]+):([a-z_]+:[a-z_]+.*)/) {
+		$query->{type}=$1;
+		$query->{target}=$2;
+		$input=$3;
+		while ($input=~/([^:]+):([^:]+)(.*)/) {
+			$query->{expr}->{$1}=$2;
+			$input=$3;
+		}
+		DEBUG4("objects_cache_query: searching for $query->{type} returning field $query->{target}");
+		foreach my $key (keys %{$query->{expr}}) {
+			DEBUG4("objects_cache_query: -> key:$key value:$query->{expr}->{$key}");
+		}
+	} else {
+		add_error(0,"objects_cache_query: invalid query expression $input, should be \$type:return-field:key:expr[:key:expr]\$");
+	}
+	return $query;
+}
+
+#---
+#--- parses objects.cache for all objects matching query object
+#---
+sub parse_objects_cache {
+	my ($filename,$query)=@_;
+
+	my %typelist=();
+	my $objectcount=0;
+	my $type="";
+	my @results=();
+	my $temp=undef;
+	unless (open(OBJECTS_CACHE,"$filename")) {
+		add_error(0,"parse_objects_cache: error opening file $filename:$!");
+		return "";
+	}
+	while (<OBJECTS_CACHE>) {
+		#--- begin of object, determine type
+		if (/^define ([a-z0-9\_\-]+) {$/) {
+			$type="$1";
+			$typelist{$type}++;
+			$objectcount++;
+		}
+
+		#--- wrong object? continue search
+		next if ($type ne $query->{type});
+
+		#--- parse particular object
+		while (<OBJECTS_CACHE>) {
+			if (/^\t([a-z0-9\_\-]+)\s+(.*)$/) {
+				$temp->{"$1"}="$2";
+			} elsif (/^\t}$/) {
+				#--- check if all query elements fit to current object
+				my $match=1;
+				foreach my $key (keys(%{$query->{expr}})) {
+					DEBUG4("parse_objects_cache: searching field $key for match of $query->{expr}->{$key}");
+					if (!defined($temp->{$key})) {
+						DEBUG4("parse_objects_cache: type $type - field $key not found");
+						$match=0;
+						last;
+					} elsif ($temp->{$key}!~/$query->{expr}->{$key}/) {
+						DEBUG4("parse_objects_cache: type $type - $temp->{$key} did not match $query->{expr}->{$key}");
+						$match=0;
+						last;
+					} else {
+						DEBUG4("parse_objects_cache: type $type - $temp->{$key} matched");
+					}
+				}
+				if ($match) {
+					if (defined($temp->{"$query->{target}"})) {
+						push @results, $temp->{"$query->{target}"};
+					} else {
+						add_error(0,"parse_objects_cache: could not find target field \"".$query->{target}."\"");
+					}
+				}
+				$temp=undef;
+			}
+		}
+	}
+	if (!defined($typelist{$query->{type}})) {
+		add_error(0,"parse_objects_cache: unknown object type \"$query->{type}\" - valid types are ".join(',',sort keys %typelist));
+	} else {
+		DEBUG3("parse_objects_cache: $objectcount objects parsed");
+		foreach my $type (sort keys %typelist) {
+			DEBUG3("parse_objects_cache: $typelist{$type} of $type");
+		}
+	}
+	return (join($opt{set}{objects_cache_delimiter},@results));
+}
 #---
 #--- replaces keywords with real results
 #---
