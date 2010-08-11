@@ -37,7 +37,7 @@ if ($procs_output=~/PROCS (\S+): \d+ (\S+)/) {
 } else {
 	plan skip_all => "tests because check_procs output ($procs_output) does not match pattern (PROCS (\\S+): \\d+ (\\s+))";
 }
-plan tests => 70;
+plan tests => 80;
 
 my $result;
 my $testopts="-s dont_be_paranoid=1 -s tmp_dir=/tmp/check_multi";
@@ -547,6 +547,96 @@ like(
 	$result->output,
 	'/^OK - 1 plugins checked, 1 ok\n'.
 	'\[ 1\] eins eins \[eins perfdata discarded for eins: bad UOM \',\' in data \'1,1\' \]\|check_multi::check_multi::plugins=1 time=\d+\.\d+ $/',
+	"output correct"
+);
+
+#-------------------------------------------------------------------------------
+#--- perfdata with range (1)----------------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi -x 'command [ eins ] = echo \"eins|eins=1;1;1;\"' -r 1+4+8  $testopts -s loose_perfdata=0",
+);
+is(
+	$result->return_code, 
+	0, 
+	"perfdata with warning / critical number - RC0"
+);
+like(
+	$result->output,
+	'/^OK - 1 plugins checked, 1 ok\n'.
+	'\[ 1\] eins eins\|check_multi::check_multi::plugins=1 time=\d+\.\d+ eins::echo::eins=1;1;1; $/',
+	"output correct"
+);
+
+#-------------------------------------------------------------------------------
+#--- perfdata with range (2)----------------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi -x 'command [ eins ] = echo \"eins|eins=1;1:;1:\"' -r 1+4+8  $testopts -s loose_perfdata=0",
+);
+is(
+	$result->return_code, 
+	0, 
+	"perfdata with warning / critical range 1: - RC0"
+);
+like(
+	$result->output,
+	'/^OK - 1 plugins checked, 1 ok\n'.
+	'\[ 1\] eins eins\|check_multi::check_multi::plugins=1 time=\d+\.\d+ eins::echo::eins=1;1:;1: $/',
+	"output correct"
+);
+
+#-------------------------------------------------------------------------------
+#--- perfdata with range (3)----------------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi -x 'command [ eins ] = echo \"eins|eins=1;\~:1;\~:1\"' -r 1+4+8  $testopts -s loose_perfdata=0",
+);
+is(
+	$result->return_code, 
+	0, 
+	"perfdata with warning / critical range ~:1 - RC0"
+);
+like(
+	$result->output,
+	'/^OK - 1 plugins checked, 1 ok\n'.
+	'\[ 1\] eins eins\|check_multi::check_multi::plugins=1 time=\d+\.\d+ eins::echo::eins=1;\~:1;\~:1 $/',
+	"output correct"
+);
+
+#-------------------------------------------------------------------------------
+#--- perfdata with range (4)----------------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi -x 'command [ eins ] = echo \"eins|eins=1;\@:1;\@:1\"' -r 1+4+8  $testopts -s loose_perfdata=0",
+);
+is(
+	$result->return_code, 
+	0, 
+	"perfdata with warning / critical range \@:1 - RC0"
+);
+like(
+	$result->output,
+	'/^OK - 1 plugins checked, 1 ok\n'.
+	'\[ 1\] eins eins\|check_multi::check_multi::plugins=1 time=\d+\.\d+ eins::echo::eins=1;\@:1;\@:1 $/',
+	"output correct"
+);
+
+#-------------------------------------------------------------------------------
+#--- perfdata with range (5)----------------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi -x 'command [ eins ] = echo \"eins|eins=1;1:10;\@10:20\"' -r 1+4+8  $testopts -s loose_perfdata=0",
+);
+is(
+	$result->return_code, 
+	0, 
+	"perfdata with warning / critical range 1:10;\@10:20 - RC0"
+);
+like(
+	$result->output,
+	'/^OK - 1 plugins checked, 1 ok\n'.
+	'\[ 1\] eins eins\|check_multi::check_multi::plugins=1 time=\d+\.\d+ eins::echo::eins=1;1:10;\@10:20 $/',
 	"output correct"
 );
 

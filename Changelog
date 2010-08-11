@@ -1,5 +1,6 @@
 
 ===== Changelog =====
+	* fix for checking of warning and critical perfdata fields, thx to makana
 	* objects.cache macros added: $type:field:key:value$ is substituted by objects.cache value
 	* restructured error messaging: messages are assigned to child checks whereever applicable
 	* now accepting perfdata with trailing semicolons (like in PNP)

@@ -3396,8 +3396,8 @@ sub parse_perfdata {
 
 		$error.= "$label: bad value \'$value\' in data \'$data\' " if ($value && $value !~/^[-0-9.]+$/);
 		$error.= "$label: bad UOM \'$uom\' in data \'$data\' " if ($uom ne "" && ($uom!~/s$/ && $uom!~/%$/ && $uom!~/b$/i && $uom!~/c$/));
-		$error.= "$label: bad warning \'$warning\' in data \'$data\' " if ($warning && $warning !~/^[-0-9.:]+$/);
-		$error.= "$label: bad critical \'$critical\' in data \'$data\' " if ($critical && $critical !~/^[-0-9.:]+$/);
+		$error.= "$label: bad warning \'$warning\' in data \'$data\' " if ($warning && $warning !~/^[\@\~]?[-0-9.:]+$/);
+		$error.= "$label: bad critical \'$critical\' in data \'$data\' " if ($critical && $critical !~/^[\@\~]?[-0-9.:]+$/);
 		$error.= "$label: bad min \'$min\' in data \'$data\' " if ($min && $min !~/^[-0-9.]+$/);
 		$error.= "$label: bad max \'$max\' in data \'$data\' " if ($max && $max !~/^[-0-9.]+$/);
 		return $error if ($error);
