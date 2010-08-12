@@ -896,6 +896,21 @@ sub mytrim {
 }
 
 #---
+#--- simple hexdump function
+#---
+sub hexdump {
+	my $bytes_per_line=shift;
+	my @bytes=map { sprintf("%02x", $_) } unpack('C*', join(' ',@_));
+	my $hexstr="";
+	my $line=0;
+	while (@bytes) {
+		$hexstr.=sprintf "\n%08o %s", $bytes_per_line*$line++, join(' ', splice(@bytes,0,$bytes_per_line));
+	}
+	return $hexstr;
+}
+
+
+#---
 #--- substitute macros a la $HOSTNAME$ from environment
 #---
 sub substitute_macros {
@@ -1853,8 +1868,10 @@ sub exec_command {
 				$cmds[$no]{output}=readfile($tmp_stdout);
 				$cmds[$no]{output}=~s/[$opt{set}{illegal_chars}]*//g; chomp $cmds[$no]{output};	
 				DEBUG3("exec_command: raw output >$cmds[$no]{output}<");
+				DEBUG3("exec_command: hex output:".hexdump(16,$cmds[$no]{output}));
 				add_error($no,readfile($tmp_stderr));
 				DEBUG3("exec_command: raw stderr >".join(',',@{$cmds[$no]{error}})."<");
+				DEBUG3("exec_command: hex stderr:".hexdump(16,join(',',@{$cmds[$no]{error}})));
 				unlink $tmp_stdout, $tmp_stderr;
 
 			#--- new open3 exec (to be tested carefully before getting standard ;-))
