@@ -1403,7 +1403,7 @@ sub parse_header {
 	DEBUG4("parse_header: type:$type name:$name key:$key cmd:$cmd lineno:$lineno");
 
 	#--- $name = 'head'? then $i = 0
-	if ($name=~/(head)/) {
+	if ($name eq "HEAD") {
 		DEBUG4("parse_header: head specified - settings values for \$cmds[0]");
 		$i=0;
 
