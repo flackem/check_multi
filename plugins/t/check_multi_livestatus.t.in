@@ -32,11 +32,49 @@ if (! -r "@localstatedir@/rw/live") {
 unless (eval "require Monitoring::Livestatus;1") {
 	plan skip_all => "tests because perl module Monitoring::Livestatus is not installed";
 }
-plan tests => 2;
+plan tests => 6;
 
 my $result;
 my $testopts="-s dont_be_paranoid=1";
 
+#-------------------------------------------------------------------------------
+#--- all hosts -----------------------------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi -x 'livestatus [ eins ] = .*' $testopts",
+);
+like(
+	$result->output,
+	'/[1-9][0-9]* plugins checked.*\n\[ 1\] eins_/',
+	"check_multi expands all hosts - passed"
+);
+#-------------------------------------------------------------------------------
+#--- all services---------------------------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi -x 'livestatus [ eins ] = .*:.*' $testopts",
+);
+like(
+	$result->output,
+	'/[1-9][0-9]* plugins checked.*\n\[ 1\] eins_.*_/',
+	"check_multi expands all services - passed"
+);
+#-------------------------------------------------------------------------------
+#--- host not found ------------------------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi -x 'livestatus [ eins ] = host_not_existing' $testopts",
+);
+is(
+	$result->return_code, 
+	3, 
+	"check_multi skips unknown host in livestatus socket - RC3 - passed"
+);
+like(
+	$result->output,
+	'/UNKNOWN - 0 plugins checked,  \[Could not expand host host_not_existing/',
+	"output correct - passed"
+);
 #-------------------------------------------------------------------------------
 #--- service not found ---------------------------------------------------------
 #-------------------------------------------------------------------------------
