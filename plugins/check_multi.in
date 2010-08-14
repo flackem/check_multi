@@ -23,7 +23,7 @@ use strict;
 use Getopt::Long qw(:config no_ignore_case bundling);
 use vars qw(
 $MYSELF @cmds %opt $returncode %def %rc $no $VERSION $tmp_stdout $tmp_stderr $xml $check_multi
-$NAGIOS $nagios $Nagios $status_dat $livestatus $timezero
+$NAGIOS $nagios $Nagios $status_dat $livestatus_service $livestatus_host $timezero
 $OK $WARNING $CRITICAL $UNKNOWN
 $DETAIL_LIST $DETAIL_LIST_FULL $DETAIL_HTML $DETAIL_STDERR $DETAIL_PERFORMANCE
 $DETAIL_PERFORMANCE_CLASSIC $DETAIL_STATUS $DETAIL_PERFORMANCE_LINK $DETAIL_XML $DETAIL_NAGIOS2
@@ -86,7 +86,8 @@ $DETAIL_HIDEIFOK=32768;
 $no=0;
 $returncode=0;
 $status_dat=undef;
-$livestatus=undef;
+$livestatus_host=undef;
+$livestatus_service=undef;
 $tmp_stdout="";
 $tmp_stderr="";
 %def=(
@@ -1620,6 +1621,7 @@ sub parse_header {
 					$cmds[$i]{service}="UNKNOWN";
 				}
 				$cmds[$i]{name}="${name}_$cmds[$i]{host}_$cmds[$i]{service}";
+				$cmds[$i]{name}=~s/[^A-Z0-9_-]+/_/gi;
 				DEBUG4("parse_header: added host:$cmds[$i]{host} / service:$cmds[$i]{service} / output:$cmds[$i]{output}");
 				$i++;
 			}
@@ -1658,6 +1660,7 @@ sub parse_header {
 					$cmds[$i]{host}="UNKNOWN";
 				}
 				$cmds[$i]{name}="${name}_$cmds[$i]{host}";
+				$cmds[$i]{name}=~s/[^A-Z0-9_-]+/_/gi;
 				DEBUG4("parse_header: added host:$cmds[$i]{host} / output:$cmds[$i]{output}");
 				$i++;
 			}
@@ -2437,15 +2440,15 @@ sub expand_livestatus_service {
 		add_error(0,"expand_livestatus_service: empty host_name=$host_name or service_description=$service_description specified");
 		return (undef,undef);
 	}
-	if (!$livestatus) {
+	if (!$livestatus_service) {
 		DEBUG4("expand_livestatus_service: 1st read, creating service tree");
 
-		$livestatus=read_livestatus($livestatus_path,"GET services\nColumns: host_name description state plugin_output long_plugin_output perf_data\n");
-		if (!$livestatus) {
+		$livestatus_service=read_livestatus($livestatus_path,"GET services\nColumns: host_name description state plugin_output long_plugin_output perf_data\n");
+		if (!$livestatus_service) {
 			add_error(0,"expand_livestatus_service: could not read $livestatus_path");
 			return (undef,undef);
 		}
-		DEBUG4("expand_livestatus_service: $#{$livestatus} results");
+		DEBUG4("expand_livestatus_service: $#{$livestatus_service} results");
 	} else {
 		DEBUG4("expand_livestatus_service: subsequent read, reading from service tree");
 	}
@@ -2457,7 +2460,7 @@ sub expand_livestatus_service {
 
 	my @result=();
 	#--- $service points to an array item
-	foreach my $service (@{$livestatus}) {
+	foreach my $service (@{$livestatus_service}) {
 		if ($service->{host_name}=~/$host_name/ && $service->{description}=~/$service_description/) {
 			push @result,$service->{host_name};
 			push @result,$service->{description};
@@ -2488,15 +2491,15 @@ sub expand_livestatus_host {
 		add_error(0,"expand_livestatus_host: empty host_name=$host_name specified");
 		return (undef,undef);
 	}
-	if (!$livestatus) {
+	if (!$livestatus_host) {
 		DEBUG4("expand_livestatus_host: 1st read, creating host tree");
 
-		$livestatus=read_livestatus($livestatus_path,"GET hosts\nColumns: host_name state plugin_output long_plugin_output perf_data\n");
-		if (!$livestatus) {
+		$livestatus_host=read_livestatus($livestatus_path,"GET hosts\nColumns: host_name state plugin_output long_plugin_output perf_data\n");
+		if (!$livestatus_host) {
 			add_error(0,"expand_livestatus_host: could not read $livestatus_path");
 			return (undef,undef);
 		}
-		DEBUG4("expand_livestatus_host: $#{$livestatus} results");
+		DEBUG4("expand_livestatus_host: $#{$livestatus_host} results");
 	} else {
 		DEBUG4("expand_livestatus_host: subsequent read, reading from host tree");
 	}
@@ -2507,7 +2510,7 @@ sub expand_livestatus_host {
 
 	my @result=();
 	#--- $host points to an array item
-	foreach my $host (@{$livestatus}) {
+	foreach my $host (@{$livestatus_host}) {
 		if ($host->{host_name}=~/$host_name/) {
 			push @result,$host->{host_name};
 			push @result,$host->{state};
@@ -2537,7 +2540,7 @@ sub read_livestatus {
 		return undef;
 	}
 	$ml->errors_are_fatal(0);
-	$livestatus=$ml->selectall_arrayref($query,{Slice => 1});
+	my $livestatus=$ml->selectall_arrayref($query,{Slice => 1});
 	if($Monitoring::Livestatus::ErrorCode) {
 		add_error(0,"read_livestatus: $Monitoring::Livestatus::ErrorMessage");
 		return undef;
