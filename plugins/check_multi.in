@@ -1577,6 +1577,7 @@ sub parse_header {
 			$opt{set}{use_monitoring_livestatus}=1;
 			unless (eval "require Monitoring::Livestatus;1") {
 				$opt{set}{use_monitoring_livestatus} = 0;
+				add_error(0,"parse_header: perl module Monitoring::Livestatus is not installed, could not add check");
 				DEBUG2("parse_header: Monitoring::Livestatus not available:$@");
 				return -1;
 			}

@@ -25,9 +25,12 @@ foreach my $plugin (@plugins) {
 	if (! -x "$path_to_plugin") {
 		plan skip_all => "tests because component $plugin not found or not executable as \'$path_to_plugin\'";
 	}
-	if (! -r "@localstatedir@/rw/live") {
-		plan skip_all => "tests because live socket \'@localstatedir@/rw/live\' not found or not readable - is @nagios_name@ running and livestatus module loaded?";
-	}
+}
+if (! -r "@localstatedir@/rw/live") {
+	plan skip_all => "tests because live socket \'@localstatedir@/rw/live\' not found or not readable - is @nagios_name@ running and livestatus module loaded?";
+}
+unless (eval "require Monitoring::Livestatus;1") {
+	plan skip_all => "tests because perl module Monitoring::Livestatus is not installed";
 }
 plan tests => 2;
 
