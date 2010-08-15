@@ -589,6 +589,7 @@ ignore_missing_cmd_file
 gunzip
 file_extension
 findbin
+feed_passive_dir_permissions
 feed_passive_dir
 feed_passive_autocreate
 exec_open3
@@ -684,6 +685,7 @@ with_extended_perfdata
 with_extinfo_in_status
 with_feed_passive_autocreate
 with_feed_passive_dir
+with_feed_passive_dir_permissions
 with_findbin
 with_file_extension
 with_ignore_missing_cmd_file
@@ -1349,6 +1351,7 @@ detail settings:
   --with-extinfo_in_status=<0|1>           display check_multi output in status.cgi
   --with-feed_passive_autocreate=<0|1>>    flag, if feed passive service definitions should be created automatically (default:1)
   --with-feed_passive_dir=<path>           directory for automatically created feed passive service definitions (default:${sysconfdir}/check_multi/feed_passive)
+  --with-feed_passive_dir_permissions=<octal perms> permissions of tmp_dir (default:0755)
   --with-findbin=<0|1>                     use Perl module FindBin for addressing plugins (default:1)
   --with-file_extension=<ext>              default extension for check_multi command files (default:"cmd")
   --with-ignore_missing_cmd_file=<0|1>     if missing cmd files should be ignored (default:0)
@@ -2413,6 +2416,14 @@ else
 fi
 
 
+# Check whether --with-feed_passive_dir_permissions was given.
+if test "${with_feed_passive_dir_permissions+set}" = set; then :
+  withval=$with_feed_passive_dir_permissions; feed_passive_dir_permissions=$withval
+else
+  feed_passive_dir_permissions="01777"
+fi
+
+
 # Check whether --with-findbin was given.
 if test "${with_findbin+set}" = set; then :
   withval=$with_findbin; findbin=$withval
@@ -2679,6 +2690,7 @@ fi
 
 
 #--- substitutions
+
 
 
 

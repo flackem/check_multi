@@ -149,6 +149,9 @@ my %opt=(
 		feed_passive_autocreate => "@feed_passive_autocreate@",
 		# directory to contain automatically created service definitions 
 		# for passive feeded check_multi services
+		feed_passive_dir_permissions => "@feed_passive_dir_permissions@",
+		# directory to contain automatically created service definitions 
+		# for passive feeded check_multi services
 		feed_passive_dir => "@feed_passive_dir@",
 		# standard extension of check_multi command files,
 		# to be searched in directories
@@ -249,6 +252,13 @@ my %opt=(
 		tmp_etc		=> "@tmp_etc@",
 		# octal permissions of tmp_dir
 		tmp_dir_permissions => "@tmp_dir_permissions@",
+		# several module usage variables
+		use_html_entities => 0,
+		use_lwp_simple	=> 0,
+		use_monitoring_livestatus => 0,
+		use_snmp	=> 0,
+		use_time_hires	=> 0,
+		use_xml_simple	=> 0,
 		# verbosity, from 1 (less verbose) to 3 (much verbose)
 		verbose		=> @verbose@,
 		# elements to be added to XML structure
@@ -261,22 +271,25 @@ my %opt=(
 my @cmds=(
 	#--- 0: parent check
 	{
-		name	=> "",
-		error	=> [ ],		# stderr and other errors
-		starttime => 0.0,	# start timestamp
-		timeouttime => 0.0,	# timeout timestamp
-		endtime => 0.0,		# end timestamp
-		runtime => 0.0,		# runtime in seconds
-		nchecks => 0,		# number of child checks (displayed)
-		nallchecks => 0,	# number of all child checks (with non-displayed checks)
-		sleeped => 0.0,		# time sleeped between child checks
-		number	=> 0,		# current number of check (0 for head)
-		output	=> "",		# output
-		rc	=> $OK,		# return code
-		ok	=> undef,	# state definition: OK
-		warning	=> undef,	# state definition: WARNING
-		critical => undef,	# state definition: CRITICAL
-		unknown	=> undef,	# state definition: UNKNOWN
+		command		=> "none",	# no command for parent
+		critical	=> undef,	# state definition: CRITICAL
+		endtime		=> 0.0,		# end timestamp
+		error		=> [ ],		# stderr and other errors
+		hash		=> "",		# hash for all child checks
+		nallchecks	=> 0,		# number of all child checks (with non-displayed checks)
+		name		=> "",		# no predefined name for parent (-n option)
+		nchecks		=> 0,		# number of child checks (displayed)
+		number		=> 0,		# current number of check (0 for head)
+		ok		=> undef,	# state definition: OK
+		output		=> "",		# output
+		rc		=> $OK,		# return code
+		runtime		=> 0.0,		# runtime in seconds
+		sleeped		=> 0.0,		# time sleeped between child checks
+		starttime	=> 0.0,		# start timestamp
+		timeouttime	=> 0.0,		# timeout timestamp
+		type		=> "head",	# this is the master of disaster
+		unknown		=> undef,	# state definition: UNKNOWN
+		warning		=> undef,	# state definition: WARNING
 	}
 	#--- elements 1..x will be added by parse_lines / parse_header
 );
@@ -467,13 +480,14 @@ sub process_input {
 
 	#--- check_multi uses a temporary directory, per default /tmp/check_multi
 	#--- 1. create if not yet done
-	if (! -d "$opt{set}{tmp_dir}") {
-		mkdir "$opt{set}{tmp_dir}";
-		chmod oct("$opt{set}{tmp_dir_permissions}"), "$opt{set}{tmp_dir}";
-	}
-	#--- 2. check if tmp_dir is available
-	if (! -d "$opt{set}{tmp_dir}") {
+	if (! my_mkdir("$opt{set}{tmp_dir}", $opt{set}{tmp_dir_permissions})) {
 		print "Error: could not create tmp directory $opt{set}{tmp_dir} as user $opt{set}{user}\n";
+		return $UNKNOWN;
+	}
+	#--- 2. check if tmp_dir has correct permissions
+	if  ((stat("$opt{set}{tmp_dir}"))[2] != oct("$opt{set}{tmp_dir_permissions}") &&
+		! chmod(oct("$opt{set}{tmp_dir_permissions}"), "$opt{set}{tmp_dir}") ) {
+		print "Error: could not set tmp directory $opt{set}{tmp_dir} permissions to $opt{set}{tmp_dir_permissions} as user $opt{set}{user}\n";
 		return $UNKNOWN;
 	#--- 3. and at last: it has to be writeable
 	} elsif (! -w "$opt{set}{tmp_dir}") {
@@ -538,7 +552,10 @@ sub process_input {
 			
 			#--- create directory to store saved config files
 			my $cmdfile_path="$opt{set}{tmp_dir}/$opt{set}{tmp_etc}/$host/$path";
-			`mkdir -p "$cmdfile_path"` if (! -d "$cmdfile_path");
+			if (! my_mkdir("$cmdfile_path", $opt{set}{tmp_dir_permissions})) {
+				add_error(0,"Cannot create config directory path \'$cmdfile_path\':$!");
+				return $UNKNOWN;
+			}
 
 			#--- use ctime to determine if config file should be updated after
 			#--- having reached cmdfile_update_interval
@@ -657,7 +674,7 @@ sub process_input {
 	$ENV{"MULTI_PPID"}=$$ if (!defined($ENV{"MULTI_PPID"}));
 
 	#--- persistency - on the way to check_multi 2.0
-	if ($opt{set}{persistent}) {
+	if (0 && $opt{set}{persistent}) {
 
 		#--- try to load module XML::Simple
 		$opt{set}{use_xml_simple} = 1;
@@ -691,6 +708,8 @@ sub process_input {
 			} else {
 				DEBUG2("process_input: persistency file $opt{set}{tmp_dir}/${MYSELF}_$cmds[0]{key}.xml not found.");
 			}
+
+			#--- read persistent data
 
 			#--- debug output per Data::Dumper
 			unless (eval "use Data::Dumper;1") {
@@ -910,6 +929,71 @@ sub hexdump {
 	return $hexstr;
 }
 
+#---
+#--- human readable timestamp with japanese format, therefore sortable
+#---
+sub readable_sortable_timestamp {
+	my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(shift);
+	return sprintf "%04d-%02d-%02d_%02d:%02d:%02d", 
+		$year+1900, $mon+1, $mday,
+		$hour, $min, $sec;
+}
+
+#---
+#--- create unique hash from input
+#---
+sub my_hash {
+	my $string=shift;
+	my $hash=crypt($string,"hash_$MYSELF");
+	DEBUG3("my_hash: inputstring \'$string\' -> $hash");
+	return $hash;
+}
+
+#---
+#--- directories should not have separator characters
+#---
+sub valid_dir {
+	my $dir=shift;
+	my $separator=($^O eq "Win32") ? "\\" : "/";
+	$dir=~s#$separator#_#g;
+	return $dir;
+}
+
+#---
+#--- creates directory (including leading paths) with given permissions
+#---
+sub my_mkdir {
+	my ($directory,$perms)=@_;
+	$perms="0755" if (!defined($perms));
+	my $path="";
+	my $separator=($^O eq "Win32") ? "\\" : "/";
+	foreach my $part (split($separator,$directory)) {
+		$path.=$part.$separator;
+		if (! -d "$path") {
+			return 0 if (! mkdir("$path", oct("$perms")));
+		}
+	}
+	return 1;
+}
+
+
+#---
+#--- creates string from all checks: name+type+command
+#---
+sub config_string {
+	my $cmds=shift;
+	my $string="";
+	my $len=0;
+	#--- add numnber, name, type and command to string
+	for (my $i=0;$i<=$#{$cmds};$i++) {
+		$string.=join('_',"_$i",$$cmds[$i]{name},$$cmds[$i]{type},$$cmds[$i]{command});
+	}
+	#--- replace all non alphanumerical characters with underscores
+	$string=~s/[^A-Za-z0-9_-]+/_/g;
+	#--- make sure, that there are no duplicate underscores
+	$string=~s/__/_/g;
+	return $string;
+}
 
 #---
 #--- substitute macros a la $HOSTNAME$ from environment
@@ -1219,11 +1303,13 @@ sub get_tmpfile {
 	my ($path,$prefix)=@_;
 	my $attempt=0;
 	my $tmpfile="";
+
 	#--- check existance of path and create it if necessary
-	if (! -d $path && ! mkdir($path,0700)) {
-		add_error(0,"get_tmpfile: error creating tmp_path $path:$!");
+	if (! my_mkdir($path,$opt{set}{tmp_dir_permissions})) {
+		add_error(0,"get_tmpfile: error creating tmp_path $path with permissions $opt{set}{tmp_dir_permissions}:$!");
 		return "";
 	}
+
 	#--- do 5 attempts to create tmpfile
 	while ($attempt++ < 5) {
 		my $suffix=int(rand(89999))+10000;
@@ -2795,24 +2881,35 @@ sub report_all {
 	DEBUG4("${NAGIOS} Environment (sorted):\n\t".join("\n\t",get_env_vars('^${NAGIOS}')));
 
 	#--- construction site for persistence
-	if ($opt{set}{persistent} && $opt{set}{use_xml_simple} && $cmds[0]{key}) {
-		unless (eval "use Data::Dumper;1") {
-			$opt{set}{test}=0;
-			DEBUG2("report_all: Data::Dumper not available");
-		} else {
-			DEBUG3("report_all: Data::Dumper module loaded");
-			DEBUG4("report_all:" . Dumper($check_multi));
+	if ($opt{set}{test} && $opt{set}{persistent}) {
+		#unless (eval "use Data::Dumper;1") {
+		#	$opt{set}{test}=0;
+		#	DEBUG2("report_all: Data::Dumper not available");
+		#} else {
+		#	DEBUG3("report_all: Data::Dumper module loaded");
+		#	DEBUG4("report_all:" . Dumper($check_multi));
+		#}
+		unless (eval "require XML::Simple;1") {
+			$opt{set}{use_xml_simple} = 0;
+			add_error(0,"process_input: XML::Simple not available: $@");
 		}
 
-		writefile(
-			">$opt{set}{tmp_dir}/${MYSELF}_$cmds[0]{key}.xml",
-			XML::Simple::XMLout(
-				$check_multi,
-				NoAttr=>1,
-				KeepRoot=>1,
-				RootName=>"$MYSELF",
-			)
-		);
+		my $pdir="$opt{set}{tmp_dir}/".valid_dir($cmds[0]{hash});
+		if (! my_mkdir("$pdir", "0755")) {
+			add_error(0,"report_all: cannot create persistent directory $pdir:$!");
+		} else {
+			writefile(
+				">$pdir/${MYSELF}_".readable_sortable_timestamp($cmds[0]{starttime})."$cmds[0]{names}.xml",
+				XML::Simple::XMLout(
+					$check_multi,
+					NoAttr=>1,
+					KeepRoot=>1,
+					RootName=>"$MYSELF",
+				)
+			);
+		}
+	} else {
+		#add_error(0,"report_all: persistent problem - persistent:$opt{set}{persistent} - use_xml_simple:$opt{set}{use_xml_simple}");
 	}
 
 	#--- print service definition
@@ -3761,18 +3858,8 @@ sub check_and_create_service_definition {
 	my ($hostname, $service_definition)=@_;
 
 	#--- check / create directory for passive feeded services
-	if (! -d "$opt{set}{feed_passive_dir}") {
-		mkdir "$opt{set}{feed_passive_dir}" or add_error(0,"check_and_create_service_definition: cannot create directory $opt{set}{feed_passive_dir}: $?");
-		DEBUG4("check_and_create_service_definition: created directory $opt{set}{feed_passive_dir}");
-	} else {
-		DEBUG4("check_and_create_service_definition: directory $opt{set}{feed_passive_dir} already there");
-	}
-	#--- check / create directory for particular host
-	if (! -d "$opt{set}{feed_passive_dir}/$hostname") {
-		mkdir "$opt{set}{feed_passive_dir}/$hostname" or add_error(0,"check_and_create_service_definition: cannot create directory $opt{set}{feed_passive_dir}/$hostname: $?");
-		DEBUG4("check_and_create_service_definition: created directory $opt{set}{feed_passive_dir}/$hostname");
-	} else {
-		DEBUG4("check_and_create_service_definition: directory $opt{set}{feed_passive_dir}/$hostname already there");
+	if (! my_mkdir("$opt{set}{feed_passive_dir}/$hostname",$opt{set}{feed_passive_dir_permissions})) {
+		add_error(0,"check_and_create_service_definition: cannot create directory $opt{set}{feed_passive_dir}/$hostname: $!");
 	}
 	#--- create service definition in host directory
 	if (! -f "$opt{set}{feed_passive_dir}/$hostname/${service_definition}.cfg") {
@@ -3824,6 +3911,10 @@ if ($#cmds<1) {
 } else {
 	DEBUG4("main: running " . ($#cmds - 1) . " child checks");
 }
+
+#--- create unique hash for check
+$cmds[0]{names}=&config_string(\@cmds);
+$cmds[0]{hash}=&my_hash($cmds[0]{names});
 
 #--- initialize timer for overall timeout
 $cmds[0]{starttime}=time;

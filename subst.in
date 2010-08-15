@@ -36,6 +36,7 @@ my $exec_open3="@exec_open3@";
 my $extinfo_in_status="@extinfo_in_status@";
 my $extended_perfdata="@extended_perfdata@";
 my $feed_passive_autocreate="@feed_passive_autocreate@";
+my $feed_passive_dir_permissions="@feed_passive_dir_permissions@";
 my $file_extension="@file_extension@";
 my $findbin="@findbin@";
 my $gunzip="@gunzip@";
@@ -119,6 +120,7 @@ while (my $f = shift @ARGV) {
 		s|\@extended_perfdata\@|$extended_perfdata|g;
 		s|\@feed_passive_autocreate\@|$feed_passive_autocreate|g;
 		s|\@feed_passive_dir\@|$feed_passive_dir|g;
+		s|\@feed_passive_dir_permissions\@|$feed_passive_dir_permissions|g;
 		s|\@file_extension\@|$file_extension|g;
 		s|\@findbin\@|$findbin|g;
 		s|\@gunzip\@|$gunzip|g;
