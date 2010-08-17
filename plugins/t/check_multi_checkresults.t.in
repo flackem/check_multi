@@ -35,11 +35,26 @@ if (-d $test_dir) {
 		plan skip_all => "tests because tmp dir $test_dir could not be created:$!";
 	}
 }
-plan tests => 3;
+plan tests => 6;
 
 my $result;
 my $testopts="-s dont_be_paranoid=1";
 
+sub read_checkresults_file {
+	my $file=`ls -1 $test_dir/???????`; chomp($file);
+	my @c=();
+	if ($file=~/\S{6}/) { 
+		if (open(RESULTFILE, "$file")) {
+			@c=<RESULTFILE>;
+			close RESULTFILE;
+		} else {
+			fail "open result file $file for reading failed:$!";
+		}
+	}
+	`rm $file`;
+	`rm $file.ok`;
+	return @c;
+}
 #-------------------------------------------------------------------------------
 #--- content of checkresults file-----------------------------------------------
 #-------------------------------------------------------------------------------
@@ -56,23 +71,34 @@ like(
 	'/PROCS .*: \d+/', 
 	"output of check_command correct - passed"
 );
-my @result_file=glob <$test_dir/???????>;
-my @contents=();
-if ($result_file[0]=~/\S{6}/) { 
-	if (open(RESULTFILE, "$result_file[0]")) {
-		@contents=<RESULTFILE>;
-		close RESULTFILE;
-	} else {
-		fail "open result file $result_file[0] for reading failed:$!";
-	}
-}
+#my @contents=&read_checkresults_file;
 like(
-	join(' ',@contents),
+	join(' ',&read_checkresults_file),
 	'/child check result.*finish_time=1.*host_name=\S+.*service_description=procs.*output=PROCS/s', 
 	"output of checkresults file correct - passed"
 );
-foreach my $file (@result_file) {
-	`rm -f $file`;
-	`rm -f $file.ok`;
-}
-`rmdir $test_dir`;
+
+#-------------------------------------------------------------------------------
+#--- empty check should return (No output returned from plugin) ----------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi -x 'command [ empty ] = (echo; exit 3)' $testopts -s checkresults_dir=$test_dir -r 8193",
+);
+is(
+	$result->return_code, 
+	3, 
+	"check_multi checkresults output is empty - RC3 - passed"
+);
+like(
+	$result->output,
+	'/UNKNOWN - 1 plugins checked, 1 unknown \(empty\)\n\[ 1\] empty /',
+	"output of check_command correct - passed"
+);
+like(
+	join(' ', &read_checkresults_file),
+	'/\(No output returned from plugin\)/', 
+	"output of 'empty' checkresults file correct - passed"
+);
+
+# cleanup
+`rm -rf $test_dir`;

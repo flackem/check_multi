@@ -48,7 +48,7 @@ my $testopts="-s dont_be_paranoid=1";
 #--- check_multi feeds check_multi ---------------------------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi -x 'command [ procs ] = check_procs' -r 256 $testopts | ../check_multi -r 1 $testopts",
+	"@PERL@ ../check_multi -x 'command [ procs ] = check_procs' -r 256 $testopts | @PERL@ ../check_multi -r 1 $testopts",
 );
 is(
 	$result->return_code, 
