@@ -1,0 +1,25 @@
+#--- local nagios settings
+eval [ NAGIOS_DIR     ] = ("$NAGIOS_DIR$"     eq "") ? "@prefix@" : "$NAGIOS_DIR$"
+eval [ NAGIOS_STATS   ] = ("$NAGIOS_STATS$"   eq "") ? "$NAGIOS_DIR$/bin/nagiostats" : "$NAGIOS_STATS$"
+eval [ NAGIOS_VERSION ] = ("$NAGIOS_VERSION$" eq "") ? `$NAGIOS_STATS$ -m -d NAGIOSVERSION` : "$NAGIOS_VERSION$"
+
+#--- settings for api.nagios.org check
+eval [ NAGIOS_API     ] = ("$NAGIOS_API$"     eq "") ? "api.nagios.org" : "$NAGIOS_API$"
+eval [ VERSION_URL    ] = ("$VERSION_URL$"    eq "") ? "/versioncheck/" : "$VERSION_URL$"
+eval [ TINY_CHECK     ] = ("$TINY_URL$"       eq "") ? "1" : "$TINY_URL$"
+eval [ STABLE_ONLY    ] = ("$STABLE_ONLY$"    eq "") ? "1" : "$STABLE_ONLY$"
+eval [ FIRST_CHECK    ] = ("$FIRST_CHECK$"    eq "") ? "1" : "$FIRST_CHECK$"
+
+#--- get output from nagios.org
+eval [ update_check ] = \
+	`check_http -H $NAGIOS_API$ -v \
+	-u 'http://$NAGIOS_API$$VERSION_URL$' \
+	-A Nagios/$NAGIOS_VERSION$ \
+	-P 'v=1&product=nagios&tinycheck=$TINY_CHECK$&stableonly=$STABLE_ONLY$&version=$NAGIOS_VERSION$&firstcheck=$FIRST_CHECK$'`;
+
+eeval [ product_name       ] = if ("$update_check$"=~/PRODUCT_NAME=(.*)/)      { $?=$OK<<8; "$1" } else { $?=$UNKNOWN<<8; "No PRODUCT_NAME found" }
+eeval [ update_version     ] = if ("$update_check$"=~/UPDATE_VERSION=(.*)/)    { $?=$OK<<8; "$1" } else { $?=$UNKNOWN<<8; "No UPDATE_VERSION found" }
+eeval [ update_releasedate ] = if ("$update_check$"=~/UPDATE_RELEASEDATE=(.*)/){ $?=$OK<<8; "$1" } else { $?=$UNKNOWN<<8; "No UPDATE_RELEASEDATE found" }
+eeval   [ update_available ] = if ("$update_check$"=~/UPDATE_AVAILABLE=0/)     { $?=$OK<<8; "no" } else { $?=$WARNING<<8; "yes" }
+output [ head ] = "%s %s - current version is %s, available version is %s, released at %s", "$product_name$", "$LABEL_update_available$", "$NAGIOS_VERSION$", "$update_version$", "$update_releasedate$"
+

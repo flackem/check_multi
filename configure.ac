@@ -216,6 +216,8 @@ $PERL subst sample_config/cluster/download_my-plugin.cmd
 $PERL subst sample_config/cluster/download_sourceforge.cmd
 $PERL subst sample_config/nagiostats/Makefile
 $PERL subst sample_config/nagiostats/nagiostats.cmd
+$PERL subst sample_config/nagios_version/Makefile
+$PERL subst sample_config/nagios_version/nagios_update.cmd
 $PERL subst sample_config/nagiostats/nagiostats.php
 $PERL subst sample_config/start_process/Makefile
 $PERL subst sample_config/start_process/start_process.cmd

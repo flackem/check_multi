@@ -18,6 +18,7 @@ clean:
 	cd multi_long		&& $(MAKE) -e $@
 	cd network_interface	&& $(MAKE) -e $@
 	cd nagiostats		&& $(MAKE) -e $@
+	cd nagios_version	&& $(MAKE) -e $@
 	cd start_process	&& $(MAKE) -e $@
 	
 
@@ -27,6 +28,7 @@ distclean: clean
 	cd multi_long		&& $(MAKE) -e $@
 	cd network_interface	&& $(MAKE) -e $@
 	cd nagiostats		&& $(MAKE) -e $@
+	cd nagios_version	&& $(MAKE) -e $@
 	cd start_process	&& $(MAKE) -e $@
 	-rm -f Makefile
 
@@ -38,4 +40,5 @@ install-config:
 	cd multi_long		&& $(MAKE) -e $@
 	cd network_interface	&& $(MAKE) -e $@
 	cd nagiostats		&& $(MAKE) -e $@
+	cd nagios_version	&& $(MAKE) -e $@
 	cd start_process	&& $(MAKE) -e $@

@@ -1,0 +1,23 @@
+#---
+#--- Makefile sample_config/nagios_update
+#---
+#--- $Id$
+#---
+prefix=@prefix@
+HTMLDIR=@datarootdir@
+CGIDIR=@sbindir@
+CFGDIR=@config_dir@
+INSTALL=@INSTALL@
+INSTALL_OPTS=@INSTALL_OPTS@
+
+clean:
+	-rm -f nagios_update.cmd
+
+distclean: clean
+	-rm -f Makefile
+
+devclean: distclean
+
+install-config: 
+	$(INSTALL) -m 755 $(INSTALL_OPTS) -d $(DESTDIR)${CFGDIR}
+	$(INSTALL) -m 755 $(INSTALL_OPTS) nagios_update.cmd $(DESTDIR)${CFGDIR}

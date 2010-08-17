@@ -1351,7 +1351,7 @@ detail settings:
   --with-extinfo_in_status=<0|1>           display check_multi output in status.cgi
   --with-feed_passive_autocreate=<0|1>>    flag, if feed passive service definitions should be created automatically (default:1)
   --with-feed_passive_dir=<path>           directory for automatically created feed passive service definitions (default:${sysconfdir}/check_multi/feed_passive)
-  --with-feed_passive_dir_permissions=<octal perms> permissions of tmp_dir (default:0755)
+  --with-feed_passive_dir_permissions=<octal perms> permissions for feed passive config dir (default:0755)
   --with-findbin=<0|1>                     use Perl module FindBin for addressing plugins (default:1)
   --with-file_extension=<ext>              default extension for check_multi command files (default:"cmd")
   --with-ignore_missing_cmd_file=<0|1>     if missing cmd files should be ignored (default:0)
@@ -3925,6 +3925,8 @@ $PERL subst sample_config/cluster/download_my-plugin.cmd
 $PERL subst sample_config/cluster/download_sourceforge.cmd
 $PERL subst sample_config/nagiostats/Makefile
 $PERL subst sample_config/nagiostats/nagiostats.cmd
+$PERL subst sample_config/nagios_version/Makefile
+$PERL subst sample_config/nagios_version/nagios_update.cmd
 $PERL subst sample_config/nagiostats/nagiostats.php
 $PERL subst sample_config/start_process/Makefile
 $PERL subst sample_config/start_process/start_process.cmd
