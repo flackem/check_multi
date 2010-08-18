@@ -37,7 +37,7 @@ if ($procs_output=~/PROCS (\S+): \d+ (\S+)/) {
 } else {
 	plan skip_all => "tests because check_procs output ($procs_output) does not match pattern (PROCS (\\S+): \\d+ (\\s+))";
 }
-plan tests => 80;
+plan tests => 82;
 
 my $result;
 my $testopts="-s dont_be_paranoid=1 -s tmp_dir=/tmp/check_multi";
@@ -696,6 +696,25 @@ like(
 	'\[ 1\] eins overloaded$/',
 	"output correct"
 );
+#-------------------------------------------------------------------------------
+#--- environment macro ----------------------------------------------------------
+#-------------------------------------------------------------------------------
+$ENV{NAGIOS__HOST_CHECK_MULTI_TESTVAR}="has a test value";
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi -x 'command [ testvar ] = echo \$_HOST_CHECK_MULTI_TESTVAR\$' -r 1 $testopts",
+);
+is(
+	$result->return_code, 
+	0, 
+	"reading custom variable - RC0"
+);
+like(
+	$result->output,
+	'/^OK - 1 plugins checked, 1 ok\n'.
+	'\[ 1\] testvar has a test value$/',
+	"output correct"
+);
+$ENV{NAGIOS__HOST_CHECK_MULTI_TESTVAR}=undef;
 #-------------------------------------------------------------------------------
 #--- killing me softly - checking signal handler -------------------------------
 #-------------------------------------------------------------------------------

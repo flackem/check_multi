@@ -1007,7 +1007,8 @@ sub substitute_macros {
 	}
 
 	DEBUG3("substitute_macros: checking line $input");
-	while ((my $var)=($input=~/\$([A-Za-z0-9_:^\-\$]+)\$/)) {
+	#--- NOT case sensitive macro checking (Nagios does not either :-/)
+	while ((my $var)=($input=~/\$([A-Za-z0-9_:^\-\$]+)\$/i)) {
 
 		DEBUG3("substitute_macros: checking var $var");
 		#--- 1. check for MULTI var
