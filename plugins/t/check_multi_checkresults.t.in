@@ -16,7 +16,6 @@ $ENV{PATH}="$libexec_dir:$ENV{PATH}";
 
 #--- check needed plugins for tests
 my @plugins=(
-	"check_procs",
 	"echo",
 	"@PERL@",
 );
@@ -59,7 +58,7 @@ sub read_checkresults_file {
 #--- content of checkresults file-----------------------------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi -x 'command [ procs ] = check_procs' $testopts -s checkresults_dir=$test_dir -r 8192",
+	"@PERL@ ../check_multi -x 'command [ procs ] = echo \"PROCS OK: 99 processes\"' $testopts -s checkresults_dir=$test_dir -r 8192",
 );
 is(
 	$result->return_code, 

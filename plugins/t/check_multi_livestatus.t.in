@@ -16,7 +16,6 @@ $ENV{PATH}="$libexec_dir:$ENV{PATH}";
 
 #--- check needed plugins for tests
 my @plugins=(
-	"check_procs",
 	"echo",
 	"@PERL@",
 );

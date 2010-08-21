@@ -378,45 +378,45 @@ is(
 	"report option 256 (XML output) - RC0"
 );
 
-#?xml version="1.0"?>
+#<?xml version="1.0"?>
 #<?xml-stylesheet type="text/xsl" href="extinfo.xsl"?>
 #<div id="check_multi_xml" style='display:none'>
 #<check_multi>
-#        <CHILD>
-#                <no>0</no>
-#                <endtime>1275582892.30824</endtime>
-#                <nallchecks>1</nallchecks>
-#                <name></name>
-#                <nchecks>1</nchecks>
-#                <number>0</number>
-#                <rc>0</rc>
-#                <runtime>0.0230729579925537</runtime>
-#                <sleeped>0</sleeped>
-#                <starttime>1275582892.28517</starttime>
-#                <timeouttime>1275582952.28517</timeouttime>
-#                <output>0 critical, 0 warning, 0 unknown, 1 ok</output>
-#                <error>report_xml: XML element critical not found</error>
-#                <error>report_xml: XML element ok not found</error>
-#                <error>report_xml: XML element unknown not found</error>
-#                <error>report_xml: XML element warning not found</error>
-#        </CHILD>
-#        <CHILD>
-#                <no>1</no>
-#                <command>check_procs</command>
-#                <displayed>1</displayed>
-#                <endtime>1275582892.30783</endtime>
-#                <error></error>
-#                <name>procs</name>
-#                <number>1</number>
-#                <output>PROCS OK: 152 processes</output>
-#                <plugin>check_procs</plugin>
-#                <pplugin>check_procs</pplugin>
-#                <process_perfdata>1</process_perfdata>
-#                <rc>0</rc>
-#                <runtime>0.0226080417633057</runtime>
-#                <starttime>1275582892.28522</starttime>
-#                <type>command</type>
-#        </CHILD>
+#	<CHILD>
+#		<no>0</no>
+#		<command>none</command>
+#		<endtime>1282402937.85597</endtime>
+#		<hash>hamX.fjak00C6</hash>
+#		<nallchecks>1</nallchecks>
+#		<name></name>
+#		<names>_0_head_none_1_proc_command_echo_PROCS_OK_99_processes_</names>
+#		<nchecks>1</nchecks>
+#		<number>0</number>
+#		<rc>0</rc>
+#		<runtime>0.00392317771911621</runtime>
+#		<sleeped>0</sleeped>
+#		<starttime>1282402937.85206</starttime>
+#		<timeouttime>1282402997.85206</timeouttime>
+#		<type>head</type>
+#		<output>0 critical, 0 warning, 0 unknown, 1 ok</output>
+#	</CHILD>
+#	<CHILD>
+#		<no>1</no>
+#		<command>echo \"PROCS OK: 99 processes\"</command>
+#		<displayed>1</displayed>
+#		<endtime>1282402937.85581</endtime>
+#		<error>report_xml: XML element critical not found</error>
+#		<name>proc</name>
+#		<number>1</number>
+#		<output>"PROCS OK: 99 processes"</output>
+#		<plugin>echo</plugin>
+#		<pplugin>echo</pplugin>
+#		<process_perfdata>1</process_perfdata>
+#		<rc>0</rc>
+#		<runtime>0.00369381904602051</runtime>
+#		<starttime>1282402937.85212</starttime>
+#		<type>command</type>
+#	</CHILD>
 #</check_multi>
 #</div>
 like(

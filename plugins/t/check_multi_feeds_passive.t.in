@@ -28,16 +28,6 @@ foreach my $plugin (@plugins) {
 unless (eval "require XML::Simple;1") {
 	plan skip_all => "tests because perl module XML::Simple not installed";
 }
-my $path_to_check_procs=`which check_procs`; chomp $path_to_check_procs;
-my $procs_string="";
-my $procs_warning="";
-my $procs_output=`$path_to_check_procs -w 10`; chomp $procs_output;
-if ($procs_output=~/PROCS (\S+): \d+ (\S+)/) {
-        $procs_warning=$1;
-        $procs_string=$2;
-} else {
-        plan skip_all => "tests because check_procs output ($procs_output) does not match pattern (PROCS (\\S+): \\d+ (\\s+))";
-}
 
 plan tests => 2;
 
@@ -48,7 +38,7 @@ my $testopts="-s dont_be_paranoid=1";
 #--- check_multi feeds check_multi ---------------------------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi -x 'command [ procs ] = check_procs' -r 256 $testopts | @PERL@ ../check_multi -r 1 $testopts",
+	"@PERL@ ../check_multi -x 'command [ procs ] = echo \"PROCS OK: 99 processes\"' -r 256 $testopts | @PERL@ ../check_multi -r 1 $testopts",
 );
 is(
 	$result->return_code, 
@@ -58,6 +48,6 @@ is(
 like(
 	$result->output,
 	'/OK - 1 plugins checked, 1 ok\n'.
-	'\[ 1\] procs PROCS OK: \d+ '.$procs_string.'$/',
+	'\[ 1\] procs PROCS OK: \d+ processes$/',
 	"output correct - passed"
 );
