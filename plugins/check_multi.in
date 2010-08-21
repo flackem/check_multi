@@ -1,5 +1,6 @@
 #!@client_perl@ -w
-# @nagios_name@: -epn
+# nagios: -epn
+# icinga: -epn
 #
 # check_multi - nagios plugin
 #
