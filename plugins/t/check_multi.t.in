@@ -17,7 +17,6 @@ $ENV{PATH}="$libexec_dir:$plugin_path:$ENV{PATH}";
 
 #--- check needed plugins for tests
 my @plugins=(
-	"check_procs",
 	"echo",
 	"@PERL@",
 );
@@ -26,16 +25,6 @@ foreach my $plugin (@plugins) {
 	if (! -x "$path_to_plugin") {
 		plan skip_all => "tests because component $plugin not found or not executable as \'$path_to_plugin\'";
 	}
-}
-my $path_to_check_procs=`which check_procs`; chomp $path_to_check_procs;
-my $procs_string="";
-my $procs_warning="";
-my $procs_output=`$path_to_check_procs -w 10`; chomp $procs_output;
-if ($procs_output=~/PROCS (\S+): \d+ (\S+)/) {
-	$procs_warning=$1;
-	$procs_string=$2;
-} else {
-	plan skip_all => "tests because check_procs output ($procs_output) does not match pattern (PROCS (\\S+): \\d+ (\\s+))";
 }
 plan tests => 82;
 
@@ -118,7 +107,7 @@ like(
 #--- valid name option -------------------------------------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi -n test -x 'command [ procs ] = check_procs' $testopts"
+	"@PERL@ ../check_multi -n test -x 'command [ procs ] = echo \"PROCS OK: 99 processes\"' $testopts"
 );
 is(
 	$result->return_code, 
@@ -128,7 +117,7 @@ is(
 like(
 	$result->output,
 	'/^test OK - 1 plugins checked, 1 ok\n'.
-	'\[ 1\] procs PROCS OK: \d+ '.$procs_string.'|check_multi::check_multi::plugins=1 time=\d+$/',
+	'\[ 1\] procs PROCS OK: \d+ processes|check_multi::check_multi::plugins=1 time=\d+$/',
 	"output correct"
 );
 
@@ -136,7 +125,7 @@ like(
 #--- invalid name option -----------------------------------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi -n test: -x 'command [ procs ] = check_procs' $testopts"
+	"@PERL@ ../check_multi -n test: -x 'command [ procs ] = echo \"PROCS OK: 99 processes\"' $testopts"
 );
 is(
 	$result->return_code, 
@@ -154,7 +143,7 @@ like(
 #--- simple OK output with 1 plugin --------------------------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi -x 'command [ procs ] = check_procs' $testopts"
+	"@PERL@ ../check_multi -x 'command [ procs ] = echo \"PROCS OK: 99 processes\"' $testopts"
 );
 is(
 	$result->return_code, 
@@ -164,7 +153,7 @@ is(
 like(
 	$result->output,
 	'/^OK - 1 plugins checked, 1 ok\n'.
-	'\[ 1\] procs PROCS OK: \d+ '.$procs_string.'|check_multi::check_multi::plugins=1 time=\d+$/',
+	'\[ 1\] procs PROCS OK: \d+ processes|check_multi::check_multi::plugins=1 time=\d+$/',
 	"output correct"
 );
 
@@ -173,7 +162,7 @@ like(
 #--- report option 0 -----------------------------------------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi -r 0 -x 'command [ procs ] = check_procs' $testopts"
+	"@PERL@ ../check_multi -r 0 -x 'command [ procs ] = echo \"PROCS OK: 99 processes\"' $testopts"
 );
 is(
 	$result->return_code, 
@@ -183,7 +172,7 @@ is(
 like(
 	$result->output,
 	'/^OK - 1 plugins checked, 0 critical, 0 warning, 0 unknown, 1 ok\n'.
-	'\[ 1\] procs PROCS OK: \d+ '.$procs_string.'$/',
+	'\[ 1\] procs PROCS OK: \d+ processes$/',
 	"output correct"
 );
 
@@ -192,7 +181,7 @@ like(
 #--- report option 1 -----------------------------------------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi -r 1 -x 'command [ procs ] = check_procs -w 1' $testopts"
+	"@PERL@ ../check_multi -r 1 -x 'command [ procs ] = (echo \"PROCS WARNING: 99 processes\"; exit 1)' $testopts"
 );
 is(
 	$result->return_code, 
@@ -202,7 +191,7 @@ is(
 like(
 	$result->output,
 	'/^WARNING - 1 plugins checked, 1 warning \(procs\)\n'.
-	'\[ 1\] procs PROCS '.$procs_warning.': \d+ '.$procs_string.'$/',
+	'\[ 1\] procs PROCS WARNING: \d+ processes$/',
 	"output correct"
 );
 
@@ -211,7 +200,7 @@ like(
 #--- report option 2 -----------------------------------------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi -r 2 -x 'command [ procs ] = check_procs' $testopts"
+	"@PERL@ ../check_multi -r 2 -x 'command [ procs ] = echo \"PROCS OK: 99 processes\"' $testopts"
 );
 is(
 	$result->return_code, 
@@ -221,7 +210,7 @@ is(
 like(
 	$result->output,
 	'/^OK - 1 plugins checked, 0 critical, 0 warning, 0 unknown, 1 ok\n'.
-	'<SCRIPT LANGUAGE=\'JavaScript\'> function Toggle.*PROCS OK: \d+ '.$procs_string.'.*div>$/',
+	'<SCRIPT LANGUAGE=\'JavaScript\'> function Toggle.*PROCS OK: \d+ processes.*div>$/',
 	"output correct"
 );
 
@@ -381,7 +370,7 @@ like(
 #--- report option 256 ---------------------------------------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi -x 'command [ proc ] = check_procs' -r 256 $testopts"
+	"@PERL@ ../check_multi -x 'command [ proc ] = echo \"PROCS OK: 99 processes\"' -r 256 $testopts"
 );
 is(
 	$result->return_code, 
@@ -436,7 +425,7 @@ like(
 	'.*<no>0<\/no>'.
 	'.*<rc>0<\/rc>'.
 	'.*<no>1<\/no>'.
-	'.*<command>check_procs<\/command>'.
+	'.*<command>echo.*<\/command>'.
 	'.*<output>PROCS.*<\/output>'.
 	'.*<type>command<\/type>.*$/s',
 	"output correct"
@@ -736,7 +725,7 @@ like(
 #--- output / head -------------------------------------------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi -x 'command [ procs ] = check_procs' -x 'output [ head ] = \"%.20s processes running\",(split(/\\s+/,\"\$procs\$\"))\[2\]' -r 1 $testopts",
+	"@PERL@ ../check_multi -x 'command [ procs ] = echo \"PROCS OK: 99 processes\"' -x 'output [ head ] = \"%.20s processes running\",(split(/\\s+/,\"\$procs\$\"))\[2\]' -r 1 $testopts",
 );
 is(
 	$result->return_code, 
@@ -746,7 +735,7 @@ is(
 like(
 	$result->output,
 	'/\\d+ processes running\n'.
-	'\[ 1\] procs PROCS OK: \\d+ '.$procs_string.'$/',
+	'\[ 1\] procs PROCS OK: \\d+ processes$/',
 	"output correct"
 );
 #-------------------------------------------------------------------------------
