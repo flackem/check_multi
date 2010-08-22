@@ -759,7 +759,7 @@ like(
 #--- check_multi cumulate ------------------------------------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi -x 'cumulate [ procs ] = ps -axo \"user rss\"' $testopts",
+	"@PERL@ ../check_multi -x 'cumulate [ two ] = (echo abc\ 123; echo def\ 456; echo abc\ 123; echo def\ 456; echo abc\ 123; echo def\ 456; exit 0)' $testopts",
 );
 is(
 	$result->return_code, 
@@ -769,12 +769,9 @@ is(
 like(
 	$result->output,
 	'/OK - 5 plugins checked, 5 ok\n'.
-	'\[ 1\] \S+ \d+\n'.
-	'\[ 2\] \S+ \d+\n'.
-	'\[ 3\] \S+ \d+\n'.
-	'\[ 4\] \S+ \d+\n'.
-	'\[ 5\] \S+ \d+\|'.
-	'check_multi::check_multi::plugins=5 time=[\d\.]+ \S+::cumulate::\S+=\d+ \S+::cumulate::\S+=\d+ \S+::cumulate::\S+=\d+ \S+::cumulate::\S+=\d+ \S+::cumulate::\S+=\d+ $/',
+	'\[ 1\] two_def 1368\n'.
+	'\[ 2\] two_abc 369|'.
+	'check_multi::check_multi::plugins=2 time=[\d\.]+ two_def::cumulate::two_def=1368 two_abc::cumulate::two_abc=369 $/',
 	"output correct"
 );
 #-------------------------------------------------------------------------------
