@@ -1,0 +1,29 @@
+#!/bin/sh
+#
+# pre-commit script to create version info into CM_VERSION
+# $ ln -s mk_VERSION .git/hooks/pre-commit
+# 
+# 1. call: 
+#    - create version file CM_VERSION
+#    - create flag file 
+#    - exit with RC1 (error) -> return to command line
+# 2. call:
+#    - remove flag file
+#    - exit with RC0 (OK) -> commit
+#
+if [ ! -f CM_VERSION.version_is_updated ]; then
+	OLD_VERSION=`awk -F\_ '{print $3}' CM_VERSION | tr -d v`
+	NEW_VERSION=`expr $OLD_VERSION + 1`
+	DATESTRING=`date +%Y-%m-%d-%H:%M`
+	echo "check_multi_v${NEW_VERSION}_${DATESTRING}" > CM_VERSION
+	echo "Created new version file CM_VERSION with check_multi_v${NEW_VERSION}_${DATESTRING}"
+	echo "-> Now run commit again to check it in..."
+	touch CM_VERSION.version_is_updated
+
+	#--- exit with error first time
+	exit 1
+else 
+	rm CM_VERSION.version_is_updated
+	#--- exit with OK the second time
+	exit 0
+fi
