@@ -34,10 +34,11 @@ $DETAIL_ENCODE_COMMANDS $DETAIL_HIDEIFOK
 );
 BEGIN {
 	#--- if hires timer available, use it
-	eval("use Time::HiRes qw(time sleep)");
+	use Time::HiRes qw(time sleep);
 	if (! $@) {
 		$opt{set}{use_time_hires}=1;
 	}
+
 	#--- if FindBin module available, use it for finding plugins
 	if (@findbin@) {
 		eval("use FindBin");
@@ -253,13 +254,6 @@ my %opt=(
 		tmp_etc		=> "@tmp_etc@",
 		# octal permissions of tmp_dir
 		tmp_dir_permissions => "@tmp_dir_permissions@",
-		# several module usage variables
-		use_html_entities => 0,
-		use_lwp_simple	=> 0,
-		use_monitoring_livestatus => 0,
-		use_snmp	=> 0,
-		use_time_hires	=> 0,
-		use_xml_simple	=> 0,
 		# verbosity, from 1 (less verbose) to 3 (much verbose)
 		verbose		=> @verbose@,
 		# elements to be added to XML structure
@@ -392,58 +386,52 @@ sub process_input {
 
 		#--- do we have input from check_multi XML report mode? (check_multi as filter)
 		if ($stdin=~/check_multi_xml/) {
-			#--- try to load module XML::Simple
-			$opt{set}{use_xml_simple} = 1;
-			unless (eval "require XML::Simple;1") {
-				$opt{set}{use_xml_simple} = 0;
-				add_error(0,"process_input: XML::Simple not available: $@");
-			}
+			#--- try to load module XML::Simple and bail out if not successful
+			module("XML::Simple",1);
 
 			#--- read in XML data and feed cmds structure
-			if ($opt{set}{use_xml_simple}) {
-				my $in=XML::Simple::XMLin(
-					$stdin,
-					KeyAttr=>["CHILD"=>"no"],	# index: child no
-					ForceArray=>["CHILD"],		# force array also for one child
-					SuppressEmpty=>"",		# if empty, add "" instead of {} empty hash
-				);
+			my $in=XML::Simple::XMLin(
+				$stdin,
+				KeyAttr=>["CHILD"=>"no"],	# index: child no
+				ForceArray=>["CHILD"],		# force array also for one child
+				SuppressEmpty=>"",		# if empty, add "" instead of {} empty hash
+			);
 				
-				unless (eval "use Data::Dumper;1") {
-					$opt{set}{test}=0;
-					DEBUG2("process_input: Data::Dumper not available");
-				} else {
-					DEBUG3("process_input: Data::Dumper available");
-					DEBUG3("XML input after XMLin:\n" . Dumper($in));
-				}
-
-				if (exists($in->{PARENT})) {
-					#--- restore some values from parent
-					$cmds[0]{nchecks}=$in->{PARENT}->{nchecks};
-					$cmds[0]{nallchecks}=$in->{PARENT}->{nallchecks};
-
-					#--- child values
-					for my $i (keys %{$in->{PARENT}->{CHILD}}) {
-						$cmds[$i]{no}=$i; # index itself as 'no'
-						$cmds[$i]{feeded}=1; # mark this cmd as feeded
-						foreach my $att (keys %{$in->{PARENT}->{CHILD}->{$i}}) {
-							$cmds[$i]{$att}=$in->{PARENT}->{CHILD}->{$i}->{$att};
-						}
-					}
-				} else {
-					#--- child values
-					for my $no (keys %{$in->{$MYSELF}->{CHILD}}) {
-						$cmds[$no]{no}=$no;	# index itself as 'no'
-						$cmds[$no]{feeded}=1;	# mark this cmd as feeded
-						foreach my $att (keys %{$in->{$MYSELF}->{CHILD}->{$no}}) {
-							$cmds[$no]{$att}=$in->{$MYSELF}->{CHILD}->{$no}->{$att};
-						}
-						$ENV{"MULTI_${no}_NAME"}="$cmds[$no]{name}";
-						$ENV{"MULTI_${no}_STATE"}="$cmds[$no]{rc}";
-						$ENV{"MULTI_${no}_LABEL"}="$def{label}{$cmds[$no]{rc}}";
-					}
-				}
-				DEBUG3("\@cmds after filling from XML input\n" . Dumper(\@cmds));
+			if (module("Data::Dumper")) {
+				DEBUG3("process_input: Data::Dumper available");
+				DEBUG3("XML input after XMLin:\n" . Dumper($in));
+			} else {
+				$opt{set}{test}=0;
+				DEBUG2("process_input: Data::Dumper not available");
 			}
+
+			if (exists($in->{PARENT})) {
+				#--- restore some values from parent
+				$cmds[0]{nchecks}=$in->{PARENT}->{nchecks};
+				$cmds[0]{nallchecks}=$in->{PARENT}->{nallchecks};
+
+				#--- child values
+				for my $i (keys %{$in->{PARENT}->{CHILD}}) {
+					$cmds[$i]{no}=$i; # index itself as 'no'
+					$cmds[$i]{feeded}=1; # mark this cmd as feeded
+					foreach my $att (keys %{$in->{PARENT}->{CHILD}->{$i}}) {
+						$cmds[$i]{$att}=$in->{PARENT}->{CHILD}->{$i}->{$att};
+					}
+				}
+			} else {
+				#--- child values
+				for my $no (keys %{$in->{$MYSELF}->{CHILD}}) {
+					$cmds[$no]{no}=$no;	# index itself as 'no'
+					$cmds[$no]{feeded}=1;	# mark this cmd as feeded
+					foreach my $att (keys %{$in->{$MYSELF}->{CHILD}->{$no}}) {
+						$cmds[$no]{$att}=$in->{$MYSELF}->{CHILD}->{$no}->{$att};
+					}
+					$ENV{"MULTI_${no}_NAME"}="$cmds[$no]{name}";
+					$ENV{"MULTI_${no}_STATE"}="$cmds[$no]{rc}";
+					$ENV{"MULTI_${no}_LABEL"}="$def{label}{$cmds[$no]{rc}}";
+				}
+			}
+			DEBUG3("\@cmds after filling from XML input\n" . Dumper(\@cmds));
 		} elsif ($stdin=~/($opt{cmdregex})\s*\[.*\]\s*=/) {
 			DEBUG3("process_input: command file in STDIN detected");
 			push @{$opt{execute}},split(/\n/,$stdin);
@@ -456,19 +444,17 @@ sub process_input {
 	$opt{set}{uid}=$<;
 	if ($^O=~/Win32/) {
 		#--- Win32? then use Win32 module
-		unless (eval "use Win32;1") {
-			$opt{set}{win32}=0;
-			DEBUG2("process_input: Win32 not available");
-			$opt{set}{user}="unknown";
-			if (!$opt{set}{HOSTNAME}) {
-				$opt{set}{HOSTNAME}=$ENV{COMPUTERNAME};
-			}
-		} else {
-			$opt{set}{win32}=1;
+		if (module("Win32")) {
 			DEBUG3("process_input: Win32 available");
 			$opt{set}{user}=&Win32::LoginName;
 			if (!$opt{set}{HOSTNAME}) {
 				$opt{set}{HOSTNAME}=&Win32::NodeName;
+			}
+		} else {
+			DEBUG2("process_input: Win32 not available");
+			$opt{set}{user}="unknown";
+			if (!$opt{set}{HOSTNAME}) {
+				$opt{set}{HOSTNAME}=$ENV{COMPUTERNAME};
 			}
 		}
 	} else {
@@ -506,17 +492,6 @@ sub process_input {
 		return $UNKNOWN;
 	}
 
-	#--- if URL specified as filename: load LWP::Simple for retrieving command file
-	if (grep {/http|ftp/} @{$opt{filename}}) {
-		unless (eval "require LWP::Simple;1") {
-			print "$MYSELF error: http/ftp config file(s) specified, but no LWP::Simple module is available\n";
-			return $UNKNOWN;
-		} else {
-			$opt{set}{use_lwp_simple}=1;
-			DEBUG3("process_input: LWP::Simple loaded");
-		}
-	}
-
 	#--- allowed characters: 'a-zA-Z0-9_-'
 	if ($opt{set}{name}!~/^[\w-]*$/) {
 		print "$MYSELF error: name \'$opt{set}{name}\' invalid - using non allowed characters (allowed are A-Za-z0-9_-)\n";
@@ -531,7 +506,7 @@ sub process_input {
 			DEBUG3("process_input: http/ftp URL specified: $opt{filename}[$i]");
 
 			#--- LWP module NOT loaded?
-			if (!$opt{set}{use_lwp_simple}) {
+			if (!module("LWP::Simple")) {
 				add_error(0,"LWP::Simple module not available, could not get command file $opt{filename}[$i]");
 				next;
 			}
@@ -619,30 +594,6 @@ sub process_input {
 		}
 	}
 
-	#--- if no module HTML::Entities available - set var
-	if ($opt{set}{report} & $DETAIL_HTML) {
-		$opt{set}{use_html_entities} = 1;
-		unless (eval "require HTML::Entities;1") {
-			$opt{set}{use_html_entities} = 0;
-			DEBUG2("process_input: HTML::Entities not available");
-		}
-	}
-
-	#--- if no modules IPC::Open3 or IO::Select, use old backquote exec and temp files
-	if ($opt{set}{exec_open3}) {
-		unless (eval "use IPC::Open3;1") {
-			$opt{set}{exec_open3}=0;
-			DEBUG2("process_input: IPC::Open3 not available");
-		}
-	}
-	if ($opt{set}{exec_open3}) {
-		unless (eval "use IO::Select;1") {
-			$opt{set}{exec_open3}=0;
-			DEBUG2("process_input: IO::Select not available");
-		}
-		DEBUG3("process_input: IPC::Open3 and IO::Select modules loaded");
-	}
-
 	#--- Initialize empty PATH if none defined
 	$ENV{PATH}="" unless ($ENV{PATH});
 	my $path_sep=($^O=~/Win32/)?';':':';
@@ -675,7 +626,7 @@ sub process_input {
 	$ENV{"MULTI_PPID"}=$$ if (!defined($ENV{"MULTI_PPID"}));
 
 	#--- persistency - on the way to check_multi 2.0
-	if (0 && $opt{set}{persistent}) {
+	if ($opt{set}{test} && $opt{set}{persistent}) {
 
 		#--- try to load module XML::Simple
 		$opt{set}{use_xml_simple} = 1;
@@ -713,13 +664,11 @@ sub process_input {
 			#--- read persistent data
 
 			#--- debug output per Data::Dumper
-			unless (eval "use Data::Dumper;1") {
-				$opt{set}{test}=0;
-				DEBUG2("process_input: Data::Dumper not available");
-			} else {
-				DEBUG3("process_input: Data::Dumper module loaded");
+			if (module("Data::Dumper")) {
 				DEBUG3("process_input: loaded persistent data:");
 				DEBUG3(Dumper($in));
+			} else {
+				$opt{set}{test}=0;
 			}
 		}
 	}
@@ -900,6 +849,37 @@ Set options:
    verbose=<0|1|2> - level of verbosity, from 1 (less verbose) to 3 (much verbose), default:$opt{set}{verbose}
 
 DETAILED_EOF
+}
+
+#---
+#--- load perl module and set variable for state
+#---
+sub module {
+	my $module_name=shift;
+	my $fatal=shift;
+	my $module_parameters="";
+
+	#--- split module name and parameters
+	if ($module_name=~/(\S+)\s+(.*)\s+/) {
+		$module_name=$1;
+		$module_parameters=$2;
+	}
+
+	#--- check if module already loaded
+	if (defined($opt{set}{"use_$module_name"}) && $opt{set}{"use_$module_name"}) {
+		DEBUG3("Module \'$module_name\' already loaded");
+	#--- load module
+	} elsif (eval("use $module_name $module_parameters;1")) {
+		#--- if successful
+		$opt{set}{"use_$module_name"}=1;
+		DEBUG3("Module \'$module_name\' loaded");
+		return 1;
+	} else {
+		fatal("Perl module \'$module_name\' not available: $@") if ($fatal);
+		$opt{set}{"use_$module_name"}=0;
+		DEBUG3("Module \'$module_name\' not available");
+		return 0;
+	}
 }
 
 #---
@@ -1269,7 +1249,9 @@ sub add_error {
 		$error=~s/[$opt{set}{illegal_chars}]*//g; 
 		$error=~s/\n//g;
 		chomp($error);
-		HTML::Entities::encode_entities($error) if ($opt{set}{use_html_entities});
+		HTML::Entities::encode_entities($error) 
+			if ($opt{set}{report} & $DETAIL_HTML && module("HTML::Entities"));
+		
 		if ($no >= 0 && $no <= $#cmds) {
 			push @{$cmds[$no]{error}}, $error;
 			DEBUG3("add_error[$no]: added error message \'$error\'");
@@ -2005,7 +1987,7 @@ sub exec_command {
 				unlink $tmp_stdout, $tmp_stderr;
 
 			#--- new open3 exec (to be tested carefully before getting standard ;-))
-			} else {
+			} elsif (module("IPC::Open3",1) && module("IO::Select",1)) {
 				my $pid=open3(*CIN,*COUT,*CERR,$cmds[$no]{command});
 				close(CIN); # not needed: close STDIN filehandle
 				$SIG{CHLD}=sub {
@@ -2041,7 +2023,8 @@ sub exec_command {
 			}
 			
 			#--- remove white chars from output (Wolfgang Barth)
-			$cmds[$no]{stdout}=HTML::Entities::encode_entities($cmds[$no]{stdout}) if ($opt{set}{use_html_entities} && $cmds[$no]{stdout});
+			$cmds[$no]{stdout}=HTML::Entities::encode_entities($cmds[$no]{stdout}) 
+				if ($opt{set}{report} & $DETAIL_HTML && module("HTML::Entities") && $cmds[$no]{stdout});
 
 			#--- split performance data from standard output
 			if ($cmds[$no]{output}=~/\|/) {
@@ -2642,18 +2625,9 @@ sub read_livestatus {
 #---
 sub get_snmp {
 	my ($host,$port,$community,$oid,$translate)=@_;
-	if (!defined($opt{set}{use_snmp})) {
-		unless (eval "use Net::SNMP;1") {
-			$opt{set}{use_snmp}=0;
-			DEBUG3("get_snmp: error: could not load Net::SNMP module");
-			return (3,"Load of perl module Net::SNMP failed");
-		} else {
-			DEBUG3("get_snmp: Net::SNMP module loaded");
-		}
-	} elsif ($opt{set}{use_snmp} != 1) {
-		DEBUG3("get_snmp: no Net::SNMP module available");
-		return (3,"perl module Net::SNMP not available");
-	}
+
+	#--- Net::SNMP is mandatory, exit fatal if not available
+	module("Net::SNMP",1);
 
 	my ($session, $error) = Net::SNMP->session(
 		-hostname=>$host,
@@ -2891,15 +2865,13 @@ sub report_all {
 		#	DEBUG3("report_all: Data::Dumper module loaded");
 		#	DEBUG4("report_all:" . Dumper($check_multi));
 		#}
-		unless (eval "require XML::Simple;1") {
-			$opt{set}{use_xml_simple} = 0;
-			add_error(0,"process_input: XML::Simple not available: $@");
-		}
+		module("XML::Simple",1);
 
 		my $pdir="$opt{set}{tmp_dir}/".valid_dir($cmds[0]{hash});
 		if (! my_mkdir("$pdir", "0755")) {
 			add_error(0,"report_all: cannot create persistent directory $pdir:$!");
 		} else {
+			DEBUG1("pdir:$pdir MYSELF:$MYSELF starttime:".readable_sortable_timestamp($cmds[0]{starttime})." name:$cmds[0]{names}");
 			writefile(
 				">$pdir/${MYSELF}_".readable_sortable_timestamp($cmds[0]{starttime})."$cmds[0]{names}.xml",
 				XML::Simple::XMLout(
@@ -3747,12 +3719,7 @@ sub report_send_nsca {
 sub report_checkresult_file {
 
 	#--- use File::Temp for generation of temp file, its available in standard perl
-	unless (eval "use File::Temp qw/tempfile/;1") {
-		add_error(0,"report_checkresult_file error: check_multi needs module File::Temp");
-		return 0;
-	} else {
-		DEBUG3("report_checkresult_file: File::Temp module loaded");
-	}
+	module ("File::Temp qw(tempfile)",1);
 
 	#--- loop over child checks
 	for (my $i=1; $i<=$#cmds; $i++) {
