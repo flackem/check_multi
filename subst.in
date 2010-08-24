@@ -25,6 +25,7 @@ my $action_url="@action_url@";
 my $child_interval="@child_interval@";
 my $client_perl="@client_perl@";
 my $nagios_name="@nagios_name@";
+my $cancel_before_global_timeout="@cancel_before_global_timeout@";
 my $child_timeout="@child_timeout@";
 my $collapse="@collapse@";
 my $cumulate_ignore_zero="@cumulate_ignore_zero@";
@@ -104,6 +105,7 @@ while (my $f = shift @ARGV) {
 		s|\@PERL\@|$PERL|g;
 		s|\@action_mouseover\@|$action_mouseover|g;
 		s|\@action_url\@|$action_url|g;
+		s|\@cancel_before_global_timeout\@|$cancel_before_global_timeout|g;
 		s|\@child_interval\@|$child_interval|g;
 		s|\@client_perl\@|$client_perl|g;
 		s|\@child_timeout\@|$child_timeout|g;

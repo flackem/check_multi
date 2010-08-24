@@ -58,6 +58,7 @@ AC_ARG_WITH(action_url,		[
 detail settings:
   --with-action_url=<URL>                  action URL (default:"")],action_url=$withval,action_url="")
 AC_ARG_WITH(action_mouseover,           [  --with-action_mouseover=<0|1>            show PNP chart popup triggered by mouseover (default:0)],action_mouseover=$withval,action_mouseover=0)
+AC_ARG_WITH(cancel_before_global_timeout,			[  --with-cancel_before_global_timeout=<0|1>  cancel checks being *near* a timeout? (default:0)],cancel_before_global_timeout=$withval,cancel_before_global_timeout="0")
 #--- too difficult to escape this - so define it as a variable before using it ;)
 client_perl=no
 AC_ARG_WITH(client_perl,                        [  --with-client_perl=<perl path>           sets perl cmdline / path (e.g. #!/usr/bin/perl)],client_perl=$withval,client_perl=no)
@@ -128,6 +129,7 @@ AC_SUBST(LIBEXECDIR)
 AC_SUBST(ac_configure_args)
 AC_SUBST(action_mouseover)
 AC_SUBST(action_url)
+AC_SUBST(cancel_before_global_timeout)
 AC_SUBST(child_interval)
 AC_SUBST(contrib_dir)
 AC_SUBST(checkresults_dir)

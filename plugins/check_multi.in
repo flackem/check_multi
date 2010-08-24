@@ -122,6 +122,8 @@ my %opt=(
 	"set"		=> {
 		# mouse_over & action_url: shows PNP chart popup triggered by mouse
 		action_mouseover => @action_mouseover@,
+		# cancel child check before it can reach global timeout
+		cancel_before_global_timeout => @cancel_before_global_timeout@,
 		# checkresults_dir
 		checkresults_dir => "@checkresults_dir@",
 		# child_interval
@@ -918,6 +920,26 @@ sub readable_sortable_timestamp {
 	return sprintf "%04d-%02d-%02d_%02d:%02d:%02d", 
 		$year+1900, $mon+1, $mday,
 		$hour, $min, $sec;
+}
+
+#---
+#--- set alarm timeout for child checks
+#---
+sub set_alarm {
+	my $no=shift;
+	my $timeout=shift;
+
+	#--- if timeout exceeds global timeout, reduce it accordingly
+	if (int(time+$timeout) > int($cmds[0]{timeouttime})) {
+		$timeout=int($cmds[0]{timeouttime})-int(time);
+		$timeout=1 if ($timeout <= 0);
+		DEBUG2(sprintf("set_alarm: $no - time exceeds global timeout with %d seconds, adjusting alarm to $timeout seconds", 
+			int(time)+int($timeout)-int($cmds[0]{timeouttime})));
+		add_error($no,"timeout reduced to $timeout seconds due to global timeout");
+	}
+	DEBUG3("set_alarm: $no - alarm set to $timeout seconds");
+	$cmds[$no]{timeout}=$timeout;
+	alarm($timeout);
 }
 
 #---
@@ -1938,7 +1960,7 @@ sub exec_command {
 	if ($cmds[$no]{type} eq "command" || $cmds[$no]{type} eq "cumulate") {
 
 		eval {
-			alarm($opt{set}{timeout});
+			set_alarm($no,$opt{set}{timeout});
 
 			#--- classic execution with temporary files
 			if (!$opt{set}{exec_open3}) {
@@ -1958,7 +1980,7 @@ sub exec_command {
 				#--- parent - start timeout for child
 				} else {
 					$SIG{'ALRM'} = sub {
-						add_error($no,"timeout after $opt{set}{timeout}s");
+						add_error($no,"timeout encountered after $cmds[$no]{timeout}s");
 						$cmds[$no]{rc}=$UNKNOWN;
 						#--- kill both ways: with prepended minus some perl versions kill the
 						#--- whole process group while positive numbers kill exact one process
@@ -1970,7 +1992,6 @@ sub exec_command {
 						kill -9,$child;
 						kill 9,$child;
 					};
-					alarm($opt{set}{timeout});
 					waitpid($child,0);
 					alarm(0);
 				}
@@ -2067,7 +2088,7 @@ sub exec_command {
 		local $SIG{ALRM} = sub {
 			add_error($no,"timeout after $opt{set}{timeout}s");
 		};
-		alarm($opt{set}{timeout});
+		set_alarm($no,$opt{set}{timeout});
 		$cmds[$no]{output}=eval($cmds[$no]{command});
 		if ($cmds[$no]{type} eq "eeval") {
 			$cmds[$no]{rc}=$?>>8;
@@ -2120,7 +2141,7 @@ sub exec_command {
 		local $SIG{ALRM} = sub {
 			add_error($no,"$cmds[$no]{name}: timeout after $opt{set}{timeout}s");
 		};
-		alarm($opt{set}{timeout});
+		set_alarm($no,$opt{set}{timeout});
 		#--- service check
 		if (defined($cmds[$no]{service})) {
 			($cmds[$no]{rc},$cmds[$no]{output})=get_status_dat_service($opt{set}{status_dat},$cmds[$no]{host},$cmds[$no]{service});
@@ -2140,7 +2161,7 @@ sub exec_command {
 		local $SIG{ALRM} = sub {
 			add_error($no,"$cmds[$no]{name}: timeout after $opt{set}{timeout}s");
 		};
-		alarm($opt{set}{timeout});
+		set_alarm($no,$opt{set}{timeout});
 		($cmds[$no]{rc},$cmds[$no]{output})=get_snmp($cmds[$no]{host},$opt{set}{snmp_port},$opt{set}{snmp_community},$cmds[$no]{command},$cmds[$no]{translate});
 		alarm(0);
 	}
@@ -3895,7 +3916,11 @@ $no=1;
 while ($no<=$#cmds) {
 
 	#--- if total timeout is going to be exceeded, cancel next commands
-	if (time + $opt{set}{timeout} > $cmds[0]{timeouttime}) {
+	if ($opt{set}{cancel_before_global_timeout} && time + $opt{set}{timeout} > $cmds[0]{timeouttime}) {
+		$cmds[$no]{output}="UNKNOWN - execution cancelled due to global timeout ($opt{set}{TIMEOUT}s)";
+		$cmds[$no]{rc}=$UNKNOWN;
+		$cmds[$no]{runtime}=0;
+	} elsif (time > $cmds[0]{timeouttime}) {
 		$cmds[$no]{output}="UNKNOWN - execution cancelled due to global timeout ($opt{set}{TIMEOUT}s)";
 		$cmds[$no]{rc}=$UNKNOWN;
 		$cmds[$no]{runtime}=0;

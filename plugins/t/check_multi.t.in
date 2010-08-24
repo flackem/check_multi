@@ -688,7 +688,7 @@ like(
 #-------------------------------------------------------------------------------
 #--- environment macro ----------------------------------------------------------
 #-------------------------------------------------------------------------------
-$ENV{NAGIOS__HOST_CHECK_MULTI_TESTVAR}="has a test value";
+$ENV{"NAGIOS__HOST_CHECK_MULTI_TESTVAR"}="has a test value";
 $result = NPTest->testCmd(
 	"@PERL@ ../check_multi -x 'command [ testvar ] = echo \$_HOST_CHECK_MULTI_TESTVAR\$' -r 1 $testopts",
 );
@@ -703,7 +703,6 @@ like(
 	'\[ 1\] testvar has a test value$/',
 	"output correct"
 );
-$ENV{NAGIOS__HOST_CHECK_MULTI_TESTVAR}=undef;
 #-------------------------------------------------------------------------------
 #--- killing me softly - checking signal handler -------------------------------
 #-------------------------------------------------------------------------------
@@ -778,7 +777,7 @@ like(
 #--- check_multi child and global timeout --------------------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi -x 'command [ one ] = ( sleep 2; echo one)' -x 'command [ two ] = echo two' -r 5 -t 1 -T 2 $testopts",
+	"@PERL@ ../check_multi -x 'command [ one ] = ( sleep 2; echo one)' -x 'command [ two ] = echo two' -r 5 -t 1 -T 2 -s cancel_before_global_timeout=1 $testopts",
 );
 is(
 	$result->return_code, 
@@ -788,7 +787,7 @@ is(
 like(
 	$result->output,
 	'/UNKNOWN - 2 plugins checked, 2 unknown \(one, two\)\n'.
-	'\[ 1\] one  \[timeout after 1s\]\n'.
+	'\[ 1\] one  \[timeout encountered after 1s\]\n'.
 	'\[ 2\] two UNKNOWN - execution cancelled due to global timeout \(2s\)/',
 	"output correct"
 );

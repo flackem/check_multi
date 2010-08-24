@@ -1,5 +1,6 @@
 
 ===== Changelog =====
+	* change in child timeout handling: full time range is used for child checks now
 	* macro substitution is case insensitive now (thx to Morbid Angel)
 	* fixed empty plugin output in checkresults files (thx to Joerg Krueger)
 	* added livestatus host expansion: livestatus [ tag ] = host.*
