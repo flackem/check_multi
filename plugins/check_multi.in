@@ -34,7 +34,7 @@ $DETAIL_ENCODE_COMMANDS $DETAIL_HIDEIFOK
 );
 BEGIN {
 	#--- if hires timer available, use it
-	use Time::HiRes qw(time sleep);
+	eval("use Time::HiRes qw(time sleep)");
 	if (! $@) {
 		$opt{set}{use_time_hires}=1;
 	}
