@@ -1095,6 +1095,8 @@ sub parse_objects_cache {
 			$type="$1";
 			$typelist{$type}++;
 			$objectcount++;
+		} else {
+			next;
 		}
 
 		#--- wrong object? continue search
@@ -1129,6 +1131,7 @@ sub parse_objects_cache {
 					}
 				}
 				$temp=undef;
+				last;
 			}
 		}
 	}
