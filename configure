@@ -1309,7 +1309,7 @@ detail settings:
   --with-tag_notes_link=<URL>              documentation URL for child checks (default:"")
   --with-target=<target_frame>             HTML target frame for URLs (default:_self)
   --with-tmp_dir=<path>                    /path/to/tmp_dir (default:/tmp/check_multi)
-  --with-tmp_dir_permissions=<octal perms> permissions of tmp_dir (default:01777)
+  --with-tmp_dir_permissions=<octal perms> permissions of tmp_dir (default:0750)
   --with-tmp_etc=<path>                    /path/to/tmp_dir/etc (default:$tmp_dir/etc)
 
 major settings:
@@ -2358,7 +2358,7 @@ fi
 if test "${with_feed_passive_dir_permissions+set}" = set; then
   withval=$with_feed_passive_dir_permissions; feed_passive_dir_permissions=$withval
 else
-  feed_passive_dir_permissions="01777"
+  feed_passive_dir_permissions="0750"
 fi
 
 
@@ -2566,7 +2566,7 @@ fi
 if test "${with_tmp_dir_permissions+set}" = set; then
   withval=$with_tmp_dir_permissions; tmp_dir_permissions=$withval
 else
-  tmp_dir_permissions="01777"
+  tmp_dir_permissions="0750"
 fi
 
 
