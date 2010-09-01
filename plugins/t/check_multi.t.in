@@ -26,7 +26,7 @@ foreach my $plugin (@plugins) {
 		plan skip_all => "tests because component $plugin not found or not executable as \'$path_to_plugin\'";
 	}
 }
-plan tests => 82;
+plan tests => 84;
 
 my $result;
 my $testopts="-s dont_be_paranoid=1 -s tmp_dir=/tmp/check_multi";
@@ -841,5 +841,22 @@ like(
 	'/OK - 2 plugins checked, 2 ok\n'.
 	'\[ 1\] hostgroup_members localhost\n'.
 	'\[ 2\] services Current Load,Current Users,HTTP,PING,Root Partition,SSH,Swap Usage,Total Processes/',
+	"output correct"
+);
+#-------------------------------------------------------------------------------
+#--- check_multi object cache nested macros ------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"MULTI_TESTVAR='localhost'; export MULTI_TESTVAR; @PERL@ ../check_multi -x 'command [ services ] = echo \$service:service_description:host_name:\$TESTVAR\$\$' -r 5 $testopts -s objects_cache=objects.cache",
+);
+is(
+	$result->return_code, 
+	0, 
+	"object cache macro check - nested macros - RC0"
+);
+like(
+	$result->output,
+	'/OK - 1 plugins checked, 1 ok\n'.
+	'\[ 1\] services Current Load,Current Users,HTTP,PING,Root Partition,SSH,Swap Usage,Total Processes/',
 	"output correct"
 );

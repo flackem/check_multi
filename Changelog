@@ -1,5 +1,6 @@
 
 ===== Changelog =====
+	* nested macros allowed: 'normal' macros within objects.cache macros
 	* change in child timeout handling: full time range is used for child checks now
 	* macro substitution is case insensitive now (thx to Morbid Angel)
 	* fixed empty plugin output in checkresults files (thx to Joerg Krueger)
@@ -12,9 +13,11 @@
 	* added old XML structure input mode for upgrade issues, thx to Joerg Krueger
 	* passive feeded service definitions can be created automatically now
 	* added check for invalid name characters (allowed are A-Za-z0-9_-)
+
 **0.23**	20.06.2010
 	* fixed statusdat for hosts and added numerous test cases
 	* version control system migrated to GIT (github)
+
 **0.22**	19.06.2010
 	* fix for correct treatment of empty lines in encoded configurations, thx to Frank Plab
 	* state evaluation for child checks now works as global state evaluation\\ - with complete expression, e.g. '$child$=~/expr/'
