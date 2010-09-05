@@ -195,6 +195,7 @@ AC_OUTPUT
 $PERL subst plugins/Makefile
 $PERL subst plugins/check_multi
 $PERL subst plugins/t/Makefile
+$PERL subst plugins/t/testopts.pm
 $PERL subst plugins/t/check_multi.t
 $PERL subst plugins/t/check_multi_checkresults.t
 $PERL subst plugins/t/check_multi_feeds_passive.t
