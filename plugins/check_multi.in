@@ -358,7 +358,7 @@ sub process_input {
 	}
 
 	#--- -h/--help shows long usage, -hh extended usage
-	DEBUG3("process_input: opt{help}=$opt{help}");
+	DEBUG3("opt{help}=$opt{help}");
 	if ($opt{help} == 1) {
 		short_usage();
 		long_usage();
@@ -381,10 +381,10 @@ sub process_input {
 	if (-p STDIN) {
 		while (<STDIN>) { $stdin.=$_; }
 	} else {
-		DEBUG3("process_input: no STDIN pipe found");
+		DEBUG3("no STDIN pipe found");
 	}
 	if ($stdin) {
-		DEBUG3("process_input: found <STDIN> >$stdin<");
+		DEBUG3("found <STDIN> >$stdin<");
 
 		#--- do we have input from check_multi XML report mode? (check_multi as filter)
 		if ($stdin=~/check_multi_xml/) {
@@ -400,11 +400,11 @@ sub process_input {
 			);
 				
 			if (module("Data::Dumper")) {
-				DEBUG3("process_input: Data::Dumper available");
+				DEBUG3("Data::Dumper available");
 				DEBUG3("XML input after XMLin:\n" . Dumper($in));
 			} else {
 				$opt{set}{test}=0;
-				DEBUG2("process_input: Data::Dumper not available");
+				DEBUG2("Data::Dumper not available");
 			}
 
 			if (exists($in->{PARENT})) {
@@ -435,11 +435,11 @@ sub process_input {
 			}
 			DEBUG3("\@cmds after filling from XML input\n" . Dumper(\@cmds));
 		} elsif ($stdin=~/($opt{cmdregex})\s*\[.*\]\s*=/) {
-			DEBUG3("process_input: command file in STDIN detected");
+			DEBUG3("command file in STDIN detected");
 			push @{$opt{execute}},split(/\n/,$stdin);
 		}
 	} else {
-		DEBUG3("process_input: no <STDIN> found");
+		DEBUG3("no <STDIN> found");
 	}
 
 	#--- determine some settings (user,hostname)
@@ -447,13 +447,13 @@ sub process_input {
 	if ($^O=~/Win32/) {
 		#--- Win32? then use Win32 module
 		if (module("Win32")) {
-			DEBUG3("process_input: Win32 available");
+			DEBUG3("Win32 available");
 			$opt{set}{user}=&Win32::LoginName;
 			if (!$opt{set}{HOSTNAME}) {
 				$opt{set}{HOSTNAME}=&Win32::NodeName;
 			}
 		} else {
-			DEBUG2("process_input: Win32 not available");
+			DEBUG2("Win32 not available");
 			$opt{set}{user}="unknown";
 			if (!$opt{set}{HOSTNAME}) {
 				$opt{set}{HOSTNAME}=$ENV{COMPUTERNAME};
@@ -505,7 +505,7 @@ sub process_input {
 
 		#--- 1. filename URL found
 		if ($opt{filename}[$i]=~/\/\//) {
-			DEBUG3("process_input: http/ftp URL specified: $opt{filename}[$i]");
+			DEBUG3("http/ftp URL specified: $opt{filename}[$i]");
 
 			#--- LWP module NOT loaded?
 			if (!module("LWP::Simple")) {
@@ -525,7 +525,7 @@ sub process_input {
 					print "$MYSELF error: empty path or filename specified in URL $opt{filename}[$i]\n";
 					return $UNKNOWN;
 				}
-				DEBUG4("process_input: URL:$opt{filename}[$i] hostname:$host path:$path file:$file");
+				DEBUG4("URL:$opt{filename}[$i] hostname:$host path:$path file:$file");
 			}
 			
 			#--- create directory to store saved config files
@@ -540,17 +540,17 @@ sub process_input {
 			my $cmdfile_age=time-(stat("$cmdfile_path/$file"))[10] if (-f "$cmdfile_path/$file");
 			if (!-f "$cmdfile_path/$file" ||
 			    $cmdfile_age>$opt{set}{cmdfile_update_interval}) {
-				DEBUG3("process_input: $cmdfile_path/$file age is $cmdfile_age, greater than allowed interval $opt{set}{cmdfile_update_interval}");
+				DEBUG3("$cmdfile_path/$file age is $cmdfile_age, greater than allowed interval $opt{set}{cmdfile_update_interval}");
 				my $RC=LWP::Simple::mirror($opt{filename}[$i],"$cmdfile_path/$file");
 				if (LWP::Simple::is_success($RC) || $RC == 304) {
 					DEBUG3("Mirroring $opt{filename}[$i] to $cmdfile_path/$file OK: RC $RC");
 					$opt{filename}[$i]="$cmdfile_path/$file";
 					`touch $opt{filename}[$i]`;
 				} else {
-					DEBUG2("process_input: Error: mirroring $opt{filename}[$i] to $cmdfile_path/$file failed: $RC");
+					DEBUG2("Error: mirroring $opt{filename}[$i] to $cmdfile_path/$file failed: $RC");
 				}
 			} else {
-				DEBUG3("process_input: $opt{filename}[$i] is already downloaded $cmdfile_path/$file");
+				DEBUG3("$opt{filename}[$i] is already downloaded $cmdfile_path/$file");
 				$opt{filename}[$i]="$cmdfile_path/$file";
 			}
 
@@ -561,7 +561,7 @@ sub process_input {
 		#--- 3. and at last: the simple filename
 		} else {
 			if (! -f $opt{filename}[$i] || ! -r $opt{filename}[$i]) {
-				DEBUG2("process_input: Error: filename $opt{filename}[$i] not existing or not readable");
+				DEBUG2("Error: filename $opt{filename}[$i] not existing or not readable");
 			}
 		}
 	}
@@ -572,7 +572,7 @@ sub process_input {
 		for (split(/\+/,$opt{set}{report})) {
 			$sum+=$_;
 		}
-		DEBUG3("process_input: reportstring $opt{set}{report} converted into numerical value $sum");
+		DEBUG3("reportstring $opt{set}{report} converted into numerical value $sum");
 		$opt{set}{report}=$sum;
 	} elsif ($opt{set}{report}=~/[0-9]/) {
 		# normal numeric value - do nothing
@@ -583,14 +583,14 @@ sub process_input {
 	#--- report options - name
 	if ($opt{set}{report} & $DETAIL_PERFORMANCE_LINK && !$opt{set}{name}) {
 		$opt{set}{name}=$MYSELF;
-		DEBUG3("process_input: performance report option set and no name defined: taking $MYSELF as name");
+		DEBUG3("performance report option set and no name defined: taking $MYSELF as name");
 	}
 
 	#--- report option - notes_url
 	if ($opt{set}{report} & $DETAIL_NOTES_LINK && !$opt{set}{notes_url}) {
 		if ($ENV{"${NAGIOS}_SERVICENOTESURL"}) {
 			$opt{set}{notes_url}=$ENV{"${NAGIOS}_SERVICENOTESURL"};
-			DEBUG3("process_input: notes report option set - taking $Nagios SERVICENOTESURL ".$ENV{"${NAGIOS}_SERVICENOTESURL"});
+			DEBUG3("notes report option set - taking $Nagios SERVICENOTESURL ".$ENV{"${NAGIOS}_SERVICENOTESURL"});
 		} else {
 			add_error(0,"process_input: Notes link report option chosen, but no $Nagios environment variable SERVICENOTESURL found and no parameter notes_url specified");
 		}
@@ -634,7 +634,7 @@ sub process_input {
 		$opt{set}{use_xml_simple} = 1;
 		unless (eval "require XML::Simple;1") {
 			$opt{set}{use_xml_simple} = 0;
-			DEBUG2("process_input: XML::Simple not available:$@");
+			DEBUG2("XML::Simple not available:$@");
 		}
 
 		#--- successful load?
@@ -652,23 +652,23 @@ sub process_input {
 
 			#--- replace whitechar with underscore
 			$cmds[0]{key}=~s/\s+/_/g;
-			DEBUG3("process_input: command key: $cmds[0]{key}");
+			DEBUG3("command key: $cmds[0]{key}");
 
 			#--- read persistent data
 			my $in;
 			my @xmlfiles=dir_entries("$opt{set}{tmp_dir}/$opt{set}{HOSTNAME}_$opt{set}{SERVICEDESC}",1);
 			if ($#xmlfiles == 1) {
-				DEBUG3("process_input: reading file $xmlfiles[0].xml");
+				DEBUG3("reading file $xmlfiles[0].xml");
 				$in=XML::Simple::XMLin("$opt{set}{tmp_dir}/$opt{set}{HOSTNAME}_$opt{set}{SERVICEDESC}/".$xmlfiles[0].".xml",KeyAttr => [ ]);
 			} else {
-				DEBUG2("process_input: no persistency file found in $opt{set}{tmp_dir}/$opt{set}{HOSTNAME}_$opt{set}{SERVICEDESC}");
+				DEBUG2("no persistency file found in $opt{set}{tmp_dir}/$opt{set}{HOSTNAME}_$opt{set}{SERVICEDESC}");
 			}
 
 			#--- read persistent data
 
 			#--- debug output per Data::Dumper
 			if (module("Data::Dumper")) {
-				DEBUG3("process_input: loaded persistent data:");
+				DEBUG3("loaded persistent data:");
 				DEBUG3(Dumper($in));
 			} else {
 				$opt{set}{test}=0;
@@ -677,8 +677,8 @@ sub process_input {
 	}
 
 	#--- do some debug output
-	DEBUG3("process_input: $MYSELF - $VERSION");
-	DEBUG3("process_input: command line: $0 >".join('< >',@SAVEARGV)."<");
+	DEBUG3("$MYSELF - $VERSION");
+	DEBUG3("command line: $0 >".join('< >',@SAVEARGV)."<");
 
 	#--- any remaining parameters are orphaned - tell the caller what's going wrong here
 	if (@ARGV) {
@@ -692,10 +692,10 @@ sub process_input {
 
 	#--- just debugging: print options
 	foreach my $option (sort keys(%opt)) {
-		DEBUG4("process_input: \$opt{$option}=$opt{$option}") if (defined($opt{$option}));
+		DEBUG4("\$opt{$option}=$opt{$option}") if (defined($opt{$option}));
 	}
 	foreach my $option (sort keys(%{$opt{set}})) {
-		DEBUG4("process_input: \$opt{set}{$option}=$opt{set}{$option}") if (defined($opt{set}{$option}));
+		DEBUG4("\$opt{set}{$option}=$opt{set}{$option}") if (defined($opt{set}{$option}));
 	}
 
 	return $OK;
@@ -895,7 +895,7 @@ sub numerically { $a <=> $b }
 #---
 sub mytrim {
 	my ($src, $trim)=@_;
-	DEBUG3("mytrim: src:\'$src\' trim:\'$trim\'");
+	DEBUG3("src:\'$src\' trim:\'$trim\'");
 	return ($src=~/[$trim]*(.*)[$trim]*/) ? $1 : $src;
 }
 
@@ -938,7 +938,7 @@ sub set_alarm {
 			int(time)+int($timeout)-int($cmds[0]{timeouttime})));
 		add_error($no,"timeout reduced to $timeout seconds due to global timeout");
 	}
-	DEBUG3("set_alarm: $no - alarm set to $timeout seconds");
+	DEBUG3("$no - alarm set to $timeout seconds");
 	$cmds[$no]{timeout}=$timeout;
 	alarm($timeout);
 }
@@ -950,7 +950,7 @@ sub my_hash {
 	my $string=shift;
 	my $hash=crypt($string,"hash_$MYSELF");
 	$hash=~s/(.)/sprintf("%02x", ord($1))/seg;
-	DEBUG3("my_hash: inputstring \'$string\' -> $hash");
+	DEBUG3("inputstring \'$string\' -> $hash");
 	return $hash;
 }
 
@@ -1025,13 +1025,13 @@ sub substitute_macros {
 	my ($input)=@_;
 
 	if (! $input) {
-		DEBUG3("substitute_macros: empty input - nothing to do");
+		DEBUG3("empty input - nothing to do");
 		return $input;
 	}
 
 	#--- first of all: replace 'normal' vars
 	#--- to prepare objects.cache substitution after that
-	DEBUG3("substitute_macros: checking line $input");
+	DEBUG3("checking line $input");
 	foreach my $match_var (($input=~/\$([A-Za-z0-9_\-]+)\$/gi)) {
   		if ($ENV{"MULTI_${match_var}"}) {
 			$input=~s/\$${match_var}\$/$ENV{"MULTI_${match_var}"}/gi;
@@ -1040,30 +1040,30 @@ sub substitute_macros {
 		}
 	}
 
-	DEBUG3("substitute_macros: line $input after nagios var substitution");
+	DEBUG3("line $input after nagios var substitution");
 	#--- NOT case sensitive macro checking (Nagios does not either :-/)
 	while ((my $var)=($input=~/\$([A-Za-z0-9_:^\-\$]+)\$/i)) {
 
-		DEBUG3("substitute_macros: checking var $var");
+		DEBUG3("checking var $var");
 		#--- 1. check for MULTI var
 		if (defined($ENV{"MULTI_${var}"})) {
-			DEBUG3("substitute_macros: replacing env var MULTI_${var} with $ENV{\"MULTI_${var}\"}");
+			DEBUG3("replacing env var MULTI_${var} with $ENV{\"MULTI_${var}\"}");
 			$input=~s/\$$var\$/$ENV{"MULTI_${var}"}/g;
 		#--- 2. check for @nagios_name@ var
 		} elsif (defined($ENV{"${NAGIOS}_${var}"})) {
-			DEBUG3("substitute_macros: replacing env var ${NAGIOS}_${var} with $ENV{\"${NAGIOS}_${var}\"}");
+			DEBUG3("replacing env var ${NAGIOS}_${var} with $ENV{\"${NAGIOS}_${var}\"}");
 			$input=~s/\$$var\$/$ENV{"${NAGIOS}_${var}"}/g;
 		#--- 3. objects.cache substitution
 		} elsif ($var=~/^[a-z_]+:[a-z_]+:[a-z_]+:/) {
-			DEBUG3("substitute_macros: checking objects_cache var $var");
+			DEBUG3("checking objects_cache var $var");
 			my $query=objects_cache_query($var);
 			my $substitution=parse_objects_cache($opt{set}{objects_cache},$query);
-			DEBUG3("substitute_macros: replacing objects_cache var $var with $substitution");
+			DEBUG3("replacing objects_cache var $var with $substitution");
 			$input=~s/\$$var\$/$substitution/g;
 		#--- 4. nothing to substitute
 		} else {
 			$input=~s/\$$var\$//g;
-			DEBUG3("substitute_macros: var ${NAGIOS}_${var}/MULTI_${var} not defined: removed \$$var\$");
+			DEBUG3("var ${NAGIOS}_${var}/MULTI_${var} not defined: removed \$$var\$");
 		}
 	}
 	return $input;
@@ -1084,9 +1084,9 @@ sub objects_cache_query {
 			$query->{expr}->{$1}=$2;
 			$input=$3;
 		}
-		DEBUG4("objects_cache_query: searching for $query->{type} returning field $query->{target}");
+		DEBUG4("searching for $query->{type} returning field $query->{target}");
 		foreach my $key (keys %{$query->{expr}}) {
-			DEBUG4("objects_cache_query: -> key:$key value:$query->{expr}->{$key}");
+			DEBUG4("-> key:$key value:$query->{expr}->{$key}");
 		}
 	} else {
 		add_error(0,"objects_cache_query: invalid query expression $input, should be \$type:return-field:key:expr[:key:expr]\$");
@@ -1130,17 +1130,17 @@ sub parse_objects_cache {
 				#--- check if all query elements fit to current object
 				my $match=1;
 				foreach my $key (keys(%{$query->{expr}})) {
-					DEBUG4("parse_objects_cache: searching field $key for match of $query->{expr}->{$key}");
+					DEBUG4("searching field $key for match of $query->{expr}->{$key}");
 					if (!defined($temp->{$key})) {
-						DEBUG4("parse_objects_cache: type $type - field $key not found");
+						DEBUG4("type $type - field $key not found");
 						$match=0;
 						last;
 					} elsif ($temp->{$key}!~/$query->{expr}->{$key}/) {
-						DEBUG4("parse_objects_cache: type $type - $temp->{$key} did not match $query->{expr}->{$key}");
+						DEBUG4("type $type - $temp->{$key} did not match $query->{expr}->{$key}");
 						$match=0;
 						last;
 					} else {
-						DEBUG4("parse_objects_cache: type $type - $temp->{$key} matched");
+						DEBUG4("type $type - $temp->{$key} matched");
 					}
 				}
 				if ($match) {
@@ -1158,9 +1158,9 @@ sub parse_objects_cache {
 	if (!defined($typelist{$query->{type}})) {
 		add_error(0,"parse_objects_cache: unknown object type \"$query->{type}\" - valid types are ".join(',',sort keys %typelist));
 	} else {
-		DEBUG3("parse_objects_cache: $objectcount objects parsed");
+		DEBUG3("$objectcount objects parsed");
 		foreach my $type (sort keys %typelist) {
-			DEBUG3("parse_objects_cache: $typelist{$type} of $type");
+			DEBUG3("$typelist{$type} of $type");
 		}
 	}
 	return (join($opt{set}{objects_cache_delimiter},@results));
@@ -1173,7 +1173,7 @@ sub substitute_states {
 
 	#--- empty input?
 	if (! $input) {
-		DEBUG3("substitute_states: empty input - nothing to do");
+		DEBUG3("empty input - nothing to do");
 		return $input;
 	}
 
@@ -1217,7 +1217,7 @@ sub set_env_vars {
 	$ENV{"MULTI_${no}_LABEL"}="$def{label}{$cmds[$no]{rc}}";
 	$ENV{"MULTI_${no}_RC_LABEL"}=($cmds[$no]{rc}<=$UNKNOWN)?$def{label}{$cmds[$no]{rc}}:"INVALID";
 
-	DEBUG4("set_env_vars: 6 environment vars set\n" .
+	DEBUG4("6 environment vars set\n" .
 		"1. MULTI_$name=$cmds[$no]{output}\n" .
 		"2. MULTI_STATE_$name=$cmds[$no]{rc}\n" .
 		"3. MULTI_LABEL_$name=$def{label}{$cmds[$no]{rc}}\n" .
@@ -1242,9 +1242,11 @@ sub get_env_vars {
 #--- print debug message (see Macro DEBUG)
 #---
 sub debug_message {
+	#my ($package, $filename, $line, $subroutine, $hasargs, $wantarray, $evaltext, $is_require, $hints, $bitmask, $hinthash) = caller(1);
+	my @c0=caller(0); my @c1=caller(1);
 	foreach (@_) {
 		if ($opt{set}{verbose}>2) {
-			printf "%08.5f ", time-$timezero;
+			printf "%08.5f %s ($c0[2]): ", time-$timezero, ($c1[3])?$c1[3]:"";
 		}
 		print "$_\n";
 	}	
@@ -1280,9 +1282,9 @@ sub signal_handler {
 
 	#--- do reports before quitting
 	add_error(0,"$signal generated at line $loc[2] in $loc[1] ($loc[3])");
-	DEBUG4("signal_handler - with message $signal");
+	DEBUG4("with message $signal");
 	&global_result_rating;
-	DEBUG4("signal_handler - RC code $rc{head}");
+	DEBUG4("RC code $rc{head}");
 	&report_all;
 
 	#--- cleanup end exit
@@ -1290,7 +1292,7 @@ sub signal_handler {
 
 	#--- exit with predefined exit code or with head rc
 	my $RC=(defined($opt{set}{signal_rc})) ? $opt{set}{signal_rc} : $rc{head};
-	DEBUG4("signal_handler - signal_rc is $opt{set}{signal_rc} - exiting with RC code $RC");
+	DEBUG4("signal_rc is $opt{set}{signal_rc} - exiting with RC code $RC");
 	exit($RC);
 }
 
@@ -1310,7 +1312,7 @@ sub add_error {
 		
 		if ($no >= 0 && $no <= $#cmds) {
 			push @{$cmds[$no]{error}}, $error;
-			DEBUG3("add_error[$no]: added error message \'$error\'");
+			DEBUG3("check [$no] - added error message \'$error\'");
 		} else {
 			add_error(0,"add_error: invalid check index $no encountered");
 		}
@@ -1331,7 +1333,7 @@ sub error {
 #--- fatal - immediate exit with UNKNOWN state
 #---
 sub fatal {
-	DEBUG3("fatal: exit with error message \'@_\'");
+	DEBUG3("exit with error message \'@_\'");
 	print "$MYSELF fatal error: @_\n";
 	exit $UNKNOWN;
 }
@@ -1357,7 +1359,7 @@ sub get_tmpfile {
 		next if (-f $tmpfile);
 		if (open(TMP,">$tmpfile")) {
 			close TMP;
-			DEBUG4("get_tmpfile: created $tmpfile");
+			DEBUG4("created $tmpfile");
 			return $tmpfile;
 		}
 	}
@@ -1408,7 +1410,7 @@ sub parse_files {
 			@lines=(split(/\n/,$filename));
 			push @lines, ""; # add empty line to avoid last line eval problem
 			DEBUG3("-" x 80);
-			DEBUG3("parse_files: parsing encoded $filename with $#lines lines");
+			DEBUG3("parsing encoded $filename with $#lines lines");
 			DEBUG3("-" x 80);
 		#--- error opening file
 		} elsif (!open(FILE, $filename)) {
@@ -1423,7 +1425,7 @@ sub parse_files {
 			push @lines, ""; # add empty line to avoid last line eval problem
 			close FILE;
 			DEBUG3("-" x 80);
-			DEBUG3("parse_files: parsing file $filename with $#lines lines");
+			DEBUG3("parsing file $filename with $#lines lines");
 			DEBUG3("-" x 80);
 		}
 
@@ -1442,7 +1444,7 @@ sub parse_lines {
 	my ($line,$cmd,$type,$name,$plugin,$pplugin,$expr,$lineno,$i,$last_command);
 
 	$lineno=0;	# count sourcefile lines
-	DEBUG4("parse_lines: starting with " . $#cmds . " command(s)");
+	DEBUG4("starting with " . $#cmds . " command(s)");
 	LINE: while (@lines) {
 
 		$line = shift(@lines);
@@ -1463,7 +1465,7 @@ sub parse_lines {
 		
 		#--- remove unwanted characters from input line
 		if ($line=~/$opt{set}{illegal_chars}/) {
-			DEBUG2("parse_lines: found illegal characters in line $lineno, removing them");
+			DEBUG2("found illegal characters in line $lineno, removing them");
 			$line=~s/$opt{set}{illegal_chars}//g;
 		}
 
@@ -1512,7 +1514,7 @@ sub parse_lines {
 			}
 		}
 	}
-	DEBUG4("parse_lines: end - now we have " . $#cmds . " command(s)");
+	DEBUG4("end - now we have " . $#cmds . " command(s)");
 }
 
 #---
@@ -1527,11 +1529,11 @@ sub parse_header {
 	($name,$key)=split(/::/,$name);
 	$key="" if (!defined($key));
 	$key=lc($key);	# force lower key for keys
-	DEBUG4("parse_header: type:$type name:$name key:$key cmd:$cmd lineno:$lineno");
+	DEBUG4("type:$type name:$name key:$key cmd:$cmd lineno:$lineno");
 
 	#--- $name = 'head'? then $i = 0
 	if ($name eq "HEAD") {
-		DEBUG4("parse_header: head specified - settings values for \$cmds[0]");
+		DEBUG4("head specified - settings values for \$cmds[0]");
 		$i=0;
 
 	#--- overloading: if child check with same name exists,
@@ -1559,9 +1561,9 @@ sub parse_header {
 			return undef;
 		} else {
 			if (!defined($cmds[$i]{$key})) {
-				DEBUG2("parse_header: key $key attribute \'$cmd\' inserted into object $name (\$cmds[$i])");
+				DEBUG2("key $key attribute \'$cmd\' inserted into object $name (\$cmds[$i])");
 			} else {
-				DEBUG2("parse_header: key $key attribute \'$cmd\' changed in object $name (\$cmds[$i]), was: $cmds[$i]{$key}");
+				DEBUG2("key $key attribute \'$cmd\' changed in object $name (\$cmds[$i]), was: $cmds[$i]{$key}");
 			}
 			$cmds[$i]{$key}=$cmd;
 		}
@@ -1601,7 +1603,7 @@ sub parse_header {
 		if ($opt{set}{suppress_perfdata} &&
 			$opt{set}{suppress_perfdata}=~/\b$name\b/i) {
 			$cmds[$i]{process_perfdata}=0;
-			DEBUG2("parse_header: perfdata of [ $name ] will be suppressed");
+			DEBUG2("perfdata of [ $name ] will be suppressed");
 		} else {
 			$cmds[$i]{process_perfdata}=1;
 		}
@@ -1633,7 +1635,7 @@ sub parse_header {
 		if ($opt{set}{suppress_perfdata} &&
 			$opt{set}{suppress_perfdata}=~/\b$name\b/i) {
 			$cmds[$i]{process_perfdata}=0;
-			DEBUG2("parse_header: perfdata of [ $name ] will be suppressed");
+			DEBUG2("perfdata of [ $name ] will be suppressed");
 		} else {
 			$cmds[$i]{process_perfdata}=1;
 		}
@@ -1659,7 +1661,7 @@ sub parse_header {
 		if ($opt{set}{suppress_perfdata} &&
 			$opt{set}{suppress_perfdata}=~/\b$name\b/i) {
 			$cmds[$i]{process_perfdata}=0;
-			DEBUG2("parse_header: perfdata of [ $name ] will be suppressed");
+			DEBUG2("perfdata of [ $name ] will be suppressed");
 		} else {
 			$cmds[$i]{process_perfdata}=1;
 		}
@@ -1690,7 +1692,7 @@ sub parse_header {
 		if ($opt{set}{suppress_perfdata} &&
 			$opt{set}{suppress_perfdata}=~/\b$name\b/i) {
 			$cmds[$i]{process_perfdata}=0;
-			DEBUG2("parse_header: perfdata of [ $name ] will be suppressed");
+			DEBUG2("perfdata of [ $name ] will be suppressed");
 		} else {
 			$cmds[$i]{process_perfdata}=1;
 		}
@@ -1705,13 +1707,13 @@ sub parse_header {
 			unless (eval "require Monitoring::Livestatus;1") {
 				$opt{set}{use_monitoring_livestatus} = 0;
 				add_error(0,"parse_header: perl module Monitoring::Livestatus is not installed, could not add check");
-				DEBUG2("parse_header: Monitoring::Livestatus not available:$@");
+				DEBUG2("Monitoring::Livestatus not available:$@");
 				return -1;
 			}
 		}
 		#--- livestatus: split host and service from command, format: host:service
 		if ($cmd=~/\s*([^:]*)\s*\:\s*(.*)\s*/) {
-			DEBUG4("parse_header: expanding livestatus host:service $1:$2");
+			DEBUG4("expanding livestatus host:service $1:$2");
 			my @result=expand_livestatus_service($opt{set}{livestatus}, $1, $2);
 
 			if (!defined($result[0])) {
@@ -1748,11 +1750,11 @@ sub parse_header {
 				}
 				$cmds[$i]{name}="${name}_$cmds[$i]{host}_$cmds[$i]{service}";
 				$cmds[$i]{name}=~s/[^A-Z0-9_-]+/_/gi;
-				DEBUG4("parse_header: added host:$cmds[$i]{host} / service:$cmds[$i]{service} / output:$cmds[$i]{output}");
+				DEBUG4("added host:$cmds[$i]{host} / service:$cmds[$i]{service} / output:$cmds[$i]{output}");
 				$i++;
 			}
 		} elsif ($cmd=~/\s*([^:]*)\s*/) {
-			DEBUG4("parse_header: expanding livestatus host $1");
+			DEBUG4("expanding livestatus host $1");
 			my @result=expand_livestatus_host($opt{set}{livestatus}, $1);
 
 			if (!defined($result[0])) {
@@ -1787,7 +1789,7 @@ sub parse_header {
 				}
 				$cmds[$i]{name}="${name}_$cmds[$i]{host}";
 				$cmds[$i]{name}=~s/[^A-Z0-9_-]+/_/gi;
-				DEBUG4("parse_header: added host:$cmds[$i]{host} / output:$cmds[$i]{output}");
+				DEBUG4("added host:$cmds[$i]{host} / output:$cmds[$i]{output}");
 				$i++;
 			}
 		} else {
@@ -1834,7 +1836,7 @@ sub parse_header {
 		if ($opt{set}{suppress_perfdata} &&
 			$opt{set}{suppress_perfdata}=~/\b$name\b/i) {
 			$cmds[$i]{process_perfdata}=0;
-			DEBUG2("parse_header: perfdata of [ $name ] will be suppressed");
+			DEBUG2("perfdata of [ $name ] will be suppressed");
 		} else {
 			$cmds[$i]{process_perfdata}=1;
 		}
@@ -1845,7 +1847,7 @@ sub parse_header {
 
 		#--- statusdat: split host and service from command, format: host:service
 		if ($cmd=~/\s*([^:]*)\s*\:\s*(.*)\s*/) {
-			DEBUG4("parse_header: host:service format - expanding $1:$2");
+			DEBUG4("host:service format - expanding $1:$2");
 			my @result=expand_status_dat_service($opt{set}{status_dat}, $1, $2);
 			if (!defined($result[0])) {
 				add_error(0,"Could not expand host:service $1:$2 from status_dat $opt{set}{status_dat}");
@@ -1879,12 +1881,12 @@ sub parse_header {
 					$cmds[$i]{service}="UNKNOWN";
 				}
 				$cmds[$i]{name}="${name}_$cmds[$i]{host}_$cmds[$i]{service}";
-				DEBUG4("parse_header: added host:$cmds[$i]{host} / service:$cmds[$i]{service}");
+				DEBUG4("added host:$cmds[$i]{host} / service:$cmds[$i]{service}");
 				$i++;
 			}
 		#--- statusdat: split host from command, format: host
 		} elsif ($cmd=~/\s*([^:]*)\s*/) {
-			DEBUG4("parse_header: host format - expanding $1");
+			DEBUG4("host format - expanding $1");
 			my @result=expand_status_dat_host($opt{set}{status_dat}, $1);
 			if (!defined($result[0])) {
 				add_error(0,"Could not expand host $1 from status_dat $opt{set}{status_dat}");
@@ -1916,7 +1918,7 @@ sub parse_header {
 					$cmds[$i]{host}="UNKNOWN";
 				}
 				$cmds[$i]{name}="${name}_$cmds[$i]{host}";
-				DEBUG4("parse_header: added host:$cmds[$i]{host}");
+				DEBUG4("added host:$cmds[$i]{host}");
 				$i++;
 			}
 		} else {
@@ -1933,10 +1935,10 @@ sub parse_header {
 		}
 		#--- store state expression only if NOT set via commandline
 		if (!defined($opt{lc($name)})) {
-			DEBUG3("parse_header: added state{$def{code}{$name}} expression: $cmd");
+			DEBUG3("added state{$def{code}{$name}} expression: $cmd");
 			$rc{expr}[$def{code}{$name}]=$cmd;
 		} else {
-			DEBUG3("parse_header: command line precedence over state expression. Using \$opt{$name}: $opt{$name}");
+			DEBUG3("command line precedence over state expression. Using \$opt{$name}: $opt{$name}");
 		}
 		$i=$name;
 
@@ -1986,7 +1988,7 @@ sub exec_command {
 	$cmds[$no]{command}=substitute_macros($cmds[$no]{command});
 	chomp($cmds[$no]{command});
 	$ENV{"MULTI_${no}_NAME"}=$cmds[$no]{name};
-	DEBUG4("exec_command [ $no ] = >$cmds[$no]{command}<");
+	DEBUG4("[$no] = >$cmds[$no]{command}<");
 
 	#--- measure command runtime;
 	$cmds[$no]{starttime}=time;
@@ -2034,11 +2036,11 @@ sub exec_command {
 				#--- store stdout/stderr and cleanup tmpfiles
 				$cmds[$no]{output}=readfile($tmp_stdout);
 				$cmds[$no]{output}=~s/[$opt{set}{illegal_chars}]*//g; chomp $cmds[$no]{output};	
-				DEBUG3("exec_command: raw output >$cmds[$no]{output}<");
-				DEBUG3("exec_command: hex output:".hexdump(16,$cmds[$no]{output}));
+				DEBUG3("raw output >$cmds[$no]{output}<");
+				DEBUG3("hex output:".hexdump(16,$cmds[$no]{output}));
 				add_error($no,readfile($tmp_stderr));
-				DEBUG3("exec_command: raw stderr >".join(',',@{$cmds[$no]{error}})."<");
-				DEBUG3("exec_command: hex stderr:".hexdump(16,join(',',@{$cmds[$no]{error}})));
+				DEBUG3("raw stderr >".join(',',@{$cmds[$no]{error}})."<");
+				DEBUG3("hex stderr:".hexdump(16,join(',',@{$cmds[$no]{error}})));
 				unlink $tmp_stdout, $tmp_stderr;
 
 			#--- new open3 exec (to be tested carefully before getting standard ;-))
@@ -2047,7 +2049,7 @@ sub exec_command {
 				close(CIN); # not needed: close STDIN filehandle
 				$SIG{CHLD}=sub {
 					$cmds[$no]{rc}=$?>>8 if waitpid($pid, 0) > 0;
-					DEBUG4("exec_command: REAPER status $cmds[$no]{rc} on $pid");
+					DEBUG4("REAPER status $cmds[$no]{rc} on $pid");
 				};
 
 				my $sel=IO::Select->new();
@@ -2065,8 +2067,8 @@ sub exec_command {
 				close(COUT);
 				close(CERR);
 				chomp $cmds[$no]{output};	
-				DEBUG3("exec_command: open3 raw output >$cmds[$no]{output}<");
-				DEBUG3("exec_command: open3 raw stderr >".join(',',$cmds[$no]{error})."<");
+				DEBUG3("open3 raw output >$cmds[$no]{output}<");
+				DEBUG3("open3 raw stderr >".join(',',$cmds[$no]{error})."<");
 			}
 
 			#--- unknown return code? change it explicitly to UNKNOWN and add error
@@ -2083,14 +2085,14 @@ sub exec_command {
 
 			#--- split performance data from standard output
 			if ($cmds[$no]{output}=~/\|/) {
-				DEBUG4("exec_command(1): output contains \|");
+				DEBUG4("(1) - output contains \|");
 				if ($cmds[$no]{output}=~/([^\n]*)\n(.*)/s) {
-					DEBUG4("exec_command(2): output contains \\n");
+					DEBUG4("(2) - output contains \\n");
 					my $rest=$2;
-					DEBUG4("exec_command(3): \$1:$1");
-					DEBUG4("exec_command(4): \$2:$2");
+					DEBUG4("(3) - \$1:$1");
+					DEBUG4("(4) - \$2:$2");
 					($cmds[$no]{output},$cmds[$no]{performance})=split(/\|/,$1);
-					DEBUG4("exec_command(5): rest:>$rest<");
+					DEBUG4("(5) - rest:>$rest<");
 					if ($rest=~/(.*)\|(.*)/s) {
 						$cmds[$no]{output}.="\n$1";
 						$cmds[$no]{performance}.=" " if ($cmds[$no]{performance});
@@ -2098,10 +2100,10 @@ sub exec_command {
 					} else {
 						$cmds[$no]{output}.="\n$rest";
 					}
-					DEBUG4("exec_command(6): output:$cmds[$no]{output} performance:$cmds[$no]{performance}");
+					DEBUG4("(6) - output:$cmds[$no]{output} performance:$cmds[$no]{performance}");
 				} else {
 					($cmds[$no]{output},$cmds[$no]{performance})=split(/\|/,$cmds[$no]{output});
-					DEBUG4("exec_command performance string: $cmds[$no]{performance}");
+					DEBUG4("performance string: $cmds[$no]{performance}");
 					$cmds[$no]{performance}=mytrim($cmds[$no]{performance},"\\s");
 				}
 
@@ -2156,7 +2158,7 @@ sub exec_command {
 					}
 				}
 			}
-			DEBUG4("exec_command: environment var MULTI_$cmds[$no]{name}=$cmds[$no]{output}");
+			DEBUG4("environment var MULTI_$cmds[$no]{name}=$cmds[$no]{output}");
 		}
 		$cmds[$no]{endtime}=time;
 		$cmds[$no]{runtime}=$cmds[$no]{endtime}-$cmds[$no]{starttime};
@@ -2273,7 +2275,7 @@ sub exec_command {
 		#--- suppress_perfdata set? ignore perfdata
 		if ($cmds[$no]{process_perfdata} && $cmds[$no]{performance}) {
 			$ENV{"MULTI_PERFDATA_".$cmds[$no]{name}}="$cmds[$no]{performance}";
-			DEBUG4("exec_command: environment var MULTI_PERFDATA_$cmds[$no]{name}=$cmds[$no]{performance}");
+			DEBUG4("environment var MULTI_PERFDATA_$cmds[$no]{name}=$cmds[$no]{performance}");
 		}
 	}
 	return $cmds[$no]{rc};
@@ -2290,13 +2292,13 @@ sub get_cumulated_top {
 			#--- zero value? count it if cumulate_ignore_zero=0
 			if ($opt{set}{cumulate_ignore_zero}) {
 				$c{"$1"}+=$2 if ($2);
-				DEBUG4("get_cumulated_top: $1 += $2 -> $c{$1}\n") if ($2);
+				DEBUG4("$1 += $2 -> $c{$1}\n") if ($2);
 			} else {
 				$c{"$1"}+=$2;
-				DEBUG4("get_cumulated_top: $1 += $2 -> $c{$1}\n");
+				DEBUG4("$1 += $2 -> $c{$1}\n");
 			}
 		} else {
-			DEBUG2("get_cumulated_top: invalid line format: $line\n");
+			DEBUG2("invalid line format: $line\n");
 		}
 	}
 	my @top_keys = sort { $c{$b}<=>$c{$a} } keys(%c);
@@ -2321,20 +2323,20 @@ sub get_status_dat_host {
 		return (-1,"");
 	}
 	if (!defined($status_dat) || !$status_dat) {
-		DEBUG4("get_status_dat_host: 1st read, creating service tree");
+		DEBUG4("1st read, creating service tree");
 		$status_dat=read_status_dat($statusdat_path);
 		if (!defined($status_dat) || !$status_dat) {
 			add_error(0,"get_status_dat_host: could not read $statusdat_path");
 			return (-1,"");
 		}
 	} else {
-		DEBUG4("get_status_dat_host: subsequent read, reading from service tree");
+		DEBUG4("subsequent read, reading from service tree");
 	}
 	if (! defined($status_dat->{hoststatus}->{$host_name})) {
-		DEBUG2("get_status_dat_host: did not found RC and output for $host_name");
+		DEBUG2("did not found RC and output for $host_name");
 		return (-1,"");
 	} else {
-		DEBUG4("get_status_dat_host: found data for $host_name: RC $status_dat->{hoststatus}->{$host_name}->{current_state} and output \'$status_dat->{hoststatus}->{$host_name}->{plugin_output}\', long_output \'$status_dat->{hoststatus}->{$host_name}->{long_plugin_output}\'");
+		DEBUG4("found data for $host_name: RC $status_dat->{hoststatus}->{$host_name}->{current_state} and output \'$status_dat->{hoststatus}->{$host_name}->{plugin_output}\', long_output \'$status_dat->{hoststatus}->{$host_name}->{long_plugin_output}\'");
 		return (
 			$status_dat->{hoststatus}->{$host_name}->{current_state},
 			$status_dat->{hoststatus}->{$host_name}->{plugin_output}."\n".
@@ -2349,37 +2351,37 @@ sub get_status_dat_host {
 sub expand_status_dat_host {
 	my ($statusdat_path, $host_name)=@_;
 
-	DEBUG4("expand_status_dat_host: expanding $host_name");
+	DEBUG4("expanding $host_name");
 	if (!$host_name) {
 		add_error(0,"expand_status_dat_host: empty host_name=$host_name specified");
 		return (undef,undef);
 	}
 	if (!defined($status_dat) || !$status_dat) {
-		DEBUG4("expand_status_dat_host: 1st read, creating tree");
+		DEBUG4("1st read, creating tree");
 		$status_dat=read_status_dat($statusdat_path);
 		if (!defined($status_dat) || !$status_dat) {
 			add_error(0,"expand_status_dat_host: could not read $statusdat_path");
 			return (undef,undef);
 		}
 	} else {
-		DEBUG4("expand_status_dat_host: subsequent read, reading from tree");
+		DEBUG4("subsequent read, reading from tree");
 	}
 
 	#--- expand simple tokens to REGEX, if necessary
 	$host_name=($host_name=~/\/(.*)\//)?$1:'^'.$host_name.'$';
-	DEBUG4("expand_status_dat_host: $host_name after REGEX preparation");
+	DEBUG4("$host_name after REGEX preparation");
 
 	my @result=();
 	foreach my $host (sort keys(%{$status_dat->{hoststatus}})) {
 		#--- proceed if host and service names do fit
 		if ($host=~/$host_name/) {
 			push @result,$host;
-			DEBUG4("expand_status_dat_host: $host matched $host_name");
+			DEBUG4("$host matched $host_name");
 		} else {
-			DEBUG4("expand_status_dat_host: $host did not match $host_name");
+			DEBUG4("$host did not match $host_name");
 		}
 	}
-	DEBUG4("expand_status_dat_host returns " . ($#result+1)/2 . " results");
+	DEBUG4("returns " . ($#result+1)/2 . " results");
 	return @result;
 }
 
@@ -2398,20 +2400,20 @@ sub get_status_dat_service {
 		return (-1,"");
 	}
 	if (!$status_dat) {
-		DEBUG4("get_status_dat_service: 1st read, creating service tree");
+		DEBUG4("1st read, creating service tree");
 		$status_dat=read_status_dat($statusdat_path);
 		if (!$status_dat) {
 			add_error(0,"get_status_dat_service: could not read $statusdat_path");
 			return (-1,"");
 		}
 	} else {
-		DEBUG4("get_status_dat_service: subsequent read, reading from service tree");
+		DEBUG4("subsequent read, reading from service tree");
 	}
 	if (! defined($status_dat->{servicestatus}->{$host_name}->{$service_description})) {
-		DEBUG2("get_status_dat_service: did not found RC and output for $host_name:$service_description");
+		DEBUG2("did not found RC and output for $host_name:$service_description");
 		return (-1,"");
 	} else {
-		DEBUG4("get_status_dat_service: found data for $host_name:$service_description: RC $status_dat->{servicestatus}->{$host_name}->{$service_description}->{current_state} and output \'$status_dat->{servicestatus}->{$host_name}->{$service_description}->{plugin_output}\', long_output \'$status_dat->{servicestatus}->{$host_name}->{$service_description}->{long_plugin_output}\'");
+		DEBUG4("found data for $host_name:$service_description: RC $status_dat->{servicestatus}->{$host_name}->{$service_description}->{current_state} and output \'$status_dat->{servicestatus}->{$host_name}->{$service_description}->{plugin_output}\', long_output \'$status_dat->{servicestatus}->{$host_name}->{$service_description}->{long_plugin_output}\'");
 		return (
 			$status_dat->{servicestatus}->{$host_name}->{$service_description}->{current_state},
 			$status_dat->{servicestatus}->{$host_name}->{$service_description}->{plugin_output}."\n".
@@ -2426,7 +2428,7 @@ sub get_status_dat_service {
 sub expand_status_dat_service {
 	my ($statusdat_path, $host_name, $service_description)=@_;
 
-	DEBUG4("expand_status_dat_service: expanding $host_name:$service_description");
+	DEBUG4("expanding $host_name:$service_description");
 	if (!defined($host_name) || !$host_name) {
 		add_error(0,"expand_status_dat_service: empty host_name specified");
 		return (undef,undef);
@@ -2436,20 +2438,20 @@ sub expand_status_dat_service {
 		return (undef,undef);
 	}
 	if (!$status_dat) {
-		DEBUG4("expand_status_dat_service: 1st read, creating service tree");
+		DEBUG4("1st read, creating service tree");
 		$status_dat=read_status_dat($statusdat_path);
 		if (!$status_dat) {
 			add_error(0,"expand_status_dat_service: could not read $statusdat_path");
 			return (undef,undef);
 		}
 	} else {
-		DEBUG4("expand_status_dat_service: subsequent read, reading from service tree");
+		DEBUG4("subsequent read, reading from service tree");
 	}
 
 	#--- expand simple tokens to REGEX, if necessary
 	$host_name=($host_name=~/\/(.*)\//)?$1:'^'.$host_name.'$';
 	$service_description=($service_description=~/\/(.*)\//)?$1:'^'.$service_description.'$';
-	DEBUG4("expand_status_dat_service: $host_name:$service_description after REGEX preparation");
+	DEBUG4("$host_name:$service_description after REGEX preparation");
 
 	my @result=();
 	foreach my $host (sort keys(%{$status_dat->{hoststatus}})) {
@@ -2458,13 +2460,13 @@ sub expand_status_dat_service {
 			if ($host=~/$host_name/ && $service=~/$service_description/) {
 				push @result,$host;
 				push @result,$service;
-				DEBUG4("expand_status_dat_service: $host:$service matched $host_name:$service_description");
+				DEBUG4("$host:$service matched $host_name:$service_description");
 			} else {
-				DEBUG4("expand_status_dat_service: $host:$service did not match $host_name:$service_description");
+				DEBUG4("$host:$service did not match $host_name:$service_description");
 			}
 		}
 	}
-	DEBUG4("expand_status_dat_service returns " . ($#result+1)/2 . " results");
+	DEBUG4("returns " . ($#result+1)/2 . " results");
 	return @result;
 }
 
@@ -2561,28 +2563,28 @@ sub read_status_dat {
 sub expand_livestatus_service {
 	my ($livestatus_path, $host_name, $service_description)=@_;
 
-	DEBUG4("expand_livestatus_service: expanding $host_name:$service_description");
+	DEBUG4("expanding $host_name:$service_description");
 	if (!$host_name || !$service_description) {
 		add_error(0,"expand_livestatus_service: empty host_name=$host_name or service_description=$service_description specified");
 		return (undef,undef);
 	}
 	if (!$livestatus_service) {
-		DEBUG4("expand_livestatus_service: 1st read, creating service tree");
+		DEBUG4("1st read, creating service tree");
 
 		$livestatus_service=read_livestatus($livestatus_path,"GET services\nColumns: host_name description state plugin_output long_plugin_output perf_data\n");
 		if (!$livestatus_service) {
 			add_error(0,"expand_livestatus_service: could not read $livestatus_path");
 			return (undef,undef);
 		}
-		DEBUG4("expand_livestatus_service: $#{$livestatus_service} results");
+		DEBUG4("$#{$livestatus_service} results");
 	} else {
-		DEBUG4("expand_livestatus_service: subsequent read, reading from service tree");
+		DEBUG4("subsequent read, reading from service tree");
 	}
 
 	#--- expand simple tokens to REGEX, if necessary
 	$host_name=($host_name=~/\/(.*)\//)?$1:'^'.$host_name.'$';
 	$service_description=($service_description=~/\/(.*)\//)?$1:'^'.$service_description.'$';
-	DEBUG4("expand_livestatus_service: $host_name:$service_description after REGEX preparation");
+	DEBUG4("$host_name:$service_description after REGEX preparation");
 
 	my @result=();
 	#--- $service points to an array item
@@ -2597,12 +2599,12 @@ sub expand_livestatus_service {
 			chomp($output);
 			push @result,$output;
 			push @result,defined($service->{perf_data})?$service->{perf_data}:"";
-			DEBUG4("expand_livestatus_service: $service->{host_name}:$service->{description} matched $host_name:$service_description:$service->{state}");
+			DEBUG4("$service->{host_name}:$service->{description} matched $host_name:$service_description:$service->{state}");
 		} else {
-			DEBUG4("expand_livestatus_service: $service->{host_name}:$service->{description} did not match $host_name:$service_description");
+			DEBUG4("$service->{host_name}:$service->{description} did not match $host_name:$service_description");
 		}
 	}
-	DEBUG4("expand_livestatus_service returns " . ($#result+1)/5 . " results");
+	DEBUG4("returns " . ($#result+1)/5 . " results");
 	return @result;
 }
 
@@ -2612,27 +2614,27 @@ sub expand_livestatus_service {
 sub expand_livestatus_host {
 	my ($livestatus_path, $host_name)=@_;
 
-	DEBUG4("expand_livestatus_host: expanding $host_name");
+	DEBUG4("expanding $host_name");
 	if (!$host_name) {
 		add_error(0,"expand_livestatus_host: empty host_name=$host_name specified");
 		return (undef,undef);
 	}
 	if (!$livestatus_host) {
-		DEBUG4("expand_livestatus_host: 1st read, creating host tree");
+		DEBUG4("1st read, creating host tree");
 
 		$livestatus_host=read_livestatus($livestatus_path,"GET hosts\nColumns: host_name state plugin_output long_plugin_output perf_data\n");
 		if (!$livestatus_host) {
 			add_error(0,"expand_livestatus_host: could not read $livestatus_path");
 			return (undef,undef);
 		}
-		DEBUG4("expand_livestatus_host: $#{$livestatus_host} results");
+		DEBUG4("$#{$livestatus_host} results");
 	} else {
-		DEBUG4("expand_livestatus_host: subsequent read, reading from host tree");
+		DEBUG4("subsequent read, reading from host tree");
 	}
 
 	#--- expand simple tokens to REGEX, if necessary
 	$host_name=($host_name=~/\/(.*)\//)?$1:'^'.$host_name.'$';
-	DEBUG4("expand_livestatus_host: $host_name after REGEX preparation");
+	DEBUG4("$host_name after REGEX preparation");
 
 	my @result=();
 	#--- $host points to an array item
@@ -2646,12 +2648,12 @@ sub expand_livestatus_host {
 			chomp($output);
 			push @result,$output;
 			push @result,defined($host->{perf_data})?$host->{perf_data}:"";
-			DEBUG4("expand_livestatus_host: $host->{host_name} matched $host_name:$host->{state}");
+			DEBUG4("$host->{host_name} matched $host_name:$host->{state}");
 		} else {
-			DEBUG4("expand_livestatus_host: $host->{host_name} did not match $host_name");
+			DEBUG4("$host->{host_name} did not match $host_name");
 		}
 	}
-	DEBUG4("expand_livestatus_host returns " . ($#result+1)/5 . " results");
+	DEBUG4("returns " . ($#result+1)/5 . " results");
 	return @result;
 }
 
@@ -2671,7 +2673,7 @@ sub read_livestatus {
 		add_error(0,"read_livestatus: $Monitoring::Livestatus::ErrorMessage");
 		return undef;
 	}
-	DEBUG4("read_livestatus: $#{$livestatus} elements read");
+	DEBUG4("$#{$livestatus} elements read");
 	return $livestatus;
 }
 
@@ -2690,7 +2692,7 @@ sub get_snmp {
 		-translate=>$translate,
 	);
 	if (!defined $session) {
-		DEBUG3("get_snmp: error creating Net::SNMP session: $error");
+		DEBUG3("error creating Net::SNMP session: $error");
 		return (3,"error creating Net::SNMP session: $error");
 	}
 
@@ -2699,11 +2701,11 @@ sub get_snmp {
 	if (!defined $result) {
 		$error=$session->error();
 		$session->close();
-		DEBUG3("get_snmp: Net::SNMP session error: $error");
+		DEBUG3("Net::SNMP session error: $error");
 		return (3,"Net::SNMP session error: $error");
 	}
 
-	DEBUG3("get_snmp: result for $host($port)-$oid: $result->{$oid}");
+	DEBUG3("result for $host($port)-$oid: $result->{$oid}");
 	$session->close();
 
 	return (0,$result->{$oid});
@@ -2719,15 +2721,15 @@ sub eval_result {
 
 	#--- empty input?
 	if (! $input) {
-		DEBUG3("eval_result: empty input - nothing to do");
+		DEBUG3("empty input - nothing to do");
 		return ($UNKNOWN, "eval_result: invalid empty input");
 	}
 
 	#--- at runtime: substitute $MACRO$ macros and $STATES$
-	DEBUG4("eval_result: input before substituting macros: $input");
+	DEBUG4("input before substituting macros: $input");
 	$input=substitute_macros($input);
 	$input=substitute_states($input);
-	DEBUG4("eval_result: input after substituting macros: $input");
+	DEBUG4("input after substituting macros: $input");
 
 	#--- evaluate expression
 	my $result=eval "($input)";
@@ -2736,7 +2738,7 @@ sub eval_result {
 	if ($@) {
 		$message="Evaluation error in \'$input_org\': $@\n";
 		$message=~s/\n/ /g;
-		DEBUG4("eval_result: eval error $message");
+		DEBUG4("eval error $message");
 		return (-1,$message);
 	#--- return result
 	} else {
@@ -2879,25 +2881,25 @@ sub single_result_rating {
 
 		#--- no special settings for evaluation? then do not evaluete!
 		if (!$cmds[$no]{$def{llabel}{$state}}) {
-			DEBUG4("single_result_rating: no expression for $def{llabel}{$state} -> no evaluation");
+			DEBUG4("no expression for $def{llabel}{$state} -> no evaluation");
 			next;
 		} else {
-			DEBUG4("single_result_rating: expression found for $def{llabel}{$state}: >>>$cmds[$no]{$def{llabel}{$state}}<<<");
+			DEBUG4("expression found for $def{llabel}{$state}: >>>$cmds[$no]{$def{llabel}{$state}}<<<");
 		}
 
 		#my ($result,$message)=eval_result("\'$cmds[$no]{output}\'$cmds[$no]{$def{llabel}{$state}}");
 		my ($result,$message)=eval_result("$cmds[$no]{$def{llabel}{$state}}");
-		DEBUG4("single_result_rating: evaluating expression \'$cmds[$no]{$def{llabel}{$state}}\', result is $result");
+		DEBUG4("evaluating expression \'$cmds[$no]{$def{llabel}{$state}}\', result is $result");
 
 		if (! defined($result) || $result eq "") {
 			; # do nothing
 		} elsif ($result < 0) {
 			add_error(0,"single_result_rating: parsing error $message");
-			DEBUG4("single_result_rating: parsing error expresstion ($cmds[$no]{output}$cmds[$no]{$state})->($message)");
+			DEBUG4("parsing error expresstion ($cmds[$no]{output}$cmds[$no]{$state})->($message)");
 		} else {
 			$cmds[$no]{rc}=$state;
 			add_error($no,"Output matched rule \'$cmds[$no]{$def{llabel}{$state}}\' -> RC is set to $def{label}{$state}");
-			DEBUG4("single_result_rating: setting RC of cmds[$no] to $state");
+			DEBUG4("setting RC of cmds[$no] to $state");
 		}
 	}
 }
@@ -2997,7 +2999,7 @@ sub report_ascii {
 		my $output="printf " . $cmds[0]{fmtstr};
 	 	$output.="," . join(",",@{$cmds[0]{parms}}) if (defined($cmds[0]{parms}));
 		$output=substitute_macros($output);
-		DEBUG4("report_ascii: output [ head ] = \'$output\'");
+		DEBUG4("output [ head ] = \'$output\'");
 		eval($output);
 	} elsif ($opt{set}{report} & $DETAIL_NAGIOS2) {
 		print "$opt{set}{name} " if $opt{set}{name};
@@ -3038,7 +3040,7 @@ sub report_ascii {
 			my $output="printf " . $cmds[$no]{fmtstr};
 	 		$output.="," . join(",",@{$cmds[$no]{parms}}) if (defined($cmds[$no]{parms}));
 			$output=substitute_macros($output);
-			DEBUG4("report_ascii: output [ $cmds[$no]{name} ] = \'$output\'");
+			DEBUG4("output [ $cmds[$no]{name} ] = \'$output\'");
 			eval($output);
 			next;
 		}
@@ -3126,7 +3128,7 @@ sub report_html {
 		$output.="sprintf " . $cmds[0]{fmtstr};
 	 	$output.="," . join(",",@{$cmds[0]{parms}}) if (defined($cmds[0]{parms}));
 		$output=substitute_macros($output);
-		DEBUG4("report_html: output [ head ] =  \'$output\'");
+		DEBUG4("output [ head ] =  \'$output\'");
 		$output=eval($output);
 	} else {
 		#--- print header line (1): name, state, number of plugins
@@ -3203,7 +3205,7 @@ sub report_html {
 				$hostname=`uname -n`;
 			}
 			chomp($hostname);
-			DEBUG3("report_html: hostname is $hostname");
+			DEBUG3("hostname is $hostname");
 			my $pnp_url=substitute_macros($opt{set}{pnp_url});
 			my $image_path=substitute_macros($opt{set}{image_path});
 			$output.=sprintf "<td nowrap>%s</td>",
@@ -3226,7 +3228,7 @@ sub report_html {
 				$hostname=`uname -n`;
 			}
 			chomp($hostname);
-			DEBUG3("report_html: hostname is $hostname");
+			DEBUG3("hostname is $hostname");
 			my $pnp_url=substitute_macros($opt{set}{pnp_url});
 			my $image_path=substitute_macros($opt{set}{image_path});
 			DEBUG4(">>>$opt{set}{target}:$pnp_url:${hostname}:$cmds[$no]{name}:${hostname}:$cmds[$no]{name}:$image_path:$hostname:$cmds[$no]{name}<<<");
@@ -3264,13 +3266,13 @@ sub report_html {
 			my $notes_url=substitute_macros($opt{set}{notes_url});
 			$output.=sprintf "<td><A HREF=\'$notes_url\' TARGET=\'$opt{set}{target}\'>%s</A></td>", ($cmds[$no]{name}) ? $cmds[$no]{name} : "";
 		}
-		DEBUG3("report_html output:$cmds[$no]{output}");
+		DEBUG3("output:$cmds[$no]{output}");
 		DEBUG3("HTML check_multi recursive levels: " . scalar ($cmds[$no]{output}=~s/multi_table/multi_table/g));
 		if (defined($cmds[$no]{fmtstr})) {
 			my $tmp="sprintf " . $cmds[$no]{fmtstr};
 	 		$tmp.="," . join(",",@{$cmds[$no]{parms}}) if (defined($cmds[$no]{parms}));
 			$tmp=substitute_macros($tmp);
-			DEBUG4("report_html: output [ $cmds[$no]{name} ] = \'$tmp\'");
+			DEBUG4("output [ $cmds[$no]{name} ] = \'$tmp\'");
 			$tmp=eval($tmp);
 			$output.=sprintf "<td>%s</td>",
 					($tmp=~/^([^\n]+)\n(.*)/is)
@@ -3418,7 +3420,7 @@ sub report_xml {
 		my $output="sprintf " . $cmds[0]{fmtstr};
 	 	$output.="," . join(",",@{$cmds[0]{parms}}) if (defined($cmds[0]{parms}));
 		$output=substitute_macros($output);
-		DEBUG4("report_xml: output [ head ] = \'$output\'");
+		DEBUG4("output [ head ] = \'$output\'");
 		$xmlstr.=encode_xml(eval($output));
 	} else {
 		#--- print header line (2): summary for particular states
@@ -3492,7 +3494,7 @@ sub report_perfdata {
 	#--- report performance data?
 	if ($opt{set}{report} & $DETAIL_PERFORMANCE) {
 		my $perftmp="";
-		DEBUG3("report_perfdata (DETAIL_PERFORMANCE): name=" . ($opt{set}{name}) ? $opt{set}{name} : $MYSELF);
+		DEBUG3("(DETAIL_PERFORMANCE): name=" . ($opt{set}{name}) ? $opt{set}{name} : $MYSELF);
 		print "\|";
 		printf "%s::%s::plugins=%d time=%f ",
 			($opt{set}{name}) ? $opt{set}{name} : $MYSELF, $MYSELF,
@@ -3531,7 +3533,7 @@ sub report_perfdata {
 					}
 				}
 				$cmds[$no]{performance}="";
-				DEBUG4("report_perfdata before splitting: $perftmp");
+				DEBUG4("before splitting: $perftmp");
 				#--- preserve '::' as multi delimiter - replace all '::' with '_'
 				while ($perftmp=~/\s*([^=]+)=(\S+)\s*(.*)/) {
 					my $label=$1;
@@ -3539,7 +3541,7 @@ sub report_perfdata {
 					$perftmp=$3;
 
 					my @tmparr=split(/::/,$label);
-					DEBUG4("report_perfdata token before splitting: $label [0-$#tmparr]:" . join("|",@tmparr));
+					DEBUG4("token before splitting: $label [0-$#tmparr]:" . join("|",@tmparr));
 					if ($#tmparr > 1) {
 						$cmds[$no]{performance}.=shift(@tmparr)."::".shift(@tmparr)."::";
 						$cmds[$no]{performance}.=join("_",@tmparr);
@@ -3547,9 +3549,9 @@ sub report_perfdata {
 						$cmds[$no]{performance}.=$label;
 					}
 					$cmds[$no]{performance}.="=$data ";
-					DEBUG4("report_perfdata remaining perftmp: $perftmp");
+					DEBUG4("remaining perftmp: $perftmp");
 				}
-				DEBUG4("report_perfdata complete after splitting: $cmds[$no]{performance}");
+				DEBUG4("complete after splitting: $cmds[$no]{performance}");
 				print $cmds[$no]{performance};
 			}
 		}
@@ -3585,10 +3587,10 @@ sub parse_perfdata {
 
 	#--- accepting loose perfdata
 	if ($opt{set}{loose_perfdata}) {
-		DEBUG4("parse_perfdata: loose_perfdata=1");
+		DEBUG4("loose_perfdata=1");
 		#--- replace decimal comma with decimal point
 		if (defined($ENV{LANG}) && $ENV{LANG} =~ /de_DE/) {
-			DEBUG4("parse_perfdata: LANG is $ENV{LANG}, replacing commata by decimal points");
+			DEBUG4("LANG is $ENV{LANG}, replacing commata by decimal points");
 			($perfdata) =~ s/,/./g;
 		}
 	}
@@ -3598,21 +3600,21 @@ sub parse_perfdata {
 	#---
 	#--- loop over perfdata
 	while ($perfdata) {
-		DEBUG4("parse_perfdata: parsing perfdata:$perfdata");	
+		DEBUG4("parsing perfdata:$perfdata");	
 		#--- label w/ \'
 		if ($perfdata=~/^\s*(\'[^']*\')=([^ ]+)(.*)/) {
 			$label=$1;
 			$data=$2;
 			$perfdata=$3;
-			DEBUG4("parse_perfdata: parsed perfdata -'label':$1 data:$2 rest:$3");	
+			DEBUG4("parsed perfdata -'label':$1 data:$2 rest:$3");	
 		#--- label w/o \'
 		} elsif ($perfdata=~/^\s*([^\s=']+)=([^ ]+)(.*)/) {
 			$label=$1;
 			$data=$2;
 			$perfdata=$3;
-			DEBUG4("parse_perfdata: parsed perfdata - label:$1 data:$2 rest:$3");	
+			DEBUG4("parsed perfdata - label:$1 data:$2 rest:$3");	
 		} else {
-			DEBUG2("parse_perfdata: general parsing error - invalid perfdata");	
+			DEBUG2("general parsing error - invalid perfdata");	
 			return "general error in '$perfdata'";
 		}
 		$perfdata=~s/^\s+//; $perfdata=~s/\s+$//;
@@ -3627,10 +3629,10 @@ sub parse_perfdata {
 
 		#--- invalid perfdata with trailing ';' after max value
 		if (($data=~tr/;//)>=5) {
-			DEBUG2("parse_perfdata: invalid ';' after max value $max");	
+			DEBUG2("invalid ';' after max value $max");	
 			return "error in '$data': invalid ';' after max value $max" if (! $opt{set}{loose_perfdata});
 		} else {
-			DEBUG4("parse_perfdata: number of ';' ok in $data: " . scalar($data=~tr/;//));	
+			DEBUG4("number of ';' ok in $data: " . scalar($data=~tr/;//));	
 		}
 
 		$error.= "$label: bad value \'$value\' in data \'$data\' " if ($value && $value !~/^[-0-9.]+$/);
@@ -3643,7 +3645,7 @@ sub parse_perfdata {
 
 		#--- done: perfdata is ok
 	}
-	DEBUG3("parse_perfdata: no errors found");	
+	DEBUG3("no errors found");	
 	return undef;
 }
 
@@ -3668,10 +3670,10 @@ sub report_service_definition {
 		next if ($cmds[$no]{type} eq "eval");
 		my @svc=@tpl;
 		foreach my $line (@svc) {
-			DEBUG4("report_service_definition: before substitution: $line");
+			DEBUG4("before substitution: $line");
 			$line=~s/THIS/$no/g;
 			$line=substitute_macros($line);
-			DEBUG4("report_service_definition: after substitution: $line");
+			DEBUG4("after substitution: $line");
 			$output.=$line;
 		}
 	}
@@ -3740,13 +3742,13 @@ sub report_send_nsca {
 		"-to $opt{set}{send_nsca_timeout} " .
 		"-d \'$opt{set}{send_nsca_delim}\' " .
 		"-c $opt{set}{send_nsca_cfg}";
-	DEBUG3("report_send_nsca: cmdline is \'$nsca_cmdline\'");
+	DEBUG3("cmdline is \'$nsca_cmdline\'");
 	for (my $i=1; $i<=$#cmds; $i++) {
 
 		#--- service will be suppressed if its mentioned in '-s suppress_service=<service1>,<service2>,...
 		if ($opt{set}{suppress_service} &&
 		    $opt{set}{suppress_service}=~/\b$cmds[$i]{name}\b/i) {
-			DEBUG2("report_send_nsca: checkresult file of [ $cmds[$i]{name} ] will be suppressed");
+			DEBUG2("checkresult file of [ $cmds[$i]{name} ] will be suppressed");
 			next;
 		}
 		
@@ -3784,7 +3786,7 @@ sub report_checkresult_file {
 		#--- service will be suppressed if its mentioned in '-s suppress_service=<service1>,<service2>,...
 		if ($opt{set}{suppress_service} &&
 		    $opt{set}{suppress_service}=~/\b$cmds[$i]{name}\b/i) {
-			DEBUG2("report_checkresult_file: checkresult file of [ $cmds[$i]{name} ] will be suppressed");
+			DEBUG2("checkresult file of [ $cmds[$i]{name} ] will be suppressed");
 			next;
 		}
 
@@ -3806,7 +3808,7 @@ sub report_checkresult_file {
 			"return_code=".$cmds[$i]{rc},
 			"output=".$escaped_output,
 		);
-		DEBUG4("report_checkresults_file: file content is >$content<");
+		DEBUG4("file content is >$content<");
 		print $th $content;
 		close $th;
 
@@ -3814,7 +3816,7 @@ sub report_checkresult_file {
 		if (!open(OKFILE, ">$tf.ok")) {
 			 add_error(0,"report_checkresult_file: Cannot write OK file to $tf.ok:$!");
 		} else {
-			DEBUG4("report_checkresult_file: $tf.ok written");
+			DEBUG4("$tf.ok written");
 			close OKFILE;
 		}
 	}
@@ -3847,7 +3849,7 @@ sub checkresult {
 			#--- perform only allowed (= already defined) pairs
 			if (exists($att{$key})) {
 				$att{$key}=$val;
-				DEBUG4("checkresult: add key $key ($val) to attributes");
+				DEBUG4("add key $key ($val) to attributes");
 			} else {
 				add_error(0,"checkresult: unknown attribute $key");
 			}
@@ -3897,10 +3899,10 @@ sub check_and_create_service_definition {
 			"$opt{set}{feed_passive_dir}/$hostname/${service_definition}.cfg", 
 			($content)
 		);
-		DEBUG4("check_and_create_service_definition: created service definition file for service ${service_definition}");
+		DEBUG4("created service definition file for service ${service_definition}");
 		return 1;
 	} else {
-		DEBUG4("check_and_create_service_definition: service definition file $opt{set}{feed_passive_dir}/$hostname/${service_definition}.cfg already there");
+		DEBUG4("service definition file $opt{set}{feed_passive_dir}/$hostname/${service_definition}.cfg already there");
 		return 0;
 	}
 }
@@ -3936,7 +3938,7 @@ if ($#cmds<1) {
 	$rc{head}=$opt{set}{no_checks_rc};
 	$rc{expr}[$OK]="0==1" if ($opt{set}{no_checks_rc} != $OK);
 } else {
-	DEBUG4("main: running " . ($#cmds - 1) . " child checks");
+	DEBUG4("running " . ($#cmds - 1) . " child checks");
 }
 
 #--- create unique hash for check
