@@ -269,7 +269,7 @@ my @cmds=(
 	#--- 0: parent check
 	{
 		command		=> "none",	# no command for parent
-		critical	=> undef,	# state definition: CRITICAL
+		critical	=> "",		# state definition: CRITICAL
 		endtime		=> 0.0,		# end timestamp
 		error		=> [ ],		# stderr and other errors
 		hash		=> "",		# hash for all child checks
@@ -277,7 +277,7 @@ my @cmds=(
 		name		=> "",		# no predefined name for parent (-n option)
 		nchecks		=> 0,		# number of child checks (displayed)
 		number		=> 0,		# current number of check (0 for head)
-		ok		=> undef,	# state definition: OK
+		ok		=> "",		# state definition: OK
 		output		=> "",		# output
 		rc		=> $OK,		# return code
 		runtime		=> 0.0,		# runtime in seconds
@@ -285,8 +285,8 @@ my @cmds=(
 		starttime	=> 0.0,		# start timestamp
 		timeouttime	=> 0.0,		# timeout timestamp
 		type		=> "head",	# this is the master of disaster
-		unknown		=> undef,	# state definition: UNKNOWN
-		warning		=> undef,	# state definition: WARNING
+		unknown		=> "",		# state definition: UNKNOWN
+		warning		=> "",		# state definition: WARNING
 	}
 	#--- elements 1..x will be added by parse_lines / parse_header
 );
@@ -488,7 +488,7 @@ sub process_input {
 	#--- getting commands - either per command file or per command parameter
 
 	#--- none of them? return UNKNOWN
-	if (! $opt{filename}[0] && ! $opt{execute}[0] && !$stdin) {
+	if (! $opt{filename}[0] && ! $opt{execute}[0] && !$stdin && (!$opt{set}{persistent})) {
 		print "$MYSELF error: no config file(s) or command parameters specified\n";
 		short_usage();
 		return $UNKNOWN;
@@ -656,11 +656,12 @@ sub process_input {
 
 			#--- read persistent data
 			my $in;
-			if (-f "$opt{set}{tmp_dir}/${MYSELF}_$cmds[0]{key}.xml") {
-				DEBUG3("process_input: reading file $opt{set}{tmp_dir}/${MYSELF}_$cmds[0]{key}.xml");
-				$in=XML::Simple::XMLin("$opt{set}{tmp_dir}/${MYSELF}_$cmds[0]{key}.xml",KeyAttr => [ ]);
+			my @xmlfiles=dir_entries("$opt{set}{tmp_dir}/$opt{set}{HOSTNAME}_$opt{set}{SERVICEDESC}",1);
+			if ($#xmlfiles == 1) {
+				DEBUG3("process_input: reading file $xmlfiles[0].xml");
+				$in=XML::Simple::XMLin("$opt{set}{tmp_dir}/$opt{set}{HOSTNAME}_$opt{set}{SERVICEDESC}/".$xmlfiles[0].".xml",KeyAttr => [ ]);
 			} else {
-				DEBUG2("process_input: persistency file $opt{set}{tmp_dir}/${MYSELF}_$cmds[0]{key}.xml not found.");
+				DEBUG2("process_input: no persistency file found in $opt{set}{tmp_dir}/$opt{set}{HOSTNAME}_$opt{set}{SERVICEDESC}");
 			}
 
 			#--- read persistent data
@@ -948,6 +949,7 @@ sub set_alarm {
 sub my_hash {
 	my $string=shift;
 	my $hash=crypt($string,"hash_$MYSELF");
+	$hash=~s/(.)/sprintf("%02x", ord($1))/seg;
 	DEBUG3("my_hash: inputstring \'$string\' -> $hash");
 	return $hash;
 }
@@ -977,6 +979,24 @@ sub my_mkdir {
 		}
 	}
 	return 1;
+}
+
+#---
+#--- return list of n files from a directory
+#---
+sub dir_entries {
+	my $dir=shift;
+	my $n=shift;
+
+	#--- open directory
+	opendir(my $dirhandle, $dir) || die "can't opendir $dir: $!";
+
+	#--- read all existing files 
+	my @entries = grep { ! /^\./ && -f "$dir/$_" } readdir($dirhandle);
+	closedir $dirhandle;
+
+	#--- return last n files
+	return (sort { $b<=>$a } @entries)[0..$n-1];
 }
 
 
@@ -1569,10 +1589,10 @@ sub parse_header {
 		$cmds[$i]{command}=$cmd;
 		$cmds[$i]{plugin}=$plugin;
 		$cmds[$i]{pplugin}=($key)?$key:$plugin;
-		$cmds[$i]{ok}=undef;
-		$cmds[$i]{warning}=undef;
-		$cmds[$i]{critical}=undef;
-		$cmds[$i]{unknown}=undef;
+		$cmds[$i]{ok}="";
+		$cmds[$i]{warning}="";
+		$cmds[$i]{critical}="";
+		$cmds[$i]{unknown}="";
 		$cmds[$i]{rc}=$OK;
 		$cmds[$i]{displayed}=1;
 		$cmds[$i]{output}="";
@@ -1601,10 +1621,10 @@ sub parse_header {
 		$cmds[$i]{command}=$cmd;
 		$cmds[$i]{plugin}=$type;
 		$cmds[$i]{pplugin}="";
-		$cmds[$i]{ok}=undef;
-		$cmds[$i]{warning}=undef;
-		$cmds[$i]{critical}=undef;
-		$cmds[$i]{unknown}=undef;
+		$cmds[$i]{ok}="";
+		$cmds[$i]{warning}="";
+		$cmds[$i]{critical}="";
+		$cmds[$i]{unknown}="";
 		$cmds[$i]{rc}=$OK;
 		$cmds[$i]{displayed}=1;
 		$cmds[$i]{output}="";
@@ -1626,10 +1646,10 @@ sub parse_header {
 		$cmds[$i]{command}=$cmd;
 		$cmds[$i]{plugin}="eval";
 		$cmds[$i]{pplugin}=($key)?$key:"eval";
-		$cmds[$i]{ok}=undef;
-		$cmds[$i]{warning}=undef;
-		$cmds[$i]{critical}=undef;
-		$cmds[$i]{unknown}=undef;
+		$cmds[$i]{ok}="";
+		$cmds[$i]{warning}="";
+		$cmds[$i]{critical}="";
+		$cmds[$i]{unknown}="";
 		$cmds[$i]{rc}=$OK;
 		$cmds[0]{nallchecks}++;
 		$cmds[$i]{displayed}=0;
@@ -1658,10 +1678,10 @@ sub parse_header {
 		$cmds[$i]{command}=$cmd;
 		$cmds[$i]{plugin}="eval";
 		$cmds[$i]{pplugin}=($key)?$key:"eval";
-		$cmds[$i]{ok}=undef;
-		$cmds[$i]{warning}=undef;
-		$cmds[$i]{critical}=undef;
-		$cmds[$i]{unknown}=undef;
+		$cmds[$i]{ok}="";
+		$cmds[$i]{warning}="";
+		$cmds[$i]{critical}="";
+		$cmds[$i]{unknown}="";
 		$cmds[$i]{rc}=$OK;
 		$cmds[$i]{displayed}=1;
 		$cmds[$i]{output}="";
@@ -1710,10 +1730,10 @@ sub parse_header {
 				$cmds[$i]{command}=$cmd;
 				$cmds[$i]{plugin}=undef;
 				$cmds[$i]{pplugin}=undef;
-				$cmds[$i]{ok}=undef;
-				$cmds[$i]{warning}=undef;
-				$cmds[$i]{critical}=undef;
-				$cmds[$i]{unknown}=undef;
+				$cmds[$i]{ok}="";
+				$cmds[$i]{warning}="";
+				$cmds[$i]{critical}="";
+				$cmds[$i]{unknown}="";
 				$cmds[$i]{displayed}=1;
 				$cmds[$i]{runtime}=0;
 				$cmds[$i]{error}=[];
@@ -1751,10 +1771,10 @@ sub parse_header {
 				$cmds[$i]{command}=$cmd;
 				$cmds[$i]{plugin}=undef;
 				$cmds[$i]{pplugin}=undef;
-				$cmds[$i]{ok}=undef;
-				$cmds[$i]{warning}=undef;
-				$cmds[$i]{critical}=undef;
-				$cmds[$i]{unknown}=undef;
+				$cmds[$i]{ok}="";
+				$cmds[$i]{warning}="";
+				$cmds[$i]{critical}="";
+				$cmds[$i]{unknown}="";
 				$cmds[$i]{displayed}=1;
 				$cmds[$i]{runtime}=0;
 				$cmds[$i]{error}=[];
@@ -1803,10 +1823,10 @@ sub parse_header {
 		$cmds[$i]{plugin}="snmp";
 		$cmds[$i]{pplugin}=($key)?$key:"snmp";
 		$cmds[$i]{rc}=$OK;
-		$cmds[$i]{ok}=undef;
-		$cmds[$i]{warning}=undef;
-		$cmds[$i]{critical}=undef;
-		$cmds[$i]{unknown}=undef;
+		$cmds[$i]{ok}="";
+		$cmds[$i]{warning}="";
+		$cmds[$i]{critical}="";
+		$cmds[$i]{unknown}="";
 		$cmds[$i]{displayed}=1;
 		$cmds[$i]{output}="";
 		$cmds[$i]{error}=[];
@@ -1843,10 +1863,10 @@ sub parse_header {
 				$cmds[$i]{command}=$cmd;
 				$cmds[$i]{plugin}=undef;
 				$cmds[$i]{pplugin}=undef;
-				$cmds[$i]{ok}=undef;
-				$cmds[$i]{warning}=undef;
-				$cmds[$i]{critical}=undef;
-				$cmds[$i]{unknown}=undef;
+				$cmds[$i]{ok}="";
+				$cmds[$i]{warning}="";
+				$cmds[$i]{critical}="";
+				$cmds[$i]{unknown}="";
 				$cmds[$i]{rc}=$OK;
 				$cmds[$i]{displayed}=1;
 				$cmds[$i]{output}="";
@@ -1882,10 +1902,10 @@ sub parse_header {
 				$cmds[$i]{command}=$cmd;
 				$cmds[$i]{plugin}=undef;
 				$cmds[$i]{pplugin}=undef;
-				$cmds[$i]{ok}=undef;
-				$cmds[$i]{warning}=undef;
-				$cmds[$i]{critical}=undef;
-				$cmds[$i]{unknown}=undef;
+				$cmds[$i]{ok}="";
+				$cmds[$i]{warning}="";
+				$cmds[$i]{critical}="";
+				$cmds[$i]{unknown}="";
 				$cmds[$i]{rc}=$OK;
 				$cmds[$i]{displayed}=1;
 				$cmds[$i]{output}="";
@@ -2222,10 +2242,10 @@ sub exec_command {
 					$top[$i]{command}=$cmds[$no]{command};
 					$top[$i]{plugin}=$cmds[$no]{type};
 					$top[$i]{pplugin}=$cmds[$no]{plugin};
-					$top[$i]{ok}=undef;
-					$top[$i]{warning}=undef;
-					$top[$i]{critical}=undef;
-					$top[$i]{unknown}=undef;
+					$top[$i]{ok}="";
+					$top[$i]{warning}="";
+					$top[$i]{critical}="";
+					$top[$i]{unknown}="";
 					$top[$i]{rc}=$OK;
 					$top[$i]{number}=$no+$i;
 					$top[$i]{displayed}=1;
@@ -2858,7 +2878,7 @@ sub single_result_rating {
 	foreach my $state (sort numerically keys %{$def{s2r}}) {
 
 		#--- no special settings for evaluation? then do not evaluete!
-		if (!defined($cmds[$no]{$def{llabel}{$state}})) {
+		if (!$cmds[$no]{$def{llabel}{$state}}) {
 			DEBUG4("single_result_rating: no expression for $def{llabel}{$state} -> no evaluation");
 			next;
 		} else {
@@ -2902,18 +2922,20 @@ sub report_all {
 		#}
 		module("XML::Simple",1);
 
-		my $pdir="$opt{set}{tmp_dir}/".valid_dir($cmds[0]{hash});
-		if (! my_mkdir("$pdir", "0755")) {
+		#my $pdir="$opt{set}{tmp_dir}/".valid_dir($cmds[0]{hash});
+		my $pdir="$opt{set}{tmp_dir}/$opt{set}{HOSTNAME}_$opt{set}{SERVICEDESC}";
+		if (! my_mkdir("$pdir", $opt{set}{tmp_dir_permissions})) {
 			add_error(0,"report_all: cannot create persistent directory $pdir:$!");
 		} else {
 			DEBUG1("pdir:$pdir MYSELF:$MYSELF starttime:".readable_sortable_timestamp($cmds[0]{starttime})." name:$cmds[0]{names}");
 			writefile(
-				">$pdir/${MYSELF}_".readable_sortable_timestamp($cmds[0]{starttime})."$cmds[0]{names}.xml",
+				">$pdir/".time.".xml",
 				XML::Simple::XMLout(
 					$check_multi,
 					NoAttr=>1,
 					KeepRoot=>1,
 					RootName=>"$MYSELF",
+					SuppressEmpty=>undef,
 				)
 			);
 		}

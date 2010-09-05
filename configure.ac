@@ -80,7 +80,7 @@ AC_ARG_WITH(extended_perfdata,		[  --with-extended_perfdata=<0|1>           prov
 AC_ARG_WITH(extinfo_in_status,		[  --with-extinfo_in_status=<0|1>           display check_multi output in status.cgi],extinfo_in_status=$withval,extinfo_in_status=0)
 AC_ARG_WITH(feed_passive_autocreate,	[  --with-feed_passive_autocreate=<0|1>>    flag, if feed passive service definitions should be created automatically (default:1)],feed_passive_autocreate=$withval,feed_passive_autocreate="1")
 AC_ARG_WITH(feed_passive_dir,		[  --with-feed_passive_dir=<path>           directory for automatically created feed passive service definitions (default:${sysconfdir}/check_multi/feed_passive)],feed_passive_dir=$withval,feed_passive_dir="${sysconfdir}/check_multi/feed_passive")
-AC_ARG_WITH(feed_passive_dir_permissions,[  --with-feed_passive_dir_permissions=<octal perms> permissions for feed passive config dir (default:0755)],feed_passive_dir_permissions=$withval,feed_passive_dir_permissions="0750")
+AC_ARG_WITH(feed_passive_dir_permissions,[  --with-feed_passive_dir_permissions=<octal perms> permissions for feed passive config dir (default:0750)],feed_passive_dir_permissions=$withval,feed_passive_dir_permissions="0750")
 AC_ARG_WITH(findbin,			[  --with-findbin=<0|1>                     use Perl module FindBin for addressing plugins (default:1)],findbin=$withval,findbin=1)
 AC_ARG_WITH(file_extension,		[  --with-file_extension=<ext>              default extension for check_multi command files (default:"cmd")],file_extension=$withval,file_extension="cmd")
 AC_ARG_WITH(ignore_missing_cmd_file,	[  --with-ignore_missing_cmd_file=<0|1>     if missing cmd files should be ignored (default:0)],ignore_missing_cmd_file=$withval,ignore_missing_cmd_file="0")
