@@ -7,19 +7,21 @@
 use strict;
 use Test::More;
 use NPTest;
+use testopts;
 
 my $t;
 
 plan tests => 12;
 
 my $result;
-my $testopts="-s status_dat=status.dat -s dont_be_paranoid=1";
+#my $testopts="-s status_dat=status.dat -s dont_be_paranoid=1";
+my $testopts=testopts::get_testopts." -s status_dat=status.dat";
 
 #-------------------------------------------------------------------------------
 #--- service not found ---------------------------------------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi -x 'statusdat [ eins ] = host_not_there:service_not_there' $testopts",
+	"@PERL@ ../check_multi $testopts -x 'statusdat [ eins ] = host_not_there:service_not_there'",
 );
 is(
 	$result->return_code, 
@@ -36,7 +38,7 @@ like(
 #--- services all --------------------------------------------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi -x 'statusdat [ svc ] = /.*/:/.*/' $testopts",
+	"@PERL@ ../check_multi $testopts -x 'statusdat [ svc ] = /.*/:/.*/'",
 );
 is(
 	$result->return_code, 
@@ -53,7 +55,7 @@ like(
 #--- service Total Processes ---------------------------------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi -x 'statusdat [ svc ] = localhost:Total Processes' $testopts",
+	"@PERL@ ../check_multi $testopts -x 'statusdat [ svc ] = localhost:Total Processes'",
 );
 is(
 	$result->return_code, 
@@ -70,7 +72,7 @@ like(
 #--- service Total Processes REGEX ---------------------------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi -x 'statusdat [ svc ] = localhost:/Processes/' $testopts",
+	"@PERL@ ../check_multi $testopts -x 'statusdat [ svc ] = localhost:/Processes/'",
 );
 is(
 	$result->return_code, 
@@ -87,7 +89,7 @@ like(
 #--- hosts all -----------------------------------------------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi -x 'statusdat [ host ] = /.*/' $testopts",
+	"@PERL@ ../check_multi $testopts -x 'statusdat [ host ] = /.*/'",
 );
 is(
 	$result->return_code, 
@@ -104,7 +106,7 @@ like(
 #--- host localhost ------------------------------------------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi -x 'statusdat [ host ] = localhost' $testopts",
+	"@PERL@ ../check_multi $testopts -x 'statusdat [ host ] = localhost'",
 );
 is(
 	$result->return_code, 

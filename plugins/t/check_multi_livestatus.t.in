@@ -7,6 +7,7 @@
 use strict;
 use Test::More;
 use NPTest;
+use testopts;
 
 my $t;
 
@@ -34,13 +35,14 @@ unless (eval "require Monitoring::Livestatus;1") {
 plan tests => 6;
 
 my $result;
-my $testopts="-s dont_be_paranoid=1";
+#my $testopts="-s dont_be_paranoid=1";
+my $testopts=testopts::get_testopts;
 
 #-------------------------------------------------------------------------------
 #--- all hosts -----------------------------------------------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi -x 'livestatus [ eins ] = .*' $testopts",
+	"@PERL@ ../check_multi $testopts -x 'livestatus [ eins ] = .*'",
 );
 like(
 	$result->output,
@@ -51,7 +53,7 @@ like(
 #--- all services---------------------------------------------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi -x 'livestatus [ eins ] = .*:.*' $testopts",
+	"@PERL@ ../check_multi $testopts -x 'livestatus [ eins ] = .*:.*'",
 );
 like(
 	$result->output,
@@ -62,7 +64,7 @@ like(
 #--- host not found ------------------------------------------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi -x 'livestatus [ eins ] = host_not_existing' $testopts",
+	"@PERL@ ../check_multi $testopts -x 'livestatus [ eins ] = host_not_existing'",
 );
 is(
 	$result->return_code, 
@@ -78,7 +80,7 @@ like(
 #--- service not found ---------------------------------------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi -x 'livestatus [ eins ] = host_not_existing:service_not_existing' $testopts",
+	"@PERL@ ../check_multi $testopts -x 'livestatus [ eins ] = host_not_existing:service_not_existing'",
 );
 is(
 	$result->return_code, 

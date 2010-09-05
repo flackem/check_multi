@@ -7,6 +7,7 @@
 use strict;
 use Test::More;
 use NPTest;
+use testopts;
 
 my $t;
 
@@ -32,13 +33,14 @@ unless (eval "require XML::Simple;1") {
 plan tests => 2;
 
 my $result;
-my $testopts="-s dont_be_paranoid=1";
+#my $testopts="-s dont_be_paranoid=1";
+my $testopts=testopts::get_testopts;
 
 #-------------------------------------------------------------------------------
 #--- check_multi feeds check_multi ---------------------------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi -x 'command [ procs ] = echo \"PROCS OK: 99 processes\"' -r 256 $testopts | @PERL@ ../check_multi -r 1 $testopts",
+	"@PERL@ ../check_multi $testopts -x 'command [ procs ] = echo \"PROCS OK: 99 processes\"' -r 256 | @PERL@ ../check_multi $testopts -r 1",
 );
 is(
 	$result->return_code, 

@@ -7,6 +7,7 @@
 use strict;
 use Test::More;
 use NPTest;
+use testopts;
 
 my $t;
 
@@ -37,7 +38,8 @@ if (-d $test_dir) {
 plan tests => 6;
 
 my $result;
-my $testopts="-s dont_be_paranoid=1";
+#my $testopts="-s dont_be_paranoid=1";
+my $testopts=testopts::get_testopts;
 
 sub read_checkresults_file {
 	my $file=`ls -1 $test_dir/???????`; chomp($file);
@@ -58,7 +60,7 @@ sub read_checkresults_file {
 #--- content of checkresults file-----------------------------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi -x 'command [ procs ] = echo \"PROCS OK: 99 processes\"' $testopts -s checkresults_dir=$test_dir -r 8192",
+	"@PERL@ ../check_multi $testopts -x 'command [ procs ] = echo \"PROCS OK: 99 processes\"' -s checkresults_dir=$test_dir -r 8192",
 );
 is(
 	$result->return_code, 
@@ -81,7 +83,7 @@ like(
 #--- empty check should return (No output returned from plugin) ----------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi -x 'command [ empty ] = (echo; exit 3)' $testopts -s checkresults_dir=$test_dir -r 8193",
+	"@PERL@ ../check_multi $testopts -x 'command [ empty ] = (echo; exit 3)' -s checkresults_dir=$test_dir -r 8193",
 );
 is(
 	$result->return_code, 
