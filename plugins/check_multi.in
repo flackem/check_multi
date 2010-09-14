@@ -318,6 +318,8 @@ my $check_multi={
 sub process_input {
 
 	my @SAVEARGV=@ARGV;
+	my $stdin="";
+
 	#--- check version of modules
 	if ($Getopt::Long::VERSION < 2.27) {
 		print "Error: module Getopt::Long version $Getopt::Long::VERSION is too old, minimum version is 2.27\n";
@@ -376,72 +378,6 @@ sub process_input {
 		return $UNKNOWN;
 	}
 
-	#--- only read STDIN if feeded by a PIPE, otherwise it would block when empty
-	my $stdin="";
-	if (-p STDIN) {
-		while (<STDIN>) { $stdin.=$_; }
-	} else {
-		DEBUG3("no STDIN pipe found");
-	}
-	if ($stdin) {
-		DEBUG3("found <STDIN> >$stdin<");
-
-		#--- do we have input from check_multi XML report mode? (check_multi as filter)
-		if ($stdin=~/check_multi_xml/) {
-			#--- try to load module XML::Simple and bail out if not successful
-			module("XML::Simple",1);
-
-			#--- read in XML data and feed cmds structure
-			my $in=XML::Simple::XMLin(
-				$stdin,
-				KeyAttr=>["CHILD"=>"no"],	# index: child no
-				ForceArray=>["CHILD"],		# force array also for one child
-				SuppressEmpty=>"",		# if empty, add "" instead of {} empty hash
-			);
-				
-			if (module("Data::Dumper")) {
-				DEBUG3("Data::Dumper available");
-				DEBUG3("XML input after XMLin:\n" . Dumper($in));
-			} else {
-				$opt{set}{test}=0;
-				DEBUG2("Data::Dumper not available");
-			}
-
-			if (exists($in->{PARENT})) {
-				#--- restore some values from parent
-				$cmds[0]{nchecks}=$in->{PARENT}->{nchecks};
-				$cmds[0]{nallchecks}=$in->{PARENT}->{nallchecks};
-
-				#--- child values
-				for my $i (keys %{$in->{PARENT}->{CHILD}}) {
-					$cmds[$i]{no}=$i; # index itself as 'no'
-					$cmds[$i]{feeded}=1; # mark this cmd as feeded
-					foreach my $att (keys %{$in->{PARENT}->{CHILD}->{$i}}) {
-						$cmds[$i]{$att}=$in->{PARENT}->{CHILD}->{$i}->{$att};
-					}
-				}
-			} else {
-				#--- child values
-				for my $no (keys %{$in->{$MYSELF}->{CHILD}}) {
-					$cmds[$no]{no}=$no;	# index itself as 'no'
-					$cmds[$no]{feeded}=1;	# mark this cmd as feeded
-					foreach my $att (keys %{$in->{$MYSELF}->{CHILD}->{$no}}) {
-						$cmds[$no]{$att}=$in->{$MYSELF}->{CHILD}->{$no}->{$att};
-					}
-					$ENV{"MULTI_${no}_NAME"}="$cmds[$no]{name}";
-					$ENV{"MULTI_${no}_STATE"}="$cmds[$no]{rc}";
-					$ENV{"MULTI_${no}_LABEL"}="$def{label}{$cmds[$no]{rc}}";
-				}
-			}
-			DEBUG3("\@cmds after filling from XML input\n" . Dumper(\@cmds));
-		} elsif ($stdin=~/($opt{cmdregex})\s*\[.*\]\s*=/) {
-			DEBUG3("command file in STDIN detected");
-			push @{$opt{execute}},split(/\n/,$stdin);
-		}
-	} else {
-		DEBUG3("no <STDIN> found");
-	}
-
 	#--- determine some settings (user,hostname)
 	$opt{set}{uid}=$<;
 	if ($^O=~/Win32/) {
@@ -487,13 +423,6 @@ sub process_input {
 	#---
 	#--- getting commands - either per command file or per command parameter
 
-	#--- none of them? return UNKNOWN
-	if (! $opt{filename}[0] && ! $opt{execute}[0] && !$stdin && (!$opt{set}{persistent})) {
-		print "$MYSELF error: no config file(s) or command parameters specified\n";
-		short_usage();
-		return $UNKNOWN;
-	}
-
 	#--- allowed characters: 'a-zA-Z0-9_-'
 	if ($opt{set}{name}!~/^[\w-]*$/) {
 		print "$MYSELF error: name \'$opt{set}{name}\' invalid - using non allowed characters (allowed are A-Za-z0-9_-)\n";
@@ -503,8 +432,66 @@ sub process_input {
 	#--- loop over filename / URL / directory array
 	for (my $i=0;$i<@{$opt{filename}}; $i++) {
 
-		#--- 1. filename URL found
-		if ($opt{filename}[$i]=~/\/\//) {
+
+		#--- only read STDIN if feeded by a PIPE, otherwise it would block when empty
+		if ($opt{filename}[$i]=~/^-$/) {
+			while (<STDIN>) { $stdin.=$_; }
+			DEBUG3("found <STDIN> >$stdin<");
+	
+			#--- do we have input from check_multi XML report mode? (check_multi as filter)
+			if ($stdin=~/check_multi_xml/) {
+				#--- try to load module XML::Simple and bail out if not successful
+				module("XML::Simple",1);
+	
+				#--- read in XML data and feed cmds structure
+				my $in=XML::Simple::XMLin(
+					$stdin,
+					KeyAttr=>["CHILD"=>"no"],	# index: child no
+					ForceArray=>["CHILD"],		# force array also for one child
+					SuppressEmpty=>"",		# if empty, add "" instead of {} empty hash
+				);
+					
+				if (module("Data::Dumper")) {
+					DEBUG3("Data::Dumper available");
+					DEBUG3("XML input after XMLin:\n" . Dumper($in));
+				} else {
+					$opt{set}{test}=0;
+					DEBUG2("Data::Dumper not available");
+				}
+	
+				if (exists($in->{PARENT})) {
+					#--- restore some values from parent
+					$cmds[0]{nchecks}=$in->{PARENT}->{nchecks};
+					$cmds[0]{nallchecks}=$in->{PARENT}->{nallchecks};
+	
+					#--- child values
+					for my $i (keys %{$in->{PARENT}->{CHILD}}) {
+						$cmds[$i]{no}=$i; # index itself as 'no'
+						$cmds[$i]{feeded}=1; # mark this cmd as feeded
+						foreach my $att (keys %{$in->{PARENT}->{CHILD}->{$i}}) {
+							$cmds[$i]{$att}=$in->{PARENT}->{CHILD}->{$i}->{$att};
+						}
+					}
+				} else {
+					#--- child values
+					for my $no (keys %{$in->{$MYSELF}->{CHILD}}) {
+						$cmds[$no]{no}=$no;	# index itself as 'no'
+						$cmds[$no]{feeded}=1;	# mark this cmd as feeded
+						foreach my $att (keys %{$in->{$MYSELF}->{CHILD}->{$no}}) {
+							$cmds[$no]{$att}=$in->{$MYSELF}->{CHILD}->{$no}->{$att};
+						}
+						$ENV{"MULTI_${no}_NAME"}="$cmds[$no]{name}";
+						$ENV{"MULTI_${no}_STATE"}="$cmds[$no]{rc}";
+						$ENV{"MULTI_${no}_LABEL"}="$def{label}{$cmds[$no]{rc}}";
+					}
+				}
+				DEBUG3("\@cmds after filling from XML input\n" . Dumper(\@cmds));
+			} elsif ($stdin=~/($opt{cmdregex})\s*\[.*\]\s*=/) {
+				DEBUG3("command file in STDIN detected");
+				push @{$opt{execute}},split(/\n/,$stdin);
+			}
+		#--- 2. filename URL found
+		} elsif ($opt{filename}[$i]=~/\/\//) {
 			DEBUG3("http/ftp URL specified: $opt{filename}[$i]");
 
 			#--- LWP module NOT loaded?
@@ -565,6 +552,14 @@ sub process_input {
 			}
 		}
 	}
+
+	#--- none of them? return UNKNOWN
+	if (! $opt{filename}[0] && ! $opt{execute}[0] && !$stdin && (!$opt{set}{persistent})) {
+		print "$MYSELF error: no config file(s) or command parameters specified\n";
+		short_usage();
+		return $UNKNOWN;
+	}
+
 
 	#--- report option candy - allow speaking strings '1+2+4+8' instead of bare '15'
 	if ($opt{set}{report}=~/[0-9+]/) {
