@@ -52,6 +52,10 @@ MAILBIN="$NAGIOSDIR/libexec/mailx"          # path to MIME capable mail client
 #
 #--- no adoptions necessary from here -----------------------------------------------
 #
+#--- special test: if HTML is included in SERVICEOUTPUT, split this and add it to the attachment later
+NAGIOS_LONGSERVICEOUTPUT="`echo \"$NAGIOS_SERVICEOUTPUT\" | sed -e 's/(<[Bb][Rr]>)(.*)/\2\1/'`$NAGIOS_LONGSERVICEOUTPUT"
+NAGIOS_SERVICEOUTPUT=`echo "$NAGIOS_SERVICEOUTPUT" | sed -e 's/(.*)<[Bb][Rr]>/\1/'`
+
 #--- 1. create ASCII file
 MAIL_ATTACHMENT_TXT="@tmp_dir@/mailx.$NAGIOS_HOSTNAME.$NAGIOS_SERVICEDESC.txt"
 cat <<EOF > $MAIL_ATTACHMENT_TXT
@@ -105,6 +109,7 @@ if [ "x$NAGIOS_LONGSERVICEOUTPUT" != "x" ]; then
 <LINK REL='stylesheet' TYPE='text/css' HREF='$NAGIOS_URL/stylesheets/extinfo.css'>
 </head>
 <body CLASS='extinfo'>
+$ADD_TO_ATTACHMENT
 $NAGIOS_LONGSERVICEOUTPUT
 </body>
 </html>
