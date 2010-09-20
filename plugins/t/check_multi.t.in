@@ -27,7 +27,7 @@ foreach my $plugin (@plugins) {
 		plan skip_all => "tests because component $plugin not found or not executable as \'$path_to_plugin\'";
 	}
 }
-plan tests => 84;
+plan tests => 86;
 
 my $result;
 #my $testopts="-s dont_be_paranoid=1 -s tmp_dir=/tmp/check_multi";
@@ -350,19 +350,40 @@ like(
 
 
 #-------------------------------------------------------------------------------
-#--- report option 143 ---------------------------------------------------------
+#--- report option 143 pnp version 0.4 -----------------------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi $testopts -x 'command [ eins ] = echo \"1|eins=1\"' -x 'command [ zwei ] = echo \"2|zwei=2\"' -r 143"
+	"@PERL@ ../check_multi $testopts -s pnp_version=0.4 -x 'command [ eins ] = echo \"1|eins=1\"' -x 'command [ zwei ] = echo \"2|zwei=2\"' -r 143"
 );
 is(
 	$result->return_code, 
 	0, 
-	"report option 143 (HTML performance output with PNP link) - RC0"
+	"report option 143 (HTML performance output with PNP 0.4 link) - RC0"
 );
 like(
 	$result->output,
 	'/^check_multi OK - 2 plugins checked, 2 ok\n'.
+	'.*pnp4nagios\/index.php.*'.
+	'.*<img src=.*Show performance chart.*'.
+	'.*zwei::echo::zwei=2 $/',
+	"output correct"
+);
+
+#-------------------------------------------------------------------------------
+#--- report option 143 pnp version 0.6 -----------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -s pnp_version=0.6 -x 'command [ eins ] = echo \"1|eins=1\"' -x 'command [ zwei ] = echo \"2|zwei=2\"' -r 143"
+);
+is(
+	$result->return_code, 
+	0, 
+	"report option 143 (HTML performance output with PNP 0.6 link) - RC0"
+);
+like(
+	$result->output,
+	'/^check_multi OK - 2 plugins checked, 2 ok\n'.
+	'.*pnp4nagios\/graph.*'.
 	'.*<img src=.*Show performance chart.*'.
 	'.*zwei::echo::zwei=2 $/',
 	"output correct"
@@ -508,7 +529,7 @@ like(
 #--- check_multi recursive -----------------------------------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi $testopts -x \'command [ child1 ] = @PERL@ ../check_multi -s tmp_dir=\"./tmp\" -x \"command [ grandchild1 ] = echo g1\"\' -r 1"
+	"@PERL@ ../check_multi $testopts -x \'command [ child1 ] = @PERL@ ../check_multi -s dont_be_paranoid=1 -s tmp_dir=\"./tmp\" -x \"command [ grandchild1 ] = echo g1\"\' -r 1"
 );
 is(
 	$result->return_code, 

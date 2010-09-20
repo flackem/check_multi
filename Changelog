@@ -1,5 +1,6 @@
 
 ===== Changelog =====
+	* STDIN (needed for feed_passive) now activated with '-f -'
 	* nested macros allowed: 'normal' macros within objects.cache macros
 	* change in child timeout handling: full time range is used for child checks now
 	* macro substitution is case insensitive now (thx to Morbid Angel)

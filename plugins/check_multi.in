@@ -3202,9 +3202,10 @@ sub report_html {
 			chomp($hostname);
 			DEBUG3("hostname is $hostname");
 			my $pnp_url=substitute_macros($opt{set}{pnp_url});
+			my $pnp_cgi=($opt{set}{pnp_version}=~/0.6/)?"graph":"index.php";
 			my $image_path=substitute_macros($opt{set}{image_path});
 			$output.=sprintf "<td nowrap>%s</td>",
-				"<A TARGET=\'$opt{set}{target}\' HREF=\'$pnp_url?host=${hostname}&srv=$cmds[$no]{name}\'> " .
+				"<A TARGET=\'$opt{set}{target}\' HREF=\'$pnp_url/$pnp_cgi?host=${hostname}&srv=$cmds[$no]{name}\'> " .
 				"<img src=\'$image_path/action.gif\' width=20 height=20 border=0 align=top alt='Show performance chart for $hostname / $cmds[$no]{plugin}'></A>";
 		#--- Action url (mouseover version)
 		} elsif (($opt{set}{report} & ($DETAIL_PERFORMANCE | $DETAIL_PERFORMANCE_CLASSIC)) &&
