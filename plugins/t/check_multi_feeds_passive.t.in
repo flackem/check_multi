@@ -40,7 +40,7 @@ my $testopts=testopts::get_testopts;
 #--- check_multi feeds check_multi ---------------------------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi $testopts -x 'command [ procs ] = echo \"PROCS OK: 99 processes\"' -r 256 | @PERL@ ../check_multi -f - $testopts -r 1",
+	"@PERL@ ../check_multi $testopts -x 'command [ procs ] = echo \"PROCS OK: 99 processes\"' -r 256+4 | @PERL@ ../check_multi -f - $testopts -r 1",
 );
 is(
 	$result->return_code, 

@@ -32,7 +32,6 @@ plan tests => 86;
 my $result;
 #my $testopts="-s dont_be_paranoid=1 -s tmp_dir=/tmp/check_multi";
 my $testopts=testopts::get_testopts;
-
 #-------------------------------------------------------------------------------
 #--- check_multi version -------------------------------------------------------
 #-------------------------------------------------------------------------------
@@ -58,7 +57,7 @@ like(
 #--- ENV vars MULTI_... via command --------------------------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi $testopts -x 'command [ echo ] = echo \"Hello World\"' -x 'command [ env ] = env | grep MULTI | sort' -r 1",
+	"@PERL@ ../check_multi $testopts -x 'command [ echo ] = echo \"Hello World\"' -x 'command [ env ] = env | grep MULTI | sort' -r 1+4",
 );
 is(
 	$result->return_code, 
@@ -83,7 +82,7 @@ like(
 #--- ENV vars MULTI_... via eval -----------------------------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi $testopts -x 'eeval [ echo ] = \"Hello World\";' -x 'command [ env ] = env | grep MULTI | sort' -r 1",
+	"@PERL@ ../check_multi $testopts -x 'eeval [ echo ] = \"Hello World\";' -x 'command [ env ] = env | grep MULTI | sort' -r 1+4",
 );
 is(
 	$result->return_code, 
@@ -164,7 +163,7 @@ like(
 #--- report option 0 -----------------------------------------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi $testopts -r 0 -x 'command [ procs ] = echo \"PROCS OK: 99 processes\"'"
+	"@PERL@ ../check_multi $testopts -r 0+4 -x 'command [ procs ] = echo \"PROCS OK: 99 processes\"'"
 );
 is(
 	$result->return_code, 
@@ -183,7 +182,7 @@ like(
 #--- report option 1 -----------------------------------------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi $testopts -r 1 -x 'command [ procs ] = (echo \"PROCS WARNING: 99 processes\"; exit 1)'"
+	"@PERL@ ../check_multi $testopts -r 1+4 -x 'command [ procs ] = (echo \"PROCS WARNING: 99 processes\"; exit 1)'"
 );
 is(
 	$result->return_code, 
@@ -458,7 +457,7 @@ like(
 #--- check_multi encode  (report option 16384) ---------------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi $testopts -r 16384 -x 'command [ encode ] = echo encode'",
+	"@PERL@ ../check_multi $testopts -r 16384+4 -x 'command [ encode ] = echo encode'",
 );
 is(
 	$result->return_code, 
@@ -475,7 +474,7 @@ like(
 #--- check_multi hide OK states (report option 32768) --------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi $testopts -r 32768 -x 'command [ OK ] = (echo 0; exit 0)' -x 'command [ WARNING ] = (echo 1; exit 1)'",
+	"@PERL@ ../check_multi $testopts -r 32768+4 -x 'command [ OK ] = (echo 0; exit 0)' -x 'command [ WARNING ] = (echo 1; exit 1)'",
 );
 is(
 	$result->return_code, 
@@ -493,7 +492,7 @@ like(
 #--- check_multi hide OK states (report option 32770) --------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi $testopts -r 32768+2 -x 'command [ OK ] = (echo 0; exit 0)'",
+	"@PERL@ ../check_multi $testopts -r 32768+2+4 -x 'command [ OK ] = (echo 0; exit 0)'",
 );
 is(
 	$result->return_code, 
@@ -529,7 +528,7 @@ like(
 #--- check_multi recursive -----------------------------------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi $testopts -x \'command [ child1 ] = @PERL@ ../check_multi -s dont_be_paranoid=1 -s tmp_dir=\"./tmp\" -x \"command [ grandchild1 ] = echo g1\"\' -r 1"
+	"@PERL@ ../check_multi $testopts -x \'command [ child1 ] = @PERL@ ../check_multi -s dont_be_paranoid=1 -s tmp_dir=\"./tmp\" -x \"command [ grandchild1 ] = echo g1\"\' -r 1+4"
 );
 is(
 	$result->return_code, 
@@ -658,7 +657,7 @@ like(
 my $old_ENV_LANG=$ENV{LANG};
 $ENV{LANG}="de_DE";
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi $testopts -x 'command [ eins ] = echo \"eins|eins=1,1\"' -r 9 -s loose_perfdata=1",
+	"@PERL@ ../check_multi $testopts -x 'command [ eins ] = echo \"eins|eins=1,1\"' -r 1+4+8 -s loose_perfdata=1",
 );
 is(
 	$result->return_code, 
@@ -677,7 +676,7 @@ $ENV{LANG}=$old_ENV_LANG;
 #--- accepting trailing semicolon (e.g. nsclient++ -----------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi $testopts -x 'command [ eins ] = echo \"eins|eins=1;2;3;4;5;\"' -r 9 -s loose_perfdata=1",
+	"@PERL@ ../check_multi $testopts -x 'command [ eins ] = echo \"eins|eins=1;2;3;4;5;\"' -r 1+4+8 -s loose_perfdata=1",
 );
 is(
 	$result->return_code, 
@@ -695,7 +694,7 @@ like(
 #--- overloading ---------------------------------------------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi $testopts -x 'command [ eins ] = echo original' -x 'command [ eins ] = echo overloaded' -r 1",
+	"@PERL@ ../check_multi $testopts -x 'command [ eins ] = echo original' -x 'command [ eins ] = echo overloaded' -r 1+4",
 );
 is(
 	$result->return_code, 
@@ -711,9 +710,9 @@ like(
 #-------------------------------------------------------------------------------
 #--- environment macro ----------------------------------------------------------
 #-------------------------------------------------------------------------------
-$ENV{"NAGIOS__HOST_CHECK_MULTI_TESTVAR"}="has a test value";
+$ENV{uc("@nagios_name@")."__HOST_CHECK_MULTI_TESTVAR"}="has a test value";
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi $testopts -x 'command [ testvar ] = echo \$_HOST_CHECK_MULTI_TESTVAR\$' -r 1",
+	"@PERL@ ../check_multi $testopts -x 'command [ testvar ] = echo \$_HOST_CHECK_MULTI_TESTVAR\$' -r 1+4",
 );
 is(
 	$result->return_code, 
@@ -730,7 +729,7 @@ like(
 #--- killing me softly - checking signal handler -------------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi $testopts -x 'eeval [ killing_me_HUPly ] = kill 1, \$\$;' -r 1",
+	"@PERL@ ../check_multi $testopts -x 'eeval [ killing_me_HUPly ] = kill 1, \$\$;' -r 1+4",
 );
 is(
 	$result->return_code, 
@@ -747,7 +746,7 @@ like(
 #--- output / head -------------------------------------------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi $testopts -x 'command [ procs ] = echo \"PROCS OK: 99 processes\"' -x 'output [ head ] = \"%.20s processes running\",(split(/\\s+/,\"\$procs\$\"))\[2\]' -r 1",
+	"@PERL@ ../check_multi $testopts -x 'command [ procs ] = echo \"PROCS OK: 99 processes\"' -x 'output [ head ] = \"%.20s processes running\",(split(/\\s+/,\"\$procs\$\"))\[2\]' -r 1+4",
 );
 is(
 	$result->return_code, 
@@ -764,7 +763,7 @@ like(
 #--- check_multi attribute -----------------------------------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi $testopts -x 'command [ with_perfdata ] = echo \"eins\|eins=1\"' -x 'attribute [ with_perfdata::process_perfdata ] = 0' -r 9",
+	"@PERL@ ../check_multi $testopts -x 'command [ with_perfdata ] = echo \"eins\|eins=1\"' -x 'attribute [ with_perfdata::process_perfdata ] = 0' -r 1+4+8",
 );
 is(
 	$result->return_code, 
@@ -800,7 +799,7 @@ like(
 #--- check_multi child and global timeout --------------------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi $testopts -x 'command [ one ] = ( sleep 2; echo one)' -x 'command [ two ] = echo two' -r 5 -t 1 -T 2 -s cancel_before_global_timeout=1",
+	"@PERL@ ../check_multi $testopts -x 'command [ one ] = ( sleep 2; echo one)' -x 'command [ two ] = echo two' -r 1+4 -t 1 -T 2 -s cancel_before_global_timeout=1",
 );
 is(
 	$result->return_code, 
@@ -818,7 +817,7 @@ like(
 #--- check_multi object cache macros - objects.cache does not exist ------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi $testopts -x 'command [ hostgroup_members ] = echo \$hostgroup:members:hostgroup_name:linux-servers\$' -r 5 -s objects_cache=not.there",
+	"@PERL@ ../check_multi $testopts -x 'command [ hostgroup_members ] = echo \$hostgroup:members:hostgroup_name:linux-servers\$' -r 1+4 -s objects_cache=not.there",
 );
 is(
 	$result->return_code, 
@@ -835,7 +834,7 @@ like(
 #--- check_multi object cache macros with invalid object -----------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi $testopts -x 'command [ invalid ] = echo \$invalid:members:hostgroup_name:linux-servers\$' -r 5 -s objects_cache=objects.cache",
+	"@PERL@ ../check_multi $testopts -x 'command [ invalid ] = echo \$invalid:members:hostgroup_name:linux-servers\$' -r 1+4 -s objects_cache=objects.cache",
 );
 is(
 	$result->return_code, 
@@ -852,7 +851,7 @@ like(
 #--- check_multi object cache macros -------------------------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi $testopts -x 'command [ hostgroup_members ] = echo \$hostgroup:members:hostgroup_name:linux-servers\$' -x 'command [ services ] = echo \$service:service_description:host_name:localhost\$' -r 5 -s objects_cache=objects.cache",
+	"@PERL@ ../check_multi $testopts -x 'command [ hostgroup_members ] = echo \$hostgroup:members:hostgroup_name:linux-servers\$' -x 'command [ services ] = echo \$service:service_description:host_name:localhost\$' -r 1+4 -s objects_cache=objects.cache",
 );
 is(
 	$result->return_code, 
@@ -870,7 +869,7 @@ like(
 #--- check_multi object cache nested macros ------------------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
-	"MULTI_TESTVAR='localhost'; export MULTI_TESTVAR; @PERL@ ../check_multi $testopts -x 'command [ services ] = echo \$service:service_description:host_name:\$TESTVAR\$\$' -r 5 -s objects_cache=objects.cache",
+	"MULTI_TESTVAR='localhost'; export MULTI_TESTVAR; @PERL@ ../check_multi $testopts -x 'command [ services ] = echo \$service:service_description:host_name:\$TESTVAR\$\$' -r 1+4 -s objects_cache=objects.cache",
 );
 is(
 	$result->return_code, 
