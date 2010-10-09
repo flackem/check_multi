@@ -1,5 +1,8 @@
 
 ===== Changelog =====
+
+	* OMD - check for environment variables OMD_ROOT and OMD_SITE
+
 **0.24**	09.10.2010
 	* STDIN (needed for feed_passive) now activated with '-f -'
 	* nested macros allowed: 'normal' macros within objects.cache macros
