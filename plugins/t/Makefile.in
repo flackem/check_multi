@@ -16,6 +16,8 @@ clean:
 	-rm -f check_multi_feeds_passive.t
 	-rm -f check_multi_livestatus.t
 	-rm -f check_multi_statusdat.t
+	-rm -f testsopts.pm
+	-rm -rf tmp
 
 distclean: clean
 	-rm -f Makefile
