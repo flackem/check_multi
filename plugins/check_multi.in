@@ -33,6 +33,13 @@ $DETAIL_ENCODE_COMMANDS $DETAIL_HIDEIFOK
 *DEBUG1 *DEBUG2 *DEBUG3 *DEBUG4
 );
 BEGIN {
+	#--- OMD environment? Then we have to be sure that vars are defined
+	#--- otherwise somebody copied check_multi from OMD to remote hosts
+        if (@omd_environment@ && (! $ENV{OMD_SITE} || !$ENV{OMD_SITE})) {
+                print "Error: OMD_SITE or OMD_ROOT variables not defined\n";
+                print "Are you running check_multi outside of OMD environment?\n";
+                exit 3;
+        }
 	#--- if hires timer available, use it
 	eval("use Time::HiRes qw(time sleep)");
 	if (! $@) {

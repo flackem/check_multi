@@ -53,6 +53,7 @@ my $parent_timeout="@parent_timeout@";
 my $persistent="@persistent@";
 my $objects_cache="@objects_cache@";
 my $objects_cache_delimiter="@objects_cache_delimiter@";
+my $omd_environment="@omd_environment@";
 my $plugin_path="@plugin_path@";
 my $pnp_url="@pnp_url@";
 my $pnp_version="@pnp_version@";
@@ -137,6 +138,7 @@ while (my $f = shift @ARGV) {
 		s|\@notes_url\@|$notes_url|g;
 		s|\@objects_cache\@|$objects_cache|g;
 		s|\@objects_cache_delimiter\@|$objects_cache_delimiter|g;
+		s|\@omd_environment\@|$omd_environment|g;
 		s|\@persistent\@|$persistent|g;
 		s|\@pnp_url\@|$pnp_url|g;
 		s|\@pnp_version\@|$pnp_version|g;
