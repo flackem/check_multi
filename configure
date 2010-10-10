@@ -820,7 +820,7 @@ detail settings:
   --with-notes_url=<URL>                   notes URL (default:"")
   --with-objects_cache=</path/to/objects.cache>    path to objects.cache (default:"/usr/local/nagios/var/objects.cache")
   --with-objects_cache_delimiter=<char>    character to separate objects.cache results (default:",")
-  --with-omd_environment=<0|1>             Run check_multi within OMD enviroment? (default:0)
+  --with-omd_environment=<0|1>             Run check_multi within OMD enviroment (default:0)
   --with-persistent=<0|1>                  persistency: saving of state data between two calls (default:0)
   --with-plugin_path=</path/to/plugins>    path to plugins (default:"/usr/local/nagios/libexec")
   --with-pnp_url=<URL>                     relative URL to PNP (default for PNP 0.6:"/pnp4nagios")
@@ -2006,13 +2006,13 @@ if test "${with_omd_environment+set}" = set; then
   withval="$with_omd_environment"
   omd_environment=$withval
 else
-  omd_environment="0"
+  omd_environment=0
 fi;
 
 # Check whether --with-persistent or --without-persistent was given.
 if test "${with_persistent+set}" = set; then
   withval="$with_persistent"
-  persisent=$withval
+  persistent=$withval
 else
   persistent=0
 fi;

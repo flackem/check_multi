@@ -35,7 +35,7 @@ $DETAIL_ENCODE_COMMANDS $DETAIL_HIDEIFOK
 BEGIN {
 	#--- OMD environment? Then we have to be sure that vars are defined
 	#--- otherwise somebody copied check_multi from OMD to remote hosts
-        if (@omd_environment@ && (! $ENV{OMD_SITE} || !$ENV{OMD_SITE})) {
+        if (@omd_environment@ && (! $ENV{OMD_SITE} || !$ENV{OMD_ROOT})) {
                 print "Error: OMD_SITE or OMD_ROOT variables not defined\n";
                 print "Are you running check_multi outside of OMD environment?\n";
                 exit 3;
