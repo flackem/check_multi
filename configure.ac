@@ -8,7 +8,7 @@
 #--- plenty of configuration options 
 #---
 #--- prerequisites, credits and Nagios defaults
-AC_PREREQ(2.61)
+AC_PREREQ(2.59)
 AC_INIT(check_multi, (author: matthias.flacke@gmx.de))
 
 AC_DEFINE([DEFAULT_NAGIOS_USER], [nagios], [Default Nagios User])
@@ -88,6 +88,7 @@ AC_ARG_WITH(illegal_chars,		[  --with-illegal_chars=<chars>             characte
 AC_ARG_WITH(image_path,			[  --with-image_path=<URL>                  relative URL to nagios images (default:"/nagios/images")],image_path=$withval,image_path="/nagios/images")
 AC_ARG_WITH(indent,			[  --with-indent=<char>                     ASCII output indent character (default:" ")],indent=$withval,indent=" ")
 AC_ARG_WITH(indent_label,		[  --with-indent_label=<0|1>                indentation of child checks? (default:1)],indent_label=$withval,indent_label=1)
+AC_ARG_WITH(livestatus, 		[  --with-livestatus=<path>                 /path/to/livestatus-socket (default:${localstatedir}/rw/live)],checkresults_dir=$withval,checkresults_dir="${localstatedir}/var/rw/live")
 AC_ARG_WITH(loose_perfdata,		[  --with-loose_perfdata=1                  loose performance data (default:1)],loose_perfdata=$withval,loose_perfdata=1)
 AC_ARG_WITH(name,			[  --with-name=<name>                       default name for check_multi label (default:"")],name=$withval,name="")
 AC_ARG_WITH(no_checks_rc,		[  --with-no_checks_rc=<RC>                 RC if no checks are specified (default:3-UNKNOWN)],no_checks_rc=$withval,no_checks_rc=3)
@@ -252,7 +253,7 @@ AC_MSG_RESULT([ Install \${prefix}         $prefix])
 AC_MSG_RESULT([ Exec \${exec_prefix}       $exec_prefix])
 AC_MSG_RESULT([ Libexec directory         $libexecdir])
 AC_MSG_RESULT([ CGI directory (sbin)      $sbindir])
-AC_MSG_RESULT([ HTML directory (dataroot) $datarootdir])
+AC_MSG_RESULT([ HTML directory (data)     $datadir])
 AC_MSG_RESULT([ Contrib directory         $contrib_dir])
 AC_MSG_RESULT([ Temporary directory       $tmp_dir])
 AC_MSG_RESULT([ Temp dir permissions      $tmp_dir_permissions])

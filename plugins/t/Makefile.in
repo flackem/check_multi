@@ -16,7 +16,7 @@ clean:
 	-rm -f check_multi_feeds_passive.t
 	-rm -f check_multi_livestatus.t
 	-rm -f check_multi_statusdat.t
-	-rm -f testsopts.pm
+	-rm -f testopts.pm
 	-rm -rf tmp
 
 distclean: clean
