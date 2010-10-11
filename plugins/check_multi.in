@@ -197,6 +197,8 @@ my %opt=(
 		objects_cache	=> "@objects_cache@",
 		# objects.cache delimiter character
 		objects_cache_delimiter	=> "@objects_cache_delimiter@",
+		# omd environment
+		omd_environment => @omd_environment@,
 		# create persistent data
 		persistent	=> @persistent@,
 		# path to additional plugins
