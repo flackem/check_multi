@@ -29,7 +29,7 @@ $OK $WARNING $CRITICAL $UNKNOWN
 $DETAIL_LIST $DETAIL_LIST_FULL $DETAIL_HTML $DETAIL_STDERR $DETAIL_PERFORMANCE
 $DETAIL_PERFORMANCE_CLASSIC $DETAIL_STATUS $DETAIL_PERFORMANCE_LINK $DETAIL_XML $DETAIL_NAGIOS2
 $DETAIL_NOTES_LINK $DETAIL_SERVICE_DEFINITION $DETAIL_SEND_NSCA $DETAIL_FEED_PASSIVE
-$DETAIL_ENCODE_COMMANDS $DETAIL_HIDEIFOK
+$DETAIL_ENCODE_COMMANDS $DETAIL_HIDEIFOK $DETAIL_SEND_GEARMAN
 *DEBUG1 *DEBUG2 *DEBUG3 *DEBUG4
 );
 BEGIN {
@@ -90,6 +90,7 @@ $DETAIL_SEND_NSCA=4096;
 $DETAIL_FEED_PASSIVE=8192;
 $DETAIL_ENCODE_COMMANDS=16384;
 $DETAIL_HIDEIFOK=32768;
+$DETAIL_SEND_GEARMAN=65536;
 #
 #--- vars
 $no=0;
@@ -207,15 +208,25 @@ my %opt=(
 		pnp_url		=> "@pnp_url@",
 		# report option, binary coded as sum of detail options
 		report		=> @report@,
-		#--- send_nsca: path to send_nsca binary
+		#--- send_gearman: path to binary
+		send_gearman	=> "/usr/local/bin/send_gearman",
+		#--- send_gearman: encryption (0|1)
+		send_gearman_encryption => 1,
+		#--- send_gearman key: either string or file
+		send_gearman_key => "should_be_changed",
+		#--- send_gearman result queue name, default:empty
+		send_gearman_resultqueue => "",
+		#--- send_gearman_srv: worker server
+		send_gearman_srv => "localhost",
+		#--- send_nsca: path to binary
 		send_nsca	=> "@sbindir@/send_nsca",
-		#--- send_nsca_cfg: path to send_nsca cfg file
+		#--- send_nsca_cfg: path to config file
 		send_nsca_cfg	=> "@sysconfdir@/send_nsca.cfg",
-		#--- send_nsca_opts: options to provide to send_nsca
+		#--- send_nsca_srv: nsca server name
 		send_nsca_srv	=> "localhost",
-		#--- send_nsca_opts: options to provide to send_nsca
+		#--- send_nsca_port: nsca server port
 		send_nsca_port	=> 5667,
-		#--- send_nsca_opts: options to provide to send_nsca
+		#--- send_nsca_timeout
 		send_nsca_timeout => @child_timeout@,
 		#--- send_nsca_opts: options to provide to send_nsca
 		send_nsca_delim => ";",
@@ -2975,6 +2986,10 @@ sub report_all {
 		&report_send_nsca;
 	}
 	#--- report to nsca (send_nsca wrapper)
+	if ($opt{set}{report} & $DETAIL_SEND_GEARMAN) {
+		&report_send_gearman;
+	}
+	#--- report to nsca (send_nsca wrapper)
 	if ($opt{set}{report} & $DETAIL_FEED_PASSIVE) {
 		&report_checkresult_file;
 	}
@@ -3882,6 +3897,94 @@ sub checkresult {
 	#--- at last: output
 	$checkresult.="output=$att{output}";
 	return $checkresult;
+}
+
+#---
+#--- send check_multi results to send_gearman
+#---
+sub report_send_gearman {
+	# Usage:
+	# 
+	# send_gearman [ --debug=<lvl>                ]
+	#              [ --help|-h                    ]
+	# 
+	#              [ --config=<configfile>        ]
+	# 
+	#              [ --server=<server>            ]
+	# 
+	#              [ --encryption=<yes|no>        ]
+	#              [ --key=<string>               ]
+	#              [ --keyfile=<file>             ]
+	# 
+	#              [ --host=<hostname>            ]
+	#              [ --service=<servicename>      ]
+	#              [ --result_queue=<queue>       ]
+	#              [ --message|-m=<pluginoutput>  ]
+	#              [ --returncode|-r=<returncode> ]
+	# 
+	# for sending active checks:
+	#              [ --active                     ]
+	#              [ --starttime=<unixtime>       ]
+	#              [ --finishtime=<unixtime>      ]
+	#              [ --latency=<seconds>          ]
+	# 
+	# plugin output is read from stdin unless --message is used.
+	# 
+	my $sent=0;
+	if (! -x "$opt{set}{send_gearman}") {
+		add_error(0,"report_send_gearman: $opt{set}{send_gearman} not found or not executable:$!");
+		return $sent;
+	}
+	#if (! -f "$opt{set}{send_gearman_cfg}") {
+	#add_error(0,"report_send_gearman: $opt{set}{send_gearman_cfg} not found or not readable for UID $>:$!");
+	#return $sent;
+	#}
+	#--- determine hostname
+	my $hostname="";
+	if ($ENV{MULTI_HOSTNAME}) {
+		$hostname=$ENV{MULTI_HOSTNAME};
+	} elsif ($ENV{MULTI_HOSTADDRESS}) {
+		$hostname=$ENV{MULTI_HOSTADDRESS};
+	} else {
+		$hostname=`uname -n`;
+	}
+	chomp($hostname);
+	my $keyoption=(-f $opt{set}{send_gearman_key}) ? "keyfile" : "key";
+	my $resultqueueoption=($opt{set}{send_gearman_resultqueue})? "--result_queue=" : "";
+	my $encryption=($opt{set}{send_gearman_encryption}) ? "yes" : "no";
+	my $gearman_cmdline=
+		"$opt{set}{send_gearman} " .
+		"--server=$opt{set}{send_gearman_srv} " .
+		"--encryption=$encryption " .
+		"--$keyoption=$opt{set}{send_gearman_key} " .
+		"${resultqueueoption}$opt{set}{send_gearman_resultqueue} ";
+	DEBUG3("cmdline is \'$gearman_cmdline\'");
+	for (my $i=1; $i<=$#cmds; $i++) {
+
+		#--- service will be suppressed if its mentioned in '-s suppress_service=<service1>,<service2>,...
+		if ($opt{set}{suppress_service} &&
+		    $opt{set}{suppress_service}=~/\b$cmds[$i]{name}\b/i) {
+			DEBUG2("checkresult file of [ $cmds[$i]{name} ] will be suppressed");
+			next;
+		}
+		
+		#--- call send_gearman
+		unless (open(SEND_GEARMAN, 
+			"|$gearman_cmdline ".
+			"--returncode=$cmds[$i]{rc} " . 
+			"--host=\'$hostname\' " . 
+			"--service=\'$cmds[$i]{name}\'" )) {
+			add_error(0,"report_send_gearman: error calling command line $gearman_cmdline");
+			return $sent;
+		}
+		print SEND_GEARMAN "$cmds[$i]{output}";
+		if (!close SEND_GEARMAN) {
+			add_error(0,"report_send_gearman: error sending data to gearman:$?");
+		} else {
+			$sent++;
+		}
+	}
+	return $sent;
 }
 
 #

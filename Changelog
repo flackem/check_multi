@@ -1,6 +1,7 @@
 
 ===== Changelog =====
 
+	* added send_gearman client report mode
 	* OMD - check for environment variables OMD_ROOT and OMD_SITE
 
 **0.24**	09.10.2010
