@@ -1,6 +1,7 @@
 
 ===== Changelog =====
 
+	* tags now can contain any characters: command [ this is a tag ] = ...
 	* added send_gearman client report mode
 	* OMD - check for environment variables OMD_ROOT and OMD_SITE
 

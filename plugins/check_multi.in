@@ -444,8 +444,8 @@ sub process_input {
 	#--- getting commands - either per command file or per command parameter
 
 	#--- allowed characters: 'a-zA-Z0-9_-'
-	if ($opt{set}{name}!~/^[\w-]*$/) {
-		print "$MYSELF error: name \'$opt{set}{name}\' invalid - using non allowed characters (allowed are A-Za-z0-9_-)\n";
+	if ($opt{set}{name}=~/[\[\]]+/) {
+		print "$MYSELF error: name \'$opt{set}{name}\' invalid - [ brackets ] are not allowed\n";
 		return $UNKNOWN;
 	}
 
@@ -1488,21 +1488,20 @@ sub parse_lines {
 		$line=~s/\\\s*$// if ($line=~/\\\s*/);
 
 		#--- header line (regex contains all allowed commands)
-		if (($type,$name,$cmd)=($line=~/^\s*(attribute|command|cumulate|eval|eeval|livestatus|snmp|statusdat|state|output)\s*\[\s*(\S+)\s*\]\s*=\s*(.*)\s*/i)) {
+		if (($type,$name,$cmd)=($line=~/^\s*(attribute|command|cumulate|eval|eeval|livestatus|snmp|statusdat|state|output)\s*\[\s*\b([^\]]*)\b\s*\]\s*=\s*(.*)\s*/i)) {
 
 			#--- macros?
 			$name=substitute_macros($name);
 
-			#--- allowed characters: 'a-zA-Z0-9_:-'
-			if ($name!~/^[\w:-]+$/) {
-				#--- still macro '$' in name? then macro was not substituted
-				if ($name=~/\$([^\$]+)\$/) {
-					add_error(0,"parse_lines: tag \'$name\' invalid - macro \$$1\$ not found");
-				} elsif ($name eq "") {
-					add_error(0,"parse_lines: empty tag \'\' invalid");
-				} else {
-					add_error(0,"parse_lines: tag \'$name\' invalid - using non allowed characters");
-				}
+			#--- still macro '$' in name? then macro was not substituted
+			if ($name=~/\$([^\$]+)\$/) {
+				add_error(0,"parse_lines: tag \'$name\' invalid - macro \$$1\$ not found");
+				next LINE;
+			} elsif ($name eq "") {
+				add_error(0,"parse_lines: empty tag \'\' invalid");
+				next LINE;
+			} elsif ($name=~/[\[\]]+/) {
+				add_error(0,"parse_lines: tag \'$name\' invalid - [ brackets ] are not allowed");
 				next LINE;
 			}
 
@@ -1510,7 +1509,7 @@ sub parse_lines {
 			$last_command=parse_header($type,$name,$cmd,$lineno);
 
 		#--- proper header line with invalid keyword
-		} elsif ($line=~/^\s*(\w+)\s*\[\s*\S+\s*\]\s*=.*/) {
+		} elsif ($line=~/^\s*(\w+)\s*\[\s*\b([^\]]*)\b\s*\]\s*=\s*(.*)\s*/) {
 			add_error(0,"Invalid keyword \'$1\' specified, allowed are attribute,command,eval,eeval,livestatus,statusdat,state,output");
 			return;
 
@@ -3513,17 +3512,23 @@ sub report_perfdata {
 	}
 	#--- report performance data?
 	if ($opt{set}{report} & $DETAIL_PERFORMANCE) {
+
+		#--- take name and - if empty - check_multi
+		my $name=($opt{set}{name})?$opt{set}{name}:$MYSELF;
+		#--- if whitespace within name, wrap it with single quotes
+		my $delim=($name=~/\s+/)?"'":"";
 		my $perftmp="";
 		DEBUG3("(DETAIL_PERFORMANCE): name=" . ($opt{set}{name}) ? $opt{set}{name} : $MYSELF);
 		print "\|";
-		printf "%s::%s::plugins=%d time=%f ",
-			($opt{set}{name}) ? $opt{set}{name} : $MYSELF, $MYSELF,
+		printf "$delim%s::%s::plugins$delim=%d time=%f ",
+			$name,
+		       	$MYSELF,
 			$cmds[0]{nallchecks},
 			$cmds[0]{runtime};
 		#--- extended performance data output for check_multi
 		if ($opt{set}{extended_perfdata}) {
-			printf "%s_extended::check_multi_extended::count_ok=%d count_warning=%d count_critical=%d count_unknown=%d overall_state=%d ",
-				($opt{set}{name}) ? $opt{set}{name} : $MYSELF,
+			printf "$delim%s_extended::check_multi_extended::count_ok$delim=%d count_warning=%d count_critical=%d count_unknown=%d overall_state=%d ",
+				$name,
 				$rc{count}[$OK],
 				$rc{count}[$WARNING],
 				$rc{count}[$CRITICAL],
@@ -3539,7 +3544,7 @@ sub report_perfdata {
 			if (defined($cmds[$no]{performance})) {
 				#--- prevent concatenation of multi-labels if called recursively
 				if ($cmds[$no]{performance}=~/check_multi::check_multi::(.*)/) {
-					$perftmp="$cmds[$no]{name}::check_multi::$1 ";
+					$perftmp="$name::check_multi::$1 ";
 				} elsif ($cmds[$no]{performance}=~/::check_multi::/) {
 					$perftmp="$cmds[$no]{performance} ";
 				} else {
@@ -3547,6 +3552,9 @@ sub report_perfdata {
 					my $plugin=($cmds[$no]{pplugin} ne "") ? $cmds[$no]{pplugin} : $cmds[$no]{plugin};
 					if ($cmds[$no]{performance}=~/^\s*\'([^']*)\'=(\S+)(.*)/) {
 						$perftmp="\'$cmds[$no]{name}::${plugin}::$1\'=$2$3 ";
+					} elsif ($delim) {
+						$cmds[$no]{performance}=~/\s*(.*)=(.*)\s*/;
+						$perftmp="$delim$cmds[$no]{name}::$plugin::$1$delim=$2 ";
 					} else {
 						$cmds[$no]{performance}=~s/\s*(.*)/$1/;
 						$perftmp="$cmds[$no]{name}::${plugin}::$cmds[$no]{performance} ";
@@ -3567,6 +3575,9 @@ sub report_perfdata {
 						$cmds[$no]{performance}.=join("_",@tmparr);
 					} else {
 						$cmds[$no]{performance}.=$label;
+					}
+					if ($cmds[$no]{performance}=~/\s+/) {
+						$cmds[$no]{performance}="\'$cmds[$no]{performance}\'";
 					}
 					$cmds[$no]{performance}.="=$data ";
 					DEBUG4("remaining perftmp: $perftmp");

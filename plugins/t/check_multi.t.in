@@ -126,7 +126,7 @@ like(
 #--- invalid name option -----------------------------------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi $testopts -n test: -x 'command [ procs ] = echo \"PROCS OK: 99 processes\"'"
+	"@PERL@ ../check_multi $testopts -n test[ -x 'command [ procs ] = echo \"PROCS OK: 99 processes\"'"
 );
 is(
 	$result->return_code, 
@@ -135,7 +135,7 @@ is(
 );
 like(
 	$result->output,
-	'/^check_multi error: name \'test:\' invalid - using non allowed characters/',
+	'/^check_multi error: name \'test\[\' invalid - \[ brackets \] are not allowed/',
 	"output correct"
 );
 
@@ -670,7 +670,7 @@ like(
 	'\[ 1\] eins eins\|check_multi::check_multi::plugins=1 time=\d+\.\d+ eins::echo::eins=1\,1 $/',
 	"output correct"
 );
-$ENV{LANG}=$old_ENV_LANG;
+$ENV{LANG}=$old_ENV_LANG if (defined($old_ENV_LANG));
 
 #-------------------------------------------------------------------------------
 #--- accepting trailing semicolon (e.g. nsclient++ -----------------------------
@@ -826,7 +826,7 @@ is(
 );
 like(
 	$result->output,
-	'/UNKNOWN - 1 plugins checked, 1 unknown \(hostgroup_members\) \[parse_objects_cache: error opening file not.there:No such file or directory\]\n'.
+	'/UNKNOWN - 1 plugins checked, 1 unknown \(hostgroup_members\) \[parse_objects_cache: error opening file not.there.*\]\n'.
 	'\[ 1\] hostgroup_members/',
 	"output correct"
 );
