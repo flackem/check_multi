@@ -27,7 +27,7 @@ foreach my $plugin (@plugins) {
 		plan skip_all => "tests because component $plugin not found or not executable as \'$path_to_plugin\'";
 	}
 }
-plan tests => 88;
+plan tests => 90;
 
 my $result;
 #my $testopts="-s dont_be_paranoid=1 -s tmp_dir=/tmp/check_multi";
@@ -108,7 +108,7 @@ like(
 #--- valid name option -------------------------------------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi $testopts -n test -x 'command [ procs ] = echo \"PROCS OK: 99 processes\"'"
+	"@PERL@ ../check_multi $testopts -n 'test 234' -x 'command [ procs ] = echo \"PROCS OK: 99 processes\"'"
 );
 is(
 	$result->return_code, 
@@ -117,7 +117,7 @@ is(
 );
 like(
 	$result->output,
-	'/^test OK - 1 plugins checked, 1 ok\n'.
+	'/^test 234 OK - 1 plugins checked, 1 ok\n'.
 	'\[ 1\] procs PROCS OK: \d+ processes|check_multi::check_multi::plugins=1 time=\d+$/',
 	"output correct"
 );
@@ -730,7 +730,7 @@ like(
 #-------------------------------------------------------------------------------
 $ENV{uc("@nagios_name@")."__HOST_CHECK_MULTI_TESTVAR"}="has a test value";
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi $testopts -x 'command [ testvar ] = echo \$_HOST_CHECK_MULTI_TESTVAR\$' -r 1+4",
+	"@PERL@ ../check_multi $testopts -x 'command [ test var ] = echo \$_HOST_CHECK_MULTI_TESTVAR\$' -r 1+4",
 );
 is(
 	$result->return_code, 
@@ -740,14 +740,14 @@ is(
 like(
 	$result->output,
 	'/^OK - 1 plugins checked, 1 ok\n'.
-	'\[ 1\] testvar has a test value$/',
+	'\[ 1\] test var has a test value$/',
 	"output correct"
 );
 #-------------------------------------------------------------------------------
 #--- killing me softly - checking signal handler -------------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi $testopts -x 'eeval [ killing_me_HUPly ] = kill 1, \$\$;' -r 1+4",
+	"@PERL@ ../check_multi $testopts -x 'eeval [ killing me HUPly ] = kill 1, \$\$;' -r 1+4",
 );
 is(
 	$result->return_code, 
@@ -757,7 +757,7 @@ is(
 like(
 	$result->output,
 	'/^OK - 1 plugins checked, 1 ok \[HUP generated at line 1 in.*\]\n'.
-	'\[ 1\] killing_me_HUPly $/',
+	'\[ 1\] killing me HUPly $/',
 	"output correct"
 );
 #-------------------------------------------------------------------------------
@@ -829,6 +829,22 @@ like(
 	'/UNKNOWN - 2 plugins checked, 2 unknown \(one, two\)\n'.
 	'\[ 1\] one  \[timeout encountered after 1s\]\n'.
 	'\[ 2\] two UNKNOWN - execution cancelled due to global timeout \(2s\)/',
+	"output correct"
+);
+#-------------------------------------------------------------------------------
+#--- check_multi child, global timeout shorter than local timeout --------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -x 'command [ one ] = echo one' -r 1+4 -T 5 -t 10",
+);
+is(
+	$result->return_code, 
+	3, 
+	"timeout check: global timeout shorter than local timeout - RC3"
+);
+like(
+	$result->output,
+	'/check_multi: error - child timeout 10s must not be greater than parent timeout 5s/',
 	"output correct"
 );
 #-------------------------------------------------------------------------------
