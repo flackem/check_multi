@@ -1047,17 +1047,19 @@ sub substitute_macros {
 	#--- first of all: replace 'normal' vars
 	#--- to prepare objects.cache substitution after that
 	DEBUG3("checking line $input");
-	foreach my $match_var (($input=~/\$([A-Za-z0-9_\-]+)\$/gi)) {
+	foreach my $match_var (($input=~/\$([^\[\]\$\:]+)\$/gi)) {
   		if ($ENV{"MULTI_${match_var}"}) {
+			DEBUG3("replacing var $match_var with $ENV{\"MULTI_${match_var}\"}");
 			$input=~s/\$${match_var}\$/$ENV{"MULTI_${match_var}"}/gi;
 		} elsif ($ENV{"${NAGIOS}_${match_var}"}) {
+			DEBUG3("replacing var $match_var with $ENV{\"NAGIOS_${match_var}\"}");
 			$input=~s/\$${match_var}\$/$ENV{"${NAGIOS}_${match_var}"}/gi;
 		}
 	}
 
 	DEBUG3("line $input after nagios var substitution");
 	#--- NOT case sensitive macro checking (Nagios does not either :-/)
-	while ((my $var)=($input=~/\$([A-Za-z0-9_:^\-\$]+)\$/i)) {
+	while ((my $var)=($input=~/\$([^\$\[\]]+)\$/i)) {
 
 		DEBUG3("checking var $var");
 		#--- 1. check for MULTI var
