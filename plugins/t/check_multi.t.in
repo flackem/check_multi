@@ -27,7 +27,7 @@ foreach my $plugin (@plugins) {
 		plan skip_all => "tests because component $plugin not found or not executable as \'$path_to_plugin\'";
 	}
 }
-plan tests => 86;
+plan tests => 88;
 
 my $result;
 #my $testopts="-s dont_be_paranoid=1 -s tmp_dir=/tmp/check_multi";
@@ -286,6 +286,24 @@ like(
 	$result->output,
 	'/^OK - 1 plugins checked, 0 critical, 0 warning, 0 unknown, 1 ok\n'.
 	'\[ 1\] eins 1|check_multi::check_multi::plugins=1 time=\d+\.\d+ eins::myplugin::eins=1 $/',
+	"output correct"
+);
+
+#-------------------------------------------------------------------------------
+#--- perfdata passed through ----------------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -x 'eeval [ eins::myplugin ] = \"1|eins=1\"' -r 1 -s perfdata_pass_through=1"
+);
+is(
+	$result->return_code, 
+	0, 
+	"perfdata passed through in plugin output - RC0"
+);
+like(
+	$result->output,
+	'/^OK - 1 plugins checked, 0 critical, 0 warning, 0 unknown, 1 ok\n'.
+	'\[ 1\] eins 1|eins=1$/',
 	"output correct"
 );
 

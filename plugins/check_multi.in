@@ -184,8 +184,12 @@ my %opt=(
 		indent_label	=> @indent_label@,
 		# plugin directory to be added to check_multi search path
 		libexec		=> "@libexecdir@",
-		# plugin directory to be added to check_multi search path
+		# livestatus socket
 		livestatus	=> "@localstatedir@/rw/live",
+		# loose (German) performance data (replace commata by decimal points)
+		loose_perfdata => "@loose_perfdata@",
+		# pnp_version needed for mouseover: 0.6,0,4
+		perfdata_pass_through => "@perfdata_pass_through@",
 		# pnp_version needed for mouseover: 0.6,0,4
 		pnp_version	=> "@pnp_version@",
 		# label to be shown in output: <name> OK, ...
@@ -250,8 +254,6 @@ my %opt=(
 		signals		=> ["DUMMY","INT","TERM","QUIT","HUP","__WARN__"],
 		# which RC if caught signal
 		signal_rc	=> @signal_rc@,
-		# loose (German) performance data (replace commata by decimal points)
-		loose_perfdata => "@loose_perfdata@",
 		# snmp_community
 		snmp_community	=> "@snmp_community@",
 		# snmp_community
@@ -2100,7 +2102,7 @@ sub exec_command {
 				if ($opt{set}{report} & $DETAIL_HTML && module("HTML::Entities") && $cmds[$no]{stdout});
 
 			#--- split performance data from standard output
-			if ($cmds[$no]{output}=~/\|/) {
+			if ($cmds[$no]{output}=~/\|/ && ! $opt{set}{perfdata_pass_through}) {
 				DEBUG4("(1) - output contains \|");
 				if ($cmds[$no]{output}=~/([^\n]*)\n(.*)/s) {
 					DEBUG4("(2) - output contains \\n");
@@ -2162,7 +2164,7 @@ sub exec_command {
 				chomp($cmds[$no]{output});
 			}
 			#--- split performance data from standard output
-			if ($cmds[$no]{output}=~/\|/) {
+			if ($cmds[$no]{output}=~/\|/&& ! $opt{set}{perfdata_pass_through}) {
 				($cmds[$no]{output},$cmds[$no]{performance})=split(/\|/,$cmds[$no]{output});
 				$cmds[$no]{performance}=mytrim($cmds[$no]{performance},"\\s");
 

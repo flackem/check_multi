@@ -43,6 +43,7 @@ sub get_testopts  {
 		notes_url			=> "",
 		objects_cache			=> "'@localstatedir@/objects.cache'",
 		objects_cache_delimiter		=> ",",
+		perfdata_pass_through		=> 0,
 		persistent			=> 0,
 		plugin_path			=> "'@libexecdir@'",
 		pnp_url				=> "'/pnp4nagios'",
