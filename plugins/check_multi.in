@@ -1041,6 +1041,7 @@ sub config_string {
 sub substitute_macros {
 	my ($input)=@_;
 
+
 	if (! $input) {
 		DEBUG3("empty input - nothing to do");
 		return $input;
@@ -1048,41 +1049,44 @@ sub substitute_macros {
 
 	#--- first of all: replace 'normal' vars
 	#--- to prepare objects.cache substitution after that
-	DEBUG3("checking line $input");
+	DEBUG3("checking line \'$input\'");
 	foreach my $match_var (($input=~/\$([^\[\]\$\:]+)\$/gi)) {
   		if ($ENV{"MULTI_${match_var}"}) {
-			DEBUG3("replacing var $match_var with $ENV{\"MULTI_${match_var}\"}");
+			DEBUG3("replacing var \'$match_var\' with \'$ENV{\"MULTI_${match_var}\"}\'");
 			$input=~s/\$${match_var}\$/$ENV{"MULTI_${match_var}"}/gi;
 		} elsif ($ENV{"${NAGIOS}_${match_var}"}) {
-			DEBUG3("replacing var $match_var with $ENV{\"NAGIOS_${match_var}\"}");
+			DEBUG3("replacing var \'$match_var\' with \'$ENV{\"NAGIOS_${match_var}\"}\'");
 			$input=~s/\$${match_var}\$/$ENV{"${NAGIOS}_${match_var}"}/gi;
 		}
 	}
+	DEBUG3("line \'$input\' after nagios var substitution");
 
-	DEBUG3("line $input after nagios var substitution");
 	#--- NOT case sensitive macro checking (Nagios does not either :-/)
-	while ((my $var)=($input=~/\$([^\$\[\]]+)\$/i)) {
-
-		DEBUG3("checking var $var");
+	my %ignored_expr=();
+	while ($input=~/\$([^\$\[\]]+)(?=\$)/g) {
+		my $var=$1;
+		DEBUG3("checking var \'$var\'");
 		#--- 1. check for MULTI var
 		if (defined($ENV{"MULTI_${var}"})) {
-			DEBUG3("replacing env var MULTI_${var} with $ENV{\"MULTI_${var}\"}");
+			DEBUG3("replacing env var \'MULTI_${var}\' with \'$ENV{\"MULTI_${var}\"}\'");
 			$input=~s/\$$var\$/$ENV{"MULTI_${var}"}/g;
 		#--- 2. check for @nagios_name@ var
 		} elsif (defined($ENV{"${NAGIOS}_${var}"})) {
-			DEBUG3("replacing env var ${NAGIOS}_${var} with $ENV{\"${NAGIOS}_${var}\"}");
+			DEBUG3("replacing env var \'${NAGIOS}_${var} with \'$ENV{\"${NAGIOS}_${var}\"}\'");
 			$input=~s/\$$var\$/$ENV{"${NAGIOS}_${var}"}/g;
 		#--- 3. objects.cache substitution
 		} elsif ($var=~/^[a-z_]+:[a-z_]+:[a-z_]+:/) {
-			DEBUG3("checking objects_cache var $var");
+			DEBUG3("checking objects_cache var \'$var\'");
 			my $query=objects_cache_query($var);
 			my $substitution=parse_objects_cache($opt{set}{objects_cache},$query);
-			DEBUG3("replacing objects_cache var $var with $substitution");
+			DEBUG3("replacing objects_cache var \'$var\' with \'$substitution\'");
 			$input=~s/\$$var\$/$substitution/g;
 		#--- 4. nothing to substitute
+		} elsif (! exists($ignored_expr{$var})) {
+			$ignored_expr{$var}++;
+			DEBUG3("Neither \'${NAGIOS}_${var}\' nor \'MULTI_${var}\' are defined: \'$var\' will be ignored");
 		} else {
-			$input=~s/\$$var\$//g;
-			DEBUG3("var ${NAGIOS}_${var}/MULTI_${var} not defined: removed \$$var\$");
+			DEBUG1("oops - something went wrong here: \'$var\' was not handled, but also not found in \%ignored_expr");
 		}
 	}
 	return $input;
