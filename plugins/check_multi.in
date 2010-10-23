@@ -4069,8 +4069,7 @@ if ($#cmds<1) {
 }
 
 #--- create unique hash for check
-$cmds[0]{names}=&config_string(\@cmds);
-$cmds[0]{hash}=&my_hash($cmds[0]{names});
+$cmds[0]{hash}=&my_hash(&config_string(\@cmds));
 
 #--- initialize timer for overall timeout
 $cmds[0]{starttime}=time;
