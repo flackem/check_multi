@@ -814,40 +814,6 @@ like(
 	"output correct"
 );
 #-------------------------------------------------------------------------------
-#--- check_multi child and global timeout --------------------------------------
-#-------------------------------------------------------------------------------
-$result = NPTest->testCmd(
-	"@PERL@ ../check_multi $testopts -x 'command [ one ] = ( sleep 2; echo one)' -x 'command [ two ] = echo two' -r 1+4 -t 1 -T 2 -s cancel_before_global_timeout=1",
-);
-is(
-	$result->return_code, 
-	3, 
-	"timeout check: child one killed, child two cancelled - RC3"
-);
-like(
-	$result->output,
-	'/UNKNOWN - 2 plugins checked, 2 unknown \(one, two\)\n'.
-	'\[ 1\] one  \[timeout encountered after 1s\]\n'.
-	'\[ 2\] two UNKNOWN - execution cancelled due to global timeout \(2s\)/',
-	"output correct"
-);
-#-------------------------------------------------------------------------------
-#--- check_multi child, global timeout shorter than local timeout --------------
-#-------------------------------------------------------------------------------
-$result = NPTest->testCmd(
-	"@PERL@ ../check_multi $testopts -x 'command [ one ] = echo one' -r 1+4 -T 5 -t 10",
-);
-is(
-	$result->return_code, 
-	3, 
-	"timeout check: global timeout shorter than local timeout - RC3"
-);
-like(
-	$result->output,
-	'/check_multi: error - child timeout 10s must not be greater than parent timeout 5s/',
-	"output correct"
-);
-#-------------------------------------------------------------------------------
 #--- check_multi object cache macros - objects.cache does not exist ------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
@@ -914,5 +880,39 @@ like(
 	$result->output,
 	'/OK - 1 plugins checked, 1 ok\n'.
 	'\[ 1\] services Current Load,Current Users,HTTP,PING,Root Partition,SSH,Swap Usage,Total Processes/',
+	"output correct"
+);
+#-------------------------------------------------------------------------------
+#--- check_multi child, global timeout shorter than local timeout --------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -x 'command [ one ] = echo one' -r 1+4 -T 5 -t 10",
+);
+is(
+	$result->return_code, 
+	3, 
+	"timeout check: global timeout shorter than local timeout - RC3"
+);
+like(
+	$result->output,
+	'/check_multi: error - child timeout 10s must not be greater than parent timeout 5s/',
+	"output correct"
+);
+#-------------------------------------------------------------------------------
+#--- check_multi child and global timeout --------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -x 'command [ one ] = ( sleep 2; echo one)' -x 'command [ two ] = echo two' -r 1+4 -t 1 -T 2 -s cancel_before_global_timeout=1",
+);
+is(
+	$result->return_code, 
+	3, 
+	"timeout check: child one killed, child two cancelled - RC3"
+);
+like(
+	$result->output,
+	'/UNKNOWN - 2 plugins checked, 2 unknown \(one, two\)\n'.
+	'\[ 1\] one  \[timeout encountered after 1s\]\n'.
+	'\[ 2\] two UNKNOWN - execution cancelled due to global timeout \(2s\)/',
 	"output correct"
 );
