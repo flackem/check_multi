@@ -3558,14 +3558,21 @@ sub report_perfdata {
 				} else {
 					#--- do we have an explicit plugin specification? take it
 					my $plugin=($cmds[$no]{pplugin} ne "") ? $cmds[$no]{pplugin} : $cmds[$no]{plugin};
+					DEBUG4("plugin is $plugin");
+
+					#--- perflabel already with single quotes? then keep it
 					if ($cmds[$no]{performance}=~/^\s*\'([^']*)\'=(\S+)(.*)/) {
 						$perftmp="\'$cmds[$no]{name}::${plugin}::$1\'=$2$3 ";
-					} elsif ($delim) {
-						$cmds[$no]{performance}=~/\s*(.*)=(.*)\s*/;
-						$perftmp="$delim$cmds[$no]{name}::$plugin::$1$delim=$2 ";
+						DEBUG4("quoting detection: already quoted before:" .$perftmp);
+					#--- child check name with spaces? then use single quotes
+					} elsif ($cmds[$no]{name}=~/\s+/) {
+						$cmds[$no]{performance}=~/([^=]*)=(.*)\s*/;
+						$perftmp="\'$cmds[$no]{name}::${plugin}::$1\'=$2 ";
+						DEBUG4("quoting detection: blanks found:" .$perftmp);
 					} else {
 						$cmds[$no]{performance}=~s/\s*(.*)/$1/;
 						$perftmp="$cmds[$no]{name}::${plugin}::$cmds[$no]{performance} ";
+						DEBUG4("quoting detection: standard without blanks:" .$perftmp);
 					}
 				}
 				$cmds[$no]{performance}="";
@@ -3583,9 +3590,6 @@ sub report_perfdata {
 						$cmds[$no]{performance}.=join("_",@tmparr);
 					} else {
 						$cmds[$no]{performance}.=$label;
-					}
-					if ($cmds[$no]{performance}=~/\s+/) {
-						$cmds[$no]{performance}="\'$cmds[$no]{performance}\'";
 					}
 					$cmds[$no]{performance}.="=$data ";
 					DEBUG4("remaining perftmp: $perftmp");
