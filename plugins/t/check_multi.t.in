@@ -27,7 +27,7 @@ foreach my $plugin (@plugins) {
 		plan skip_all => "tests because component $plugin not found or not executable as \'$path_to_plugin\'";
 	}
 }
-plan tests => 90;
+plan tests => 94;
 
 my $result;
 #my $testopts="-s dont_be_paranoid=1 -s tmp_dir=/tmp/check_multi";
@@ -880,6 +880,40 @@ like(
 	$result->output,
 	'/OK - 1 plugins checked, 1 ok\n'.
 	'\[ 1\] services Current Load,Current Users,HTTP,PING,Root Partition,SSH,Swap Usage,Total Processes/',
+	"output correct"
+);
+#-------------------------------------------------------------------------------
+#--- check_multi object drops illegal characters -------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -x 'eeval [ string_with_carriage_return ] = \"Hello\rWorld!\"' -r 1+4",
+);
+is(
+	$result->return_code, 
+	0, 
+	"illegal characters are dropped - RC0"
+);
+like(
+	$result->output,
+	'/OK - 1 plugins checked, 1 ok\n'.
+	'\[ 1\] string_with_carriage_return HelloWorld!/',
+	"output correct"
+);
+#-------------------------------------------------------------------------------
+#--- check_multi object deals with empty illegal character variable ------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -x 'eeval [ string_with_carriage_return ] = \"Hello\rWorld!\"' -r 1+4 -s illegal_chars=\"\"",
+);
+is(
+	$result->return_code, 
+	0, 
+	"illegal character variable is empty - RC0"
+);
+like(
+	$result->output,
+	'/OK - 1 plugins checked, 1 ok\n'.
+	'\[ 1\] string_with_carriage_return Hello\rWorld!/',
 	"output correct"
 );
 #-------------------------------------------------------------------------------

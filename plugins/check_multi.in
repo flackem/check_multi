@@ -1336,7 +1336,7 @@ sub add_error {
 	while (@_) {
 		my $error=shift;
 		next if (!$error);	# skip empty entries
-		$error=~s/[$opt{set}{illegal_chars}]*//g; 
+		$error=~s/[$opt{set}{illegal_chars}]*//g if ($opt{set}{illegal_chars}); 
 		$error=~s/\n//g;
 		chomp($error);
 		HTML::Entities::encode_entities($error) 
@@ -1497,7 +1497,7 @@ sub parse_lines {
 		next LINE if ($line=~/^\s*#/);
 		
 		#--- remove unwanted characters from input line
-		if ($line=~/$opt{set}{illegal_chars}/) {
+		if ($opt{set}{illegal_chars} && $line=~/$opt{set}{illegal_chars}/) {
 			DEBUG2("found illegal characters in line $lineno, removing them");
 			$line=~s/$opt{set}{illegal_chars}//g;
 		}
@@ -2067,7 +2067,8 @@ sub exec_command {
 
 				#--- store stdout/stderr and cleanup tmpfiles
 				$cmds[$no]{output}=readfile($tmp_stdout);
-				$cmds[$no]{output}=~s/[$opt{set}{illegal_chars}]*//g; chomp $cmds[$no]{output};	
+				$cmds[$no]{output}=~s/[$opt{set}{illegal_chars}]*//g if ($opt{set}{illegal_chars});
+				chomp $cmds[$no]{output};	
 				DEBUG3("raw output >$cmds[$no]{output}<");
 				DEBUG3("hex output:".hexdump(16,$cmds[$no]{output}));
 				add_error($no,readfile($tmp_stderr));
