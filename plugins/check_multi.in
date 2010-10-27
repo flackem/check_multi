@@ -3420,9 +3420,13 @@ sub report_html {
 		}
 		$output.="</div>";
 	}
-
-	#--- status_in_extinfo? escape newlines by '<br>'
-	$output=~s/\n/<br \/>/g if ($opt{set}{extinfo_in_status});
+	
+	if ($opt{set}{extinfo_in_status}) {
+		#--- status_in_extinfo? escape newlines by '<br>'
+		$output=~s/\n/<br \/>/g; 
+		#--- close div if collapsed
+		$output.="</div>" if ($opt{set}{collapse} == 1); 
+	}
 
 	#--- last not least: output ;-)
 	print $output;
