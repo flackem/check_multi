@@ -1,6 +1,7 @@
 
 ===== Changelog =====
 
+   * statusdat now handles makros, thx to Jan Mara
 	* fixed empty illegal_chars var handling, thx to Tony Yarusso
 	* tags now can contain any characters: command [ this is a tag ] = ...
 	* added send_gearman client report mode

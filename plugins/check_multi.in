@@ -1510,6 +1510,7 @@ sub parse_lines {
 
 			#--- macros?
 			$name=substitute_macros($name);
+			$cmd=substitute_macros($cmd);
 
 			#--- still macro '$' in name? then macro was not substituted
 			if ($name=~/\$([^\$]+)\$/) {

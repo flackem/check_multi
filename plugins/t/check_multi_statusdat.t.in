@@ -11,7 +11,7 @@ use testopts;
 
 my $t;
 
-plan tests => 12;
+plan tests => 14;
 
 my $result;
 #my $testopts="-s status_dat=status.dat -s dont_be_paranoid=1";
@@ -112,6 +112,24 @@ is(
 	$result->return_code, 
 	$result->return_code, 
 	"check_multi finds localhost in status.dat - RC".$result->return_code." - passed"
+);
+like(
+	$result->output,
+	#'/OK - 1 plugins checked, 1 ok\n\[ 1\] test_localhost.*PING OK.*\|check_multi\:\:check_multi\:\:plugins=1/s', 
+	'/OK - 1 plugins checked, 1 ok\n\[ 1\] host_localhost PING OK.*/s', 
+	"hosts output correct - passed"
+);
+
+#-------------------------------------------------------------------------------
+#--- host localhost with macro -------------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -x 'statusdat [ host ] = \$HOSTNAME\$'",
+);
+is(
+	$result->return_code, 
+	$result->return_code, 
+	"check_multi finds \$HOSTNAME\$ (localhost) in status.dat - RC".$result->return_code." - passed"
 );
 like(
 	$result->output,
