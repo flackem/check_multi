@@ -182,10 +182,6 @@ my %opt=(
 		indent		=> "@indent@",
 		# child checks indented?
 		indent_label	=> @indent_label@,
-		# characters which are not allowed in macros
-		invalid_macro_chars => '^\[\]\$',
-		# characters which are not allowed in tags
-		invalid_tag_chars => '^\]\(\)\"\'',
 		# plugin directory to be added to check_multi search path
 		libexec		=> "@libexecdir@",
 		# livestatus socket
@@ -282,6 +278,11 @@ my %opt=(
 		tmp_etc		=> "@tmp_etc@",
 		# octal permissions of tmp_dir
 		tmp_dir_permissions => "@tmp_dir_permissions@",
+		# characters which are allowed in macros
+		#valid_macro_chars => '[A-Za-z0-9\s!#%&\(\)\\*+,-.:;<=>?@_{}~',
+		valid_macro_chars => 'A-Za-z0-9\s\.\@\-\_\:',
+		# characters which are allowed in tags
+		valid_tag_chars => 'A-Za-z0-9\s\-\.\@\_\:\$',
 		# verbosity, from 1 (less verbose) to 3 (much verbose)
 		verbose		=> @verbose@,
 		# elements to be added to XML structure
@@ -427,7 +428,7 @@ sub process_input {
 			$opt{set}{HOSTNAME}=`uname -n`;
 			chomp($opt{set}{HOSTNAME});
 		}
-	}	
+	}
 
 	#--- check_multi uses a temporary directory, per default /tmp/check_multi
 	#--- 1. create if not yet done
@@ -463,12 +464,12 @@ sub process_input {
 		if ($opt{filename}[$i]=~/^-$/) {
 			while (<STDIN>) { $stdin.=$_; }
 			DEBUG3("found <STDIN> >$stdin<");
-	
+
 			#--- do we have input from check_multi XML report mode? (check_multi as filter)
 			if ($stdin=~/check_multi_xml/) {
 				#--- try to load module XML::Simple and bail out if not successful
 				module("XML::Simple",1);
-	
+
 				#--- read in XML data and feed cmds structure
 				my $in=XML::Simple::XMLin(
 					$stdin,
@@ -476,7 +477,7 @@ sub process_input {
 					ForceArray=>["CHILD"],		# force array also for one child
 					SuppressEmpty=>"",		# if empty, add "" instead of {} empty hash
 				);
-					
+
 				if (module("Data::Dumper")) {
 					DEBUG3("Data::Dumper available");
 					DEBUG3("XML input after XMLin:\n" . Dumper($in));
@@ -484,12 +485,12 @@ sub process_input {
 					$opt{set}{test}=0;
 					DEBUG2("Data::Dumper not available");
 				}
-	
+
 				if (exists($in->{PARENT})) {
 					#--- restore some values from parent
 					$cmds[0]{nchecks}=$in->{PARENT}->{nchecks};
 					$cmds[0]{nallchecks}=$in->{PARENT}->{nallchecks};
-	
+
 					#--- child values
 					for my $i (keys %{$in->{PARENT}->{CHILD}}) {
 						$cmds[$i]{no}=$i; # index itself as 'no'
@@ -540,7 +541,7 @@ sub process_input {
 				}
 				DEBUG4("URL:$opt{filename}[$i] hostname:$host path:$path file:$file");
 			}
-			
+
 			#--- create directory to store saved config files
 			my $cmdfile_path="$opt{set}{tmp_dir}/$opt{set}{tmp_etc}/$host/$path";
 			if (! my_mkdir("$cmdfile_path", $opt{set}{tmp_dir_permissions})) {
@@ -1051,19 +1052,21 @@ sub substitute_macros {
 		return $input;
 	}
 
-	#--- first of all: replace 'normal' vars
+	#--- first pass: replace 'normal' vars (without ':')
 	#--- to prepare objects.cache substitution after that
-	DEBUG3("checking line \'$input\'");
-	foreach my $match_var (($input=~/\$([$opt{set}{invalid_macro_chars}\:]+)\$/gi)) {
-  		if ($ENV{"MULTI_${match_var}"}) {
+	DEBUG3("checking expression \'$input\'");
+	foreach my $match_var (($input=~/\$([$opt{set}{valid_macro_chars}]+)(?=\$)/gi)) {
+ 		if ($ENV{"MULTI_${match_var}"}) {
 			DEBUG3("replacing var \'$match_var\' with \'$ENV{\"MULTI_${match_var}\"}\'");
 			$input=~s/\$${match_var}\$/$ENV{"MULTI_${match_var}"}/gi;
 		} elsif ($ENV{"${NAGIOS}_${match_var}"}) {
 			DEBUG3("replacing var \'$match_var\' with \'$ENV{\"NAGIOS_${match_var}\"}\'");
 			$input=~s/\$${match_var}\$/$ENV{"${NAGIOS}_${match_var}"}/gi;
+		} else {
+			DEBUG3("var \'$match_var\' matching neither MULTI_var nor NAGIOS_var!");
 		}
 	}
-	DEBUG3("line \'$input\' after nagios var substitution");
+	DEBUG3("expression \'$input\' after nagios var substitution");
 
 	#--- NOT case insensitive macro checking (Nagios does not either :-/)
 	#--- Note: due to blanks and other separating characters its possible, that 
@@ -1071,7 +1074,7 @@ sub substitute_macros {
 	#--- the last '$' as potential character of the new macro, the backtrack
 	#--- operator ?= is used.
 	my %ignored_expr=();
-	while ($input=~/\$([$opt{set}{invalid_macro_chars}]+)(?=\$)/g) {
+	while ($input=~/\$([$opt{set}{valid_macro_chars}]+)(?=\$)/g) {
 		my $var=$1;
 
 		DEBUG3("checking var \'$var\'");
@@ -1098,6 +1101,7 @@ sub substitute_macros {
 			DEBUG1("oops - something went wrong here: \'$var\' was not handled, but also not found in \%ignored_expr");
 		}
 	}
+	DEBUG3("expression \'$input\' after MULTI/NAGIOS/objects.cache substitution");
 	return $input;
 }
 
@@ -1152,7 +1156,7 @@ sub parse_objects_cache {
 		}
 
 		#--- wrong object? continue search
-		next if ($type ne $query->{type});
+		next if ("$type" ne "$query->{type}");
 
 		#--- parse particular object
 		while (<OBJECTS_CACHE>) {
@@ -1281,7 +1285,7 @@ sub debug_message {
 			printf "%08.5f %s ($c0[2]): ", time-$timezero, ($c1[3])?$c1[3]:"";
 		}
 		print "$_\n";
-	}	
+	}
 }
 
 #---
@@ -1341,7 +1345,7 @@ sub add_error {
 		chomp($error);
 		HTML::Entities::encode_entities($error) 
 			if ($opt{set}{report} & $DETAIL_HTML && module("HTML::Entities"));
-		
+
 		if ($no >= 0 && $no <= $#cmds) {
 			push @{$cmds[$no]{error}}, $error;
 			DEBUG3("check [$no] - added error message \'$error\'");
@@ -1490,12 +1494,12 @@ sub parse_lines {
 		}
 
 		#--- count lines
-		$lineno++;		
+		$lineno++;
 
 		#--- skip empty lines and comments
 		next LINE if ($line=~/^\s*$/);
 		next LINE if ($line=~/^\s*#/);
-		
+
 		#--- remove unwanted characters from input line
 		if ($opt{set}{illegal_chars} && $line=~/$opt{set}{illegal_chars}/) {
 			DEBUG2("found illegal characters in line $lineno, removing them");
@@ -1506,7 +1510,7 @@ sub parse_lines {
 		$line=~s/\\\s*$// if ($line=~/\\\s*/);
 
 		#--- header line (regex contains all allowed commands)
-		if (($type,$name,$cmd)=($line=~/^\s*(${valid_commands})\s*\[\s*\b([$opt{set}{invalid_tag_chars}]*)\b\s*\]\s*=\s*(.*)\s*/i)) {
+		if (($type,$name,$cmd)=($line=~/^\s*(${valid_commands})\s*\[\s*\b([$opt{set}{valid_tag_chars}]*)\b\s*\]\s*=\s*(.*)\s*/i)) {
 
 			#--- macros?
 			$name=substitute_macros($name);
@@ -1528,7 +1532,7 @@ sub parse_lines {
 			$last_command=parse_header($type,$name,$cmd,$lineno);
 
 		#--- proper header line with invalid keyword
-		} elsif ($line=~/^\s*(\w+)\s*\[\s*\b([$opt{set}{invalid_tag_chars}]*)\b\s*\]\s*=\s*(.*)\s*/) {
+		} elsif ($line=~/^\s*(\w+)\s*\[\s*\b([$opt{set}{valid_tag_chars}]*)\b\s*\]\s*=\s*(.*)\s*/) {
 			add_error(0,"Invalid keyword \'$1\' specified, valid are ${valid_commands}");
 			return;
 
@@ -1853,7 +1857,7 @@ sub parse_header {
 			$cmds[$i]{command}=$2;
 		} else {
 			$cmds[$i]{host}=$opt{set}{HOSTNAME};
-			$cmds[$i]{command}=$cmd;	
+			$cmds[$i]{command}=$cmd;
 		}
 		$cmds[$i]{plugin}="snmp";
 		$cmds[$i]{pplugin}=($key)?$key:"snmp";
@@ -2044,7 +2048,7 @@ sub exec_command {
 				#--- child: execute command
 				} elsif ($child==0) {
 					#--- assign own process group for child check, thx Henry Rolofs
-					setpgrp(0,0) if ($^O!~/Win32/);	
+					setpgrp(0,0) if ($^O!~/Win32/);
 					exec("$cmds[$no]{command} 1>$tmp_stdout 2>$tmp_stderr");
 				#--- parent - start timeout for child
 				} else {
@@ -2069,7 +2073,7 @@ sub exec_command {
 				#--- store stdout/stderr and cleanup tmpfiles
 				$cmds[$no]{output}=readfile($tmp_stdout);
 				$cmds[$no]{output}=~s/[$opt{set}{illegal_chars}]*//g if ($opt{set}{illegal_chars});
-				chomp $cmds[$no]{output};	
+				chomp $cmds[$no]{output};
 				DEBUG3("raw output >$cmds[$no]{output}<");
 				DEBUG3("hex output:".hexdump(16,$cmds[$no]{output}));
 				add_error($no,readfile($tmp_stderr));
@@ -2100,7 +2104,7 @@ sub exec_command {
 				}
 				close(COUT);
 				close(CERR);
-				chomp $cmds[$no]{output};	
+				chomp $cmds[$no]{output};
 				DEBUG3("open3 raw output >$cmds[$no]{output}<");
 				DEBUG3("open3 raw stderr >".join(',',$cmds[$no]{error})."<");
 			}
@@ -2112,7 +2116,7 @@ sub exec_command {
 				add_error($no,"RC was $cmds[$no]{rc}!");
 				$cmds[$no]{rc}=$UNKNOWN;
 			}
-			
+
 			#--- remove white chars from output (Wolfgang Barth)
 			$cmds[$no]{stdout}=HTML::Entities::encode_entities($cmds[$no]{stdout}) 
 				if ($opt{set}{report} & $DETAIL_HTML && module("HTML::Entities") && $cmds[$no]{stdout});
@@ -2302,7 +2306,7 @@ sub exec_command {
 
 		#--- evaluate single command RC rating
 		single_result_rating($no);
-		
+
 		#--- set environment variable states
 		set_env_vars($no);
 
@@ -2886,9 +2890,9 @@ sub global_result_rating {
 		$ENV{"MULTI_$def{label}{$s}_LIST"}=join(',',@{$rc{list}[$s]});
 		$ENV{"MULTI_$def{label}{$s}_COUNT_ALL"}=$rc{count_all}[$s];
 		$ENV{"MULTI_$def{label}{$s}_LIST_ALL"}=join(',',@{$rc{list_all}[$s]});
-		
+
 		my $state=$def{s2r}{$s};
-		
+
 		my ($result,$message)=eval_result($rc{expr}[$state]);
 		if (! defined($result) || $result eq "") {
 			; # do nothing
@@ -3383,12 +3387,12 @@ sub report_html {
 			$output.="<table><tr style='text-align:left' bgcolor='" . $colors[$flipflop] . "'><th></th><th>Attribute</th><th>Value</th></tr>";
 			my %vars=(
 				1 => {
-					att => "\$no",	
+					att => "\$no",
 					val => $no,
 				},
 				2 => {
-					att => "tag",	
-					val => $cmds[$no]{name},	
+					att => "tag",
+					val => $cmds[$no]{name},
 				},
 				3 => {
 					att => "\$STATE_$cmds[$no]{name}\$",
@@ -3396,19 +3400,19 @@ sub report_html {
 				},
 				4 => {
 					att => "\$$cmds[$no]{name}\$",
-					val => $cmds[$no]{output},	
+					val => $cmds[$no]{output},
 				},
 				5 => {
-					att => "type",			
-					val => $cmds[$no]{type},	
+					att => "type",
+					val => $cmds[$no]{type},
 				},
 				6 => {
-					att => "command",		
-					val => $cmds[$no]{command},	
+					att => "command",
+					val => $cmds[$no]{command},
 				},
 				7 => {
-					att => "runtime",		
-					val => $cmds[$no]{runtime},	
+					att => "runtime",
+					val => $cmds[$no]{runtime},
 				},
 			);
 
@@ -3420,7 +3424,8 @@ sub report_html {
 		}
 		$output.="</div>";
 	}
-	
+
+	#--- status_in_extinfo? escape newlines by '<br>'
 	if ($opt{set}{extinfo_in_status}) {
 		#--- status_in_extinfo? escape newlines by '<br>'
 		$output=~s/\n/<br \/>/g; 
@@ -3659,21 +3664,21 @@ sub parse_perfdata {
 	#---
 	#--- loop over perfdata
 	while ($perfdata) {
-		DEBUG4("parsing perfdata:$perfdata");	
+		DEBUG4("parsing perfdata:$perfdata");
 		#--- label w/ \'
 		if ($perfdata=~/^\s*(\'[^']*\')=([^ ]+)(.*)/) {
 			$label=$1;
 			$data=$2;
 			$perfdata=$3;
-			DEBUG4("parsed perfdata -'label':$1 data:$2 rest:$3");	
+			DEBUG4("parsed perfdata -'label':$1 data:$2 rest:$3");
 		#--- label w/o \'
 		} elsif ($perfdata=~/^\s*([^\s=']+)=([^ ]+)(.*)/) {
 			$label=$1;
 			$data=$2;
 			$perfdata=$3;
-			DEBUG4("parsed perfdata - label:$1 data:$2 rest:$3");	
+			DEBUG4("parsed perfdata - label:$1 data:$2 rest:$3");
 		} else {
-			DEBUG2("general parsing error - invalid perfdata");	
+			DEBUG2("general parsing error - invalid perfdata");
 			return "general error in '$perfdata'";
 		}
 		$perfdata=~s/^\s+//; $perfdata=~s/\s+$//;
@@ -3688,10 +3693,10 @@ sub parse_perfdata {
 
 		#--- invalid perfdata with trailing ';' after max value
 		if (($data=~tr/;//)>=5) {
-			DEBUG2("invalid ';' after max value $max");	
+			DEBUG2("invalid ';' after max value $max");
 			return "error in '$data': invalid ';' after max value $max" if (! $opt{set}{loose_perfdata});
 		} else {
-			DEBUG4("number of ';' ok in $data: " . scalar($data=~tr/;//));	
+			DEBUG4("number of ';' ok in $data: " . scalar($data=~tr/;//));
 		}
 
 		$error.= "$label: bad value \'$value\' in data \'$data\' " if ($value && $value !~/^[-0-9.]+$/);
@@ -3704,7 +3709,7 @@ sub parse_perfdata {
 
 		#--- done: perfdata is ok
 	}
-	DEBUG3("no errors found");	
+	DEBUG3("no errors found");
 	return undef;
 }
 
@@ -3810,7 +3815,7 @@ sub report_send_nsca {
 			DEBUG2("checkresult file of [ $cmds[$i]{name} ] will be suppressed");
 			next;
 		}
-		
+
 		#--- call send_ncsa
 		if (!open(SEND_NSCA, "|$nsca_cmdline >/dev/null")) {
 			add_error(0,"report_send_nsca: error calling command line $nsca_cmdline");
@@ -4006,7 +4011,7 @@ sub report_send_gearman {
 			DEBUG2("checkresult file of [ $cmds[$i]{name} ] will be suppressed");
 			next;
 		}
-		
+
 		#--- call send_gearman
 		unless (open(SEND_GEARMAN, 
 			"|$gearman_cmdline ".
@@ -4076,7 +4081,7 @@ add_error(0,"please don't run plugins as root!") if ($opt{set}{user}=~/root/ && 
 #--- quick exit if only encoding of commands requested
 if ($opt{set}{report} & $DETAIL_ENCODE_COMMANDS) {
 	print "%0A\n";	# end up with NEWLINE
-	exit $OK;	
+	exit $OK;
 }
 
 #--- no child checks defined yet? Throw UNKNOWN

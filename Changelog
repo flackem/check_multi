@@ -1,6 +1,7 @@
 
 ===== Changelog =====
 
+	* allowed characters for tags and macros fixed
 	* fixed missing closing </div> for status.cgi, thx to Sebastian Halles
 	* statusdat now handles makros, thx to Jan Mara
 	* fixed empty illegal_chars var handling, thx to Tony Yarusso
