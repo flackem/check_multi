@@ -1,6 +1,7 @@
 
 ===== Changelog =====
 
+	* MULTI_<var> replaced by MULTI_set_<var> to avoid collisions
 	* new macro ERROR_<tag> contains STDERR of child check
 	* allowed characters for tags and macros fixed
 	* fixed missing closing </div> for status.cgi, thx to Sebastian Halles
