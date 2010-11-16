@@ -1057,16 +1057,16 @@ sub substitute_macros {
 	DEBUG3("checking expression \'$input\'");
 	foreach my $match_var (($input=~/\$([$opt{set}{valid_macro_chars}]+)(?=\$)/gi)) {
  		if ($ENV{"MULTI_${match_var}"}) {
-			DEBUG3("replacing var \'$match_var\' with \'$ENV{\"MULTI_${match_var}\"}\'");
+			DEBUG3("1st run: var - replacing var \'$match_var\' with \'$ENV{\"MULTI_${match_var}\"}\'");
 			$input=~s/\$${match_var}\$/$ENV{"MULTI_${match_var}"}/gi;
 		} elsif ($ENV{"${NAGIOS}_${match_var}"}) {
-			DEBUG3("replacing var \'$match_var\' with \'$ENV{\"NAGIOS_${match_var}\"}\'");
+			DEBUG3("1st run: var - replacing var \'$match_var\' with \'$ENV{\"NAGIOS_${match_var}\"}\'");
 			$input=~s/\$${match_var}\$/$ENV{"${NAGIOS}_${match_var}"}/gi;
 		} else {
-			DEBUG3("var \'$match_var\' matching neither MULTI_var nor NAGIOS_var!");
+			DEBUG3("1st run: var - var \'$match_var\' matching neither MULTI_var nor NAGIOS_var!");
 		}
 	}
-	DEBUG3("expression \'$input\' after nagios var substitution");
+	DEBUG3("expression \'$input\' after 1st run (nagios var substitution)");
 
 	#--- NOT case insensitive macro checking (Nagios does not either :-/)
 	#--- Note: due to blanks and other separating characters its possible, that 
@@ -1080,28 +1080,28 @@ sub substitute_macros {
 		DEBUG3("checking var \'$var\'");
 		#--- 1. check for MULTI var
 		if (defined($ENV{"MULTI_${var}"})) {
-			DEBUG3("replacing env var \'MULTI_${var}\' with \'$ENV{\"MULTI_${var}\"}\'");
+			DEBUG3("2nd run - replacing env var \'MULTI_${var}\' with \'$ENV{\"MULTI_${var}\"}\'");
 			$input=~s/\$$var\$/$ENV{"MULTI_${var}"}/g;
 		#--- 2. check for @nagios_name@ var
 		} elsif (defined($ENV{"${NAGIOS}_${var}"})) {
-			DEBUG3("replacing env var \'${NAGIOS}_${var} with \'$ENV{\"${NAGIOS}_${var}\"}\'");
+			DEBUG3("2nd run - replacing env var \'${NAGIOS}_${var} with \'$ENV{\"${NAGIOS}_${var}\"}\'");
 			$input=~s/\$$var\$/$ENV{"${NAGIOS}_${var}"}/g;
 		#--- 3. objects.cache substitution
 		} elsif ($var=~/^[a-z_]+:[a-z_]+:[a-z_]+:/) {
-			DEBUG3("checking objects_cache var \'$var\'");
+			DEBUG3("2nd run - checking objects_cache var \'$var\'");
 			my $query=objects_cache_query($var);
 			my $substitution=parse_objects_cache($opt{set}{objects_cache},$query);
-			DEBUG3("replacing objects_cache var \'$var\' with \'$substitution\'");
+			DEBUG3("2nd run - replacing objects_cache var \'$var\' with \'$substitution\'");
 			$input=~s/\$$var\$/$substitution/g;
 		#--- 4. nothing to substitute
 		} elsif (! exists($ignored_expr{$var})) {
 			$ignored_expr{$var}++;
-			DEBUG3("Neither \'${NAGIOS}_${var}\' nor \'MULTI_${var}\' are defined: \'$var\' will be ignored");
+			DEBUG3("2nd run - Neither \'${NAGIOS}_${var}\' nor \'MULTI_${var}\' are defined: \'$var\' will be ignored");
 		} else {
-			DEBUG1("oops - something went wrong here: \'$var\' was not handled, but also not found in \%ignored_expr");
+			DEBUG1("2nd run - oops - something went wrong here: \'$var\' was not handled, but also not found in \%ignored_expr");
 		}
 	}
-	DEBUG3("expression \'$input\' after MULTI/NAGIOS/objects.cache substitution");
+	DEBUG3("expression \'$input\' after 2nd run: MULTI/NAGIOS/objects.cache substitution");
 	return $input;
 }
 
@@ -1258,14 +1258,22 @@ sub set_env_vars {
 	$ENV{"MULTI_${no}_LABEL"}="$def{label}{$cmds[$no]{rc}}";
 	$ENV{"MULTI_${no}_RC_LABEL"}=($cmds[$no]{rc}<=$UNKNOWN)?$def{label}{$cmds[$no]{rc}}:"INVALID";
 
-	DEBUG4("environment vars set\n" .
-		"1. MULTI_$name=$cmds[$no]{output}\n" .
-		"2. MULTI_STATE_$name=$cmds[$no]{rc}\n" .
-		"3. MULTI_ERROR_$name=$cmds[$no]{error}".
-		"4. MULTI_LABEL_$name=$def{label}{$cmds[$no]{rc}}\n" .
-		"5. MULTI_${no}=$cmds[$no]{output}\n" .
-		"6. MULTI_${no}_STATE=$cmds[$no]{rc}\n" .
-		"7. MULTI_${no}_LABEL=$def{label}{$cmds[$no]{rc}}"
+	DEBUG4(
+		sprintf "environment vars set\n".
+      "1. MULTI_$name=%s\n".
+		"2. MULTI_STATE_$name=%s\n".
+		"3. MULTI_ERROR_$name=%s\n".
+		"4. MULTI_LABEL_$name=%s\n".
+		"5. MULTI_${no}=%s\n".
+		"6. MULTI_${no}_STATE=%s\n".
+		"7. MULTI_${no}_LABEL=%s\n", 
+			defined($ENV{"MULTI_$name"})?$ENV{"MULTI_$name"}:"undef",
+			defined($ENV{"MULTI_STATE_$name"})?$ENV{"MULTI_STATE_$name"}:"undef",
+			defined($ENV{"MULTI_ERROR_$name"})?$ENV{"MULTI_ERROR_$name"}:"undef",
+			defined($ENV{"MULTI_LABEL_$name"})?$ENV{"MULTI_LABEL_$name"}:"undef",
+			defined($ENV{"MULTI_${no}"})?$ENV{"MULTI_${no}"}:"undef",
+			defined($ENV{"MULTI_${no}_STATE"})?$ENV{"MULTI_${no}_STATE"}:"undef",
+			defined($ENV{"MULTI_${no}_LABEL"})?$ENV{"MULTI_${no}_LABEL"}:"undef",
 	);
 }
 
