@@ -1,6 +1,7 @@
 
 ===== Changelog =====
 
+	* new macro ERROR_<tag> contains STDERR of child check
 	* allowed characters for tags and macros fixed
 	* fixed missing closing </div> for status.cgi, thx to Sebastian Halles
 	* statusdat now handles makros, thx to Jan Mara

@@ -27,7 +27,7 @@ foreach my $plugin (@plugins) {
 		plan skip_all => "tests because component $plugin not found or not executable as \'$path_to_plugin\'";
 	}
 }
-plan tests => 94;
+plan tests => 98;
 
 my $result;
 #my $testopts="-s dont_be_paranoid=1 -s tmp_dir=/tmp/check_multi";
@@ -930,6 +930,42 @@ is(
 like(
 	$result->output,
 	'/check_multi: error - child timeout 10s must not be greater than parent timeout 5s/',
+	"output correct"
+);
+#-------------------------------------------------------------------------------
+#--- check_multi error macro ---------------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -x 'command [ not_existing_command ] = this_command_does_not_exist' -x 'command [ error_macro ] = echo \$ERROR_not_existing_command\$' -r 1+4",
+);
+is(
+	$result->return_code, 
+	3, 
+	"error macro contains STDERR - RC3"
+);
+like(
+	$result->output,
+	'/UNKNOWN - 2 plugins checked, 1 unknown \(not_existing_command\), 1 ok\n'.
+	'\[ 1\] not_existing_command  \[.*\]\n'.
+	'\[ 2\] error_macro \[.*this_command_does_not_exist/',
+	"output correct"
+);
+#-------------------------------------------------------------------------------
+#--- check_multi error macro replaces output if none there ---------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -x 'command [ not_existing_command ] = this_command_does_not_exist' -x 'command [ output_macro ] = echo \$not_existing_command\$' -r 1+4",
+);
+is(
+	$result->return_code, 
+	3, 
+	"output macro contains error, if no output available - RC3"
+);
+like(
+	$result->output,
+	'/UNKNOWN - 2 plugins checked, 1 unknown \(not_existing_command\), 1 ok\n'.
+	'\[ 1\] not_existing_command  \[.*\]\n'.
+	'\[ 2\] output_macro \[.*this_command_does_not_exist/',
 	"output correct"
 );
 #-------------------------------------------------------------------------------

@@ -1244,7 +1244,12 @@ sub set_env_vars {
 
 	my $name=($no==0)?"head":$cmds[$no]{name};
 
-	$ENV{"MULTI_$name"}="$cmds[$no]{output}";
+	if ($cmds[$no]{output}) {
+		$ENV{"MULTI_$name"}="$cmds[$no]{output}";
+	} elsif (error($no)) {
+		$ENV{"MULTI_$name"}=error($no);
+	}
+	$ENV{"MULTI_ERROR_$name"}=error($no);
 	$ENV{"MULTI_STATE_$name"}="$cmds[$no]{rc}";
 	$ENV{"MULTI_LABEL_$name"}="$def{label}{$cmds[$no]{rc}}";
 	$ENV{"MULTI_${no}"}="$cmds[$no]{output}";
@@ -1253,13 +1258,15 @@ sub set_env_vars {
 	$ENV{"MULTI_${no}_LABEL"}="$def{label}{$cmds[$no]{rc}}";
 	$ENV{"MULTI_${no}_RC_LABEL"}=($cmds[$no]{rc}<=$UNKNOWN)?$def{label}{$cmds[$no]{rc}}:"INVALID";
 
-	DEBUG4("6 environment vars set\n" .
+	DEBUG4("environment vars set\n" .
 		"1. MULTI_$name=$cmds[$no]{output}\n" .
 		"2. MULTI_STATE_$name=$cmds[$no]{rc}\n" .
-		"3. MULTI_LABEL_$name=$def{label}{$cmds[$no]{rc}}\n" .
-		"4. MULTI_${no}=$cmds[$no]{output}\n" .
-		"5. MULTI_${no}_STATE=$cmds[$no]{rc}\n" .
-		"6. MULTI_${no}_LABEL=$def{label}{$cmds[$no]{rc}}");
+		"3. MULTI_ERROR_$name=$cmds[$no]{error}".
+		"4. MULTI_LABEL_$name=$def{label}{$cmds[$no]{rc}}\n" .
+		"5. MULTI_${no}=$cmds[$no]{output}\n" .
+		"6. MULTI_${no}_STATE=$cmds[$no]{rc}\n" .
+		"7. MULTI_${no}_LABEL=$def{label}{$cmds[$no]{rc}}"
+	);
 }
 
 #---
