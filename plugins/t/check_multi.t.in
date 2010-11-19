@@ -920,7 +920,7 @@ like(
 #--- check_multi child, global timeout shorter than local timeout --------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi $testopts -x 'command [ one ] = echo one' -r 1+4 -T 5 -t 10",
+	"@PERL@ ../check_multi $testopts -x 'eeval [ timeout ] = \$opt{set}{timeout}' -x 'eeval [ TIMEOUT ] = \$opt{set}{TIMEOUT}' -r 1+4 -T 5 -t 10",
 );
 is(
 	$result->return_code, 

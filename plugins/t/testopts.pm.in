@@ -47,7 +47,6 @@ sub get_testopts  {
 		persistent			=> 0,
 		plugin_path			=> "'@libexecdir@'",
 		pnp_url				=> "'/pnp4nagios'",
-		report				=> 13,
 		send_nsca			=> "'@sbindir@/send_nsca'",
 		send_nsca_cfg			=> "'@sysconfdir@/send_nsca.cfg'",
 		send_nsca_srv			=> "localhost",
@@ -62,8 +61,6 @@ sub get_testopts  {
 		tag_notes_link			=> "",
 		target				=> "'_self'",
 		test				=> 0,
-		timeout				=> 10,
-		TIMEOUT				=> 60,
 		tmp_dir				=> "'./tmp'",
 		tmp_etc				=> "'./tmp/etc'",
 		tmp_dir_permissions		=> "0750",
@@ -71,9 +68,14 @@ sub get_testopts  {
 		eml_elements			=> "'name,rc,output,error,plugin,command,performance,starttime,endtime,runtime,type'",
 	};
 	
-	my $testopts="";
+	my $testopts=
+		"--report 13 ".
+		"--timeout 10 ".
+		"--TIMEOUT 10 ".
+		"--verbose 0 "
+		;
 	foreach my $key (sort keys %{$set}) {
-		$testopts.=" -s $key=$set->{$key}";
+		$testopts.=" --set $key=$set->{$key}";
 	}
 	return $testopts;
 }

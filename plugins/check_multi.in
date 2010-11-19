@@ -288,6 +288,8 @@ my %opt=(
 		# elements to be added to XML structure
 		eml_elements	=> "name,rc,output,error,plugin,command,performance,starttime,endtime,runtime,type",
 	},
+	"variable" 	=> {
+	},
 
 );
 
@@ -359,7 +361,7 @@ sub process_input {
 		"l|libexec=s"	=> \$opt{set}{libexec},
 		"n|name=s"	=> \$opt{set}{name},
 		"r|report=s"	=> \$opt{set}{report},
-		"s|set=s"	=> \%{$opt{set}},
+		"s|set=s"	=> \%{$opt{variable}},
 		"t|timeout=i"	=> \$opt{set}{timeout},
 		"T|TIMEOUT=i"	=> \$opt{set}{TIMEOUT},
 		"v|verbose:+"	=> \$opt{set}{verbose},
@@ -403,6 +405,19 @@ sub process_input {
 		extended_usage();
 		detailed_usage();
 		return $UNKNOWN;
+	}
+
+	#--- check command line vars (--set KEY=VAL) and transfer it to $opt{set}
+	foreach my $variable (sort keys(%{$opt{variable}})) {
+		#--- export MULTI_$variable
+		$ENV{"MULTI_".$variable}="$opt{variable}{$variable}";
+		#--- if existing, overwrite, otherwise set $opt}{set} variable
+		if (defined($opt{set}{$variable})) {
+			DEBUG3("overwriting \$opt{set}{$variable}:$opt{set}{$variable} with $opt{variable}{$variable}");
+		} else {
+			DEBUG3("setting \$opt{set}{$variable} with $opt{variable}{$variable}");
+		}
+		$opt{set}{"$variable"}="$opt{variable}{$variable}";
 	}
 
 	#--- determine some settings (user,hostname)
