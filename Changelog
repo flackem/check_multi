@@ -1,6 +1,7 @@
 
 ===== Changelog =====
 
+	* fixed problem with tags parsing
 	* variables set on command line are still exported as MULTI_var
 	* MULTI_<var> replaced by MULTI_set_<var> to avoid collisions
 	* new macro ERROR_<tag> contains STDERR of child check
