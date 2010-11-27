@@ -1540,7 +1540,7 @@ sub parse_lines {
 		$line=~s/\\\s*$// if ($line=~/\\\s*/);
 
 		#--- header line (regex contains all allowed commands)
-		if (($type,$name,$cmd)=($line=~/^\s*(${valid_commands})\s*\[\s*(\S+[$opt{set}{valid_tag_chars}]*\S+)\s*\]\s*=\s*(.*)\s*/i)) {
+		if (($type,$name,$cmd)=($line=~/^\s*(${valid_commands})\s*\[\s*(\S[$opt{set}{valid_tag_chars}]*\S)\s*\]\s*=\s*(.*)\s*/i)) {
 
 			#--- macros?
 			$name=substitute_macros($name);
