@@ -3947,13 +3947,17 @@ fi
 #--- substitution itself
 $PERL subst plugins/Makefile
 $PERL subst plugins/check_multi
+
 $PERL subst plugins/t/Makefile
 $PERL subst plugins/t/testopts.pm
-$PERL subst plugins/t/check_multi.t
-$PERL subst plugins/t/check_multi_checkresults.t
-$PERL subst plugins/t/check_multi_feeds_passive.t
-$PERL subst plugins/t/check_multi_livestatus.t
-$PERL subst plugins/t/check_multi_statusdat.t
+$PERL subst plugins/t/10_check_multi.t
+$PERL subst plugins/t/20_check_multi_macros.t
+$PERL subst plugins/t/30_check_multi_perfdata.t
+$PERL subst plugins/t/50_check_multi_checkresults.t
+$PERL subst plugins/t/60_check_multi_feeds_passive.t
+$PERL subst plugins/t/70_check_multi_statusdat.t
+$PERL subst plugins/t/80_check_multi_livestatus.t
+$PERL subst plugins/t/90_extreme_testing.t
 
 $PERL subst contrib/Makefile
 $PERL subst contrib/status_query/Makefile

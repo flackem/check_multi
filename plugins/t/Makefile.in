@@ -11,11 +11,14 @@ INSTALL_OPTS=@INSTALL_OPTS@
 all:
 
 clean:
-	-rm -f check_multi.t
-	-rm -f check_multi_checkresults.t
-	-rm -f check_multi_feeds_passive.t
-	-rm -f check_multi_livestatus.t
-	-rm -f check_multi_statusdat.t
+	-rm -f 10_check_multi.t
+	-rm -f 20_check_multi_macros.t
+	-rm -f 30_check_multi_perfdata.t
+	-rm -f 50_check_multi_checkresults.t
+	-rm -f 60_check_multi_feeds_passive.t
+	-rm -f 70_check_multi_statusdat.t
+	-rm -f 80_check_multi_livestatus.t
+	-rm -f 90_extreme_testing.t
 	-rm -f testopts.pm
 	-rm -rf tmp
 
@@ -25,24 +28,29 @@ distclean: clean
 devclean: distclean
 
 test: 
-	@PERL@ check_multi.t
-
+	@PERL@ 10_check_multi.t
+	@PERL@ 20_check_multi_macros.t
+	@PERL@ 30_check_multi_perfdata.t
+test-macros:
+	@PERL@ 20_check_multi_macros.t
+test-perfdata:
+	@PERL@ 30_check_multi_perfdata.t
 test-checkresults:
-	@PERL@ check_multi_checkresults.t
-
+	@PERL@ 50_check_multi_checkresults.t
 test-feeds-passive:
-	@PERL@ check_multi_feeds_passive.t
-
-test-livestatus:
-	@PERL@ check_multi_livestatus.t
-
+	@PERL@ 60_check_multi_feeds_passive.t
 test-statusdat:
-	@PERL@ check_multi_statusdat.t
-
+	@PERL@ 70_check_multi_statusdat.t
+test-livestatus:
+	@PERL@ 80_check_multi_livestatus.t
+test-extreme:
+	@PERL@ 90_extreme_testing.t
 test-all:
-	@PERL@ check_multi.t
-	@PERL@ check_multi_checkresults.t
-	@PERL@ check_multi_feeds_passive.t
-	@PERL@ check_multi_statusdat.t
-	@PERL@ check_multi_livestatus.t
-	
+	@PERL@ 10_check_multi.t
+	@PERL@ 20_check_multi_macros.t
+	@PERL@ 30_check_multi_perfdata.t
+	@PERL@ 50_check_multi_checkresults.t
+	@PERL@ 60_check_multi_feeds_passive.t
+	@PERL@ 70_check_multi_statusdat.t
+	@PERL@ 80_check_multi_livestatus.t
+	@PERL@ 90_extreme_testing.t
