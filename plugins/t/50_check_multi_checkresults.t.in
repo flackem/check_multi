@@ -1,0 +1,106 @@
+#! @PERL@ -w -I ..
+#
+# Process Tests via check_multi
+# thanks to Ton Voon for his persistency on testing ;)
+#
+
+use strict;
+use Test::More;
+use NPTest;
+use testopts;
+
+my $t;
+
+#--- add $libexec_dir to PATH to be sure that plugins will be called from libexec_dir
+my $libexec_dir="@libexecdir@";
+$ENV{PATH}="$libexec_dir:$ENV{PATH}";
+
+#--- check needed plugins for tests
+my @plugins=(
+	"echo",
+	"@PERL@",
+);
+foreach my $plugin (@plugins) {
+	my $path_to_plugin=`which $plugin`; chomp $path_to_plugin;
+	if (! -x "$path_to_plugin") {
+		plan skip_all => "tests because component $plugin not found or not executable as \'$path_to_plugin\'";
+	}
+}
+my $test_dir="/tmp/check_multi_checkresults_test_$$";
+if (-d $test_dir) {
+	plan skip_all => "tests because tmp dir $test_dir already exists";
+} else {
+	mkdir $test_dir;
+	if (!-d $test_dir) {
+		plan skip_all => "tests because tmp dir $test_dir could not be created:$!";
+	}
+}
+
+plan tests => 6;
+
+my $result;
+#my $testopts="-s dont_be_paranoid=1";
+my $testopts=testopts::get_testopts;
+
+sub read_checkresults_file {
+	my $file=`ls -1 $test_dir/???????`; chomp($file);
+	my @c=();
+	if ($file=~/\S{6}/) { 
+		if (open(RESULTFILE, "$file")) {
+			@c=<RESULTFILE>;
+			close RESULTFILE;
+		} else {
+			fail "open result file $file for reading failed:$!";
+		}
+	}
+	`rm $file`;
+	`rm $file.ok`;
+	return @c;
+}
+#-------------------------------------------------------------------------------
+#--- content of checkresults file-----------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -s checkresults_dir=$test_dir -s report=8192+4 -x 'command [ procs ] = echo \"PROCS OK: 99 processes\"'",
+);
+is(
+	$result->return_code, 
+	0, 
+	"check_multi checkresults output - RC0 - passed"
+);
+like(
+	$result->output,
+	'/PROCS .*: \d+/', 
+	"output of check_command correct - passed"
+);
+#my @contents=&read_checkresults_file;
+like(
+	join(' ',&read_checkresults_file),
+	'/child check result.*finish_time=1.*host_name=\S+.*service_description=procs.*output=PROCS/s', 
+	"output of checkresults file correct - passed"
+);
+
+#-------------------------------------------------------------------------------
+#--- empty check should return (No output returned from plugin) ----------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -s checkresults_dir=$test_dir -s report=8192+1+4 -x 'command [ empty ] = (echo; exit 3)'",
+);
+is(
+	$result->return_code, 
+	3, 
+	"check_multi checkresults output is empty - RC3 - passed"
+);
+like(
+	$result->output,
+	'/UNKNOWN - 1 plugins checked, 1 unknown \(empty\)\n\[ 1\] empty /',
+	"output of check_command correct - passed"
+);
+like(
+	join(' ', &read_checkresults_file),
+	'/\(No output returned from plugin\)/', 
+	"output of 'empty' checkresults file correct - passed"
+);
+
+# cleanup
+`rm -rf $test_dir`;

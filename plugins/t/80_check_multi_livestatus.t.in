@@ -1,0 +1,95 @@
+#! @PERL@ -w -I ..
+#
+# Process Tests via check_multi
+# thanks to Ton Voon for his persistency on testing ;)
+#
+
+use strict;
+use Test::More;
+use NPTest;
+use testopts;
+
+my $t;
+
+#--- add $libexec_dir to PATH to be sure that plugins will be called from libexec_dir
+my $libexec_dir="@libexecdir@";
+$ENV{PATH}="$libexec_dir:$ENV{PATH}";
+
+#--- check needed plugins for tests
+my @plugins=(
+	"echo",
+	"@PERL@",
+);
+foreach my $plugin (@plugins) {
+	my $path_to_plugin=`which $plugin`; chomp $path_to_plugin;
+	if (! -x "$path_to_plugin") {
+		plan skip_all => "tests because component $plugin not found or not executable as \'$path_to_plugin\'";
+	}
+}
+if (! -r "@localstatedir@/rw/live") {
+	plan skip_all => "tests because live socket \'@localstatedir@/rw/live\' not found or not readable - is @nagios_name@ running and livestatus module loaded?";
+}
+unless (eval "require Monitoring::Livestatus;1") {
+	plan skip_all => "tests because perl module Monitoring::Livestatus is not installed";
+}
+
+plan tests => 6;
+
+my $result;
+#my $testopts="-s dont_be_paranoid=1";
+my $testopts=testopts::get_testopts;
+
+#-------------------------------------------------------------------------------
+#--- all hosts -----------------------------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -x 'livestatus [ eins ] = .*'",
+);
+like(
+	$result->output,
+	'/[1-9][0-9]* plugins checked.*\n\[ 1\] eins_/',
+	"check_multi expands all hosts - passed"
+);
+#-------------------------------------------------------------------------------
+#--- all services---------------------------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -x 'livestatus [ eins ] = .*:.*'",
+);
+like(
+	$result->output,
+	'/[1-9][0-9]* plugins checked.*\n\[ 1\] eins_.*_/',
+	"check_multi expands all services - passed"
+);
+#-------------------------------------------------------------------------------
+#--- host not found ------------------------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -x 'livestatus [ eins ] = host_not_existing'",
+);
+is(
+	$result->return_code, 
+	3, 
+	"check_multi skips unknown host in livestatus socket - RC3 - passed"
+);
+like(
+	$result->output,
+	'/UNKNOWN - 0 plugins checked,  \[Could not expand host host_not_existing/',
+	"output correct - passed"
+);
+#-------------------------------------------------------------------------------
+#--- service not found ---------------------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -x 'livestatus [ eins ] = host_not_existing:service_not_existing'",
+);
+is(
+	$result->return_code, 
+	3, 
+	"check_multi skips unknown service in livestatus socket - RC3 - passed"
+);
+like(
+	$result->output,
+	'/UNKNOWN - 0 plugins checked,  \[Could not expand host:service host_not_existing:service_not_existing/',
+	"output correct - passed"
+);

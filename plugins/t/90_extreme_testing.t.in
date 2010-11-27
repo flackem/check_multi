@@ -1,0 +1,112 @@
+#! @PERL@ -w -I ..
+#
+# Process Tests via check_multi
+# thanks to Ton Voon for his persistency on testing ;)
+#
+
+use strict;
+use Test::More;
+use NPTest;
+use testopts;
+
+my $t;
+
+#--- add $libexec_dir to PATH to be sure that plugins will be called from libexec_dir
+my $libexec_dir="@libexecdir@";
+$ENV{PATH}="$libexec_dir:$ENV{PATH}";
+
+#--- check needed plugins for tests
+my @plugins=(
+	"echo",
+	"@PERL@",
+);
+foreach my $plugin (@plugins) {
+	my $path_to_plugin=`which $plugin`; chomp $path_to_plugin;
+	if (! -x "$path_to_plugin") {
+		plan skip_all => "tests because component $plugin not found or not executable as \'$path_to_plugin\'";
+	}
+}
+if (! -r "@localstatedir@/rw/live") {
+	plan skip_all => "tests because live socket \'@localstatedir@/rw/live\' not found or not readable - is @nagios_name@ running and livestatus module loaded?";
+}
+unless (eval "require Monitoring::Livestatus;1") {
+	plan skip_all => "tests because perl module Monitoring::Livestatus is not installed";
+}
+
+plan tests => 160;
+
+my $result;
+my $testopts=testopts::get_testopts;
+
+#-------------------------------------------------------------------------------
+#--- random tags ---------------------------------------------------------------
+#-------------------------------------------------------------------------------
+my $macrolen=80;
+my $valid_tag_chars=`@PERL@ ../check_multi -x 'eval [ chars ] = print "\$opt{set}{valid_tag_chars}\"; exit 0;'`;
+print "valid_tag_chars:>>>$valid_tag_chars<<<\n";
+my @tag_chars=();
+for (my $i=32;$i<256; $i++) {
+        if (eval("chr($i)=~/[$valid_tag_chars]+/")) {
+                push @tag_chars,chr($i) if (chr($i)!~/\$/);
+        }
+}
+print "tag_chars:>>>".join('',@tag_chars)."<<<\n";
+for (my $i=1;$i<=40;$i++) {
+	my $tag="";
+	for (my $j=0;$j<$macrolen;$j++) {
+                $tag.=$tag_chars[int(rand($#tag_chars))];
+	}
+	$result = NPTest->testCmd(
+		"@PERL@ ../check_multi $testopts -s report=1 ".
+		" -x 'command [ $tag ] = echo \"$tag\"'",
+	);
+	is(
+	        $result->return_code,
+	        0,
+		"tag with random character set - RC0 - passed"
+	);
+	like(
+		$result->output,
+		"/OK - 1 plugins checked, 1 ok/",
+		"$i ($tag)"
+	);
+}
+
+#-------------------------------------------------------------------------------
+#--- random macros -------------------------------------------------------------
+#-------------------------------------------------------------------------------
+my $macrolen=80;
+my $valid_macro_chars=`@PERL@ ../check_multi -x 'eval [ chars ] = print "\$opt{set}{valid_macro_chars}\"; exit 0;'`;
+print "valid_macro_chars:>>>$valid_macro_chars<<<\n";
+my @macro_chars=();
+for (my $i=32;$i < 256; $i++) {
+        if (eval("chr($i)=~/[$valid_macro_chars]+/")&& $i!=10 && $i!=13) {
+                push @macro_chars,chr($i);
+        }
+}
+print "tag_chars:>>>".join('',@macro_chars)."<<<\n";
+for (my $i=1;$i<=40;$i++) {
+	my $macro="";
+	for (my $j=0;$j<$macrolen;$j++) {
+                $macro.=$macro_chars[int(rand($#macro_chars))];
+	}
+	$ENV{CHECK_MULTI_TESTMACRO}="$macro";
+	$result = NPTest->testCmd(
+		"@PERL@ ../check_multi $testopts -s report=1 ".
+		" -x 'command [ macro ] = echo \"\$CHECK_MULTI_TESTMACRO\$\"'",
+	);
+	is(
+	        $result->return_code,
+	        0,
+		"tag with random character set - RC0 - passed"
+	);
+	my $regex=$macro;
+	#$regex=~s/([^A-Za-z0-9]?)/\\\1/g;
+	like(
+		$result->output,
+		#"/OK - 1 plugins checked, 1 ok\n.*\[ 1\] macro [$valid_macro_chars\$]+/",
+		#"/OK - 1 plugins checked, 1 ok.*\] macro [$valid_macro_chars\$]{$macrolen}/",
+		"/OK - 1 plugins checked, 1 ok[^\]]*\] macro [$valid_macro_chars\$]{$macrolen}/",
+		"$i ($macro)"
+	);
+}

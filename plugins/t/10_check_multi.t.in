@@ -1,0 +1,562 @@
+#! @PERL@ -w -I ..
+#
+# Process Tests via check_multi
+# thanks to Ton Voon for his persistency on testing ;)
+#
+
+use strict;
+use Test::More;
+use NPTest;
+use testopts;
+
+my $t;
+
+#--- add $libexec_dir to PATH to be sure that plugins will be called from libexec_dir
+my $libexec_dir="@libexecdir@";
+my $plugin_path="@plugin_path@";
+$ENV{PATH}="$libexec_dir:$plugin_path:$ENV{PATH}";
+
+#--- check needed plugins for tests
+my @plugins=(
+	"echo",
+	"@PERL@",
+);
+foreach my $plugin (@plugins) {
+	my $path_to_plugin=`which $plugin`; chomp $path_to_plugin;
+	if (! -x "$path_to_plugin") {
+		plan skip_all => "tests because component $plugin not found or not executable as \'$path_to_plugin\'";
+	}
+}
+
+plan tests => 52;
+
+my $result;
+#my $testopts="-s dont_be_paranoid=1 -s tmp_dir=/tmp/check_multi";
+my $testopts=testopts::get_testopts;
+#-------------------------------------------------------------------------------
+#--- check_multi version -------------------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi -V"
+);
+print '-'x 80 ; print "\n";
+print $result->output; print "\n";
+print '-'x 80 ; print "\n";
+is(
+	$result->return_code, 
+	3, 
+	"check_multi version - RC3"
+);
+like(
+	$result->output,
+	'/^Version: check_multi_v\d{3}_\d{4}-\d{2}-\d{2}-\d{2}:\d{2}\n'.
+	'configure.*$/',
+	"output correct"
+);
+
+#-------------------------------------------------------------------------------
+#--- ENV vars MULTI_... via command --------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi -r 1+4 $testopts -x 'command [ echo ] = echo \"Hello World\"' -x 'command [ env ] = env | grep MULTI | sort' -r 1+4",
+);
+is(
+	$result->return_code, 
+	0, 
+	"environment variables assignment via command - RC0"
+);
+like(
+	$result->output,
+	'/^OK - 2 plugins checked, 2 ok\n'.
+	'\[ 1\] echo Hello World\n'.
+	'\[ 2\] env MULTI_1=Hello World\n'.
+	' MULTI_1_LABEL=OK\n'.
+	' MULTI_1_NAME=echo\n'.
+	' MULTI_1_RC=0\n'.
+	' MULTI_1_RC_LABEL=OK\n'.
+	' MULTI_1_STATE=0\n'.
+	' MULTI_2_NAME=env\n'.
+	'.*$/s',
+	"output correct"
+);
+#-------------------------------------------------------------------------------
+#--- ENV vars MULTI_... via eval -----------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -x 'eeval [ echo ] = \"Hello World\";' -x 'command [ env ] = env | grep MULTI | sort' -r 1+4",
+);
+is(
+	$result->return_code, 
+	0, 
+	"environment variables assignment via eeval - RC0"
+);
+like(
+	$result->output,
+	'/^OK - 2 plugins checked, 2 ok\n'.
+	'\[ 1\] echo Hello World\n'.
+	'\[ 2\] env MULTI_1=Hello World\n'.
+	' MULTI_1_LABEL=OK\n'.
+	' MULTI_1_NAME=echo\n'.
+	' MULTI_1_RC=0\n'.
+	' MULTI_1_RC_LABEL=OK\n'.
+	' MULTI_1_STATE=0\n'.
+	' MULTI_2_NAME=env\n'.
+	'.*$/s',
+	"output correct"
+);
+
+#-------------------------------------------------------------------------------
+#--- valid name option -------------------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -n 'test 234' -x 'command [ procs ] = echo \"PROCS OK: 99 processes\"'"
+);
+is(
+	$result->return_code, 
+	0, 
+	"valid name option - RC0"
+);
+like(
+	$result->output,
+	'/^test 234 OK - 1 plugins checked, 1 ok\n'.
+	'\[ 1\] procs PROCS OK: \d+ processes|check_multi::check_multi::plugins=1 time=\d+$/',
+	"output correct"
+);
+
+#-------------------------------------------------------------------------------
+#--- invalid name option -----------------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -n test[ -x 'command [ procs ] = echo \"PROCS OK: 99 processes\"'"
+);
+is(
+	$result->return_code, 
+	3, 
+	"invalid name option - RC3"
+);
+like(
+	$result->output,
+	'/^check_multi error: name \'test\[\' invalid - \[ brackets \] are not allowed/',
+	"output correct"
+);
+
+
+#-------------------------------------------------------------------------------
+#--- simple OK output with 1 plugin --------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -x 'command [ procs ] = echo \"PROCS OK: 99 processes\"'"
+);
+is(
+	$result->return_code, 
+	0, 
+	"default report option - RC0"
+);
+like(
+	$result->output,
+	'/^OK - 1 plugins checked, 1 ok\n'.
+	'\[ 1\] procs PROCS OK: \d+ processes|check_multi::check_multi::plugins=1 time=\d+$/',
+	"output correct"
+);
+
+
+#-------------------------------------------------------------------------------
+#--- report option 0 -----------------------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -s report=0+4 -x 'command [ procs ] = echo \"PROCS OK: 99 processes\"'"
+);
+is(
+	$result->return_code, 
+	0, 
+	"report option 0 (all states shown) - RC0"
+);
+like(
+	$result->output,
+	'/^OK - 1 plugins checked, 0 critical, 0 warning, 0 unknown, 1 ok\n'.
+	'\[ 1\] procs PROCS OK: \d+ processes$/',
+	"output correct"
+);
+
+
+#-------------------------------------------------------------------------------
+#--- report option 1 -----------------------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -s report=1+4 -x 'command [ procs ] = (echo \"PROCS WARNING: 99 processes\"; exit 1)'"
+);
+is(
+	$result->return_code, 
+	1, 
+	"report option 1 (non-OK service names in state list) - RC1"
+);
+like(
+	$result->output,
+	'/^WARNING - 1 plugins checked, 1 warning \(procs\)\n'.
+	'\[ 1\] procs PROCS WARNING: \d+ processes$/',
+	"output correct"
+);
+
+
+#-------------------------------------------------------------------------------
+#--- report option 2 -----------------------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -s report=2 -x 'command [ procs ] = echo \"PROCS OK: 99 processes\"'"
+);
+is(
+	$result->return_code, 
+	0, 
+	"report option 2 (HTML) - RC0"
+);
+like(
+	$result->output,
+	'/^OK - 1 plugins checked, 0 critical, 0 warning, 0 unknown, 1 ok\n'.
+	'<SCRIPT LANGUAGE=\'JavaScript\'> function Toggle.*PROCS OK: \d+ processes.*div>$/',
+	"output correct"
+);
+
+#-------------------------------------------------------------------------------
+#--- report option 4 -----------------------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -s report=4 -x 'command [ procs ] = check_prox'"
+);
+is(
+	$result->return_code, 
+	3, 
+	"report option 4 [error messages - stderr] - RC3"
+);
+like(
+	$result->output,
+	'/^UNKNOWN - 1 plugins checked, 0 critical, 0 warning, 1 unknown, 0 ok\n'.
+	'\[ 1\] procs  \[sh: check_prox: (command )?not found,RC was 127!\]$/',
+	"output correct"
+);
+#-------------------------------------------------------------------------------
+#--- report option 64 ----------------------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -s report=64 -x 'command [ eins ] = echo \"1|eins=1\"' -x 'command [ zwei ] = echo \"2|zwei=2\"'"
+);
+is(
+	$result->return_code, 
+	0, 
+	"report option 64 (state in front of output) - RC0"
+);
+like(
+	$result->output,
+	'/^OK - 2 plugins checked, 0 critical, 0 warning, 0 unknown, 2 ok\n'.
+	'\[ 1\] eins OK 1\n'.
+	'\[ 2\] zwei OK 2$/',
+	"output correct"
+);
+#-------------------------------------------------------------------------------
+#--- report option 256 ---------------------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -s report=256 -x 'command [ proc ] = echo \"PROCS OK: 99 processes\"'"
+);
+is(
+	$result->return_code, 
+	0, 
+	"report option 256 (XML output) - RC0"
+);
+
+#<?xml version="1.0"?>
+#<?xml-stylesheet type="text/xsl" href="extinfo.xsl"?>
+#<div id="check_multi_xml" style='display:none'>
+#<check_multi>
+#	<CHILD>
+#		<no>0</no>
+#		<command>none</command>
+#		<endtime>1282402937.85597</endtime>
+#		<hash>hamX.fjak00C6</hash>
+#		<nallchecks>1</nallchecks>
+#		<name></name>
+#		<names>_0_head_none_1_proc_command_echo_PROCS_OK_99_processes_</names>
+#		<nchecks>1</nchecks>
+#		<number>0</number>
+#		<rc>0</rc>
+#		<runtime>0.00392317771911621</runtime>
+#		<sleeped>0</sleeped>
+#		<starttime>1282402937.85206</starttime>
+#		<timeouttime>1282402997.85206</timeouttime>
+#		<type>head</type>
+#		<output>0 critical, 0 warning, 0 unknown, 1 ok</output>
+#	</CHILD>
+#	<CHILD>
+#		<no>1</no>
+#		<command>echo \"PROCS OK: 99 processes\"</command>
+#		<displayed>1</displayed>
+#		<endtime>1282402937.85581</endtime>
+#		<error>report_xml: XML element critical not found</error>
+#		<name>proc</name>
+#		<number>1</number>
+#		<output>"PROCS OK: 99 processes"</output>
+#		<plugin>echo</plugin>
+#		<pplugin>echo</pplugin>
+#		<process_perfdata>1</process_perfdata>
+#		<rc>0</rc>
+#		<runtime>0.00369381904602051</runtime>
+#		<starttime>1282402937.85212</starttime>
+#		<type>command</type>
+#	</CHILD>
+#</check_multi>
+#</div>
+like(
+	$result->output,
+	'/^<\?xml version'.
+	'.*<no>0<\/no>'.
+	'.*<rc>0<\/rc>'.
+	'.*<no>1<\/no>'.
+	'.*<command>echo.*<\/command>'.
+	'.*<output>PROCS.*<\/output>'.
+	'.*<type>command<\/type>.*$/s',
+	"output correct"
+);
+
+#-------------------------------------------------------------------------------
+#--- check_multi encode  (report option 16384) ---------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -s report=16384+4 -x 'command [ encode ] = echo encode'",
+);
+is(
+	$result->return_code, 
+	0, 
+	"report option 16384 - encode commands - RC0"
+);
+like(
+	$result->output,
+	'/command%20%5B%20encode%20%5D%20%3D%20echo%20encode%0A/',
+	"output correct"
+);
+
+#-------------------------------------------------------------------------------
+#--- check_multi hide OK states (report option 32768) --------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -s report=32768+4 -x 'command [ OK ] = (echo 0; exit 0)' -x 'command [ WARNING ] = (echo 1; exit 1)'",
+);
+is(
+	$result->return_code, 
+	1, 
+	"report option 32768 - hide OK states - RC1"
+);
+like(
+	$result->output,
+	'/WARNING - 2 plugins checked, 0 critical, 1 warning, 0 unknown, 1 ok\n'.
+	'\[ 2\] WARNING 1/',
+	"output correct"
+);
+
+#-------------------------------------------------------------------------------
+#--- check_multi hide OK states (report option 32770) --------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -s report=32768+2+4 -x 'command [ OK ] = (echo 0; exit 0)'",
+);
+is(
+	$result->return_code, 
+	0, 
+	"report option 32768+2 - hide OK states in HTML mode - RC1"
+);
+like(
+	$result->output,
+	'/OK - 1 plugins checked, 0 critical, 0 warning, 0 unknown, 1 ok\n'.
+	'.*OK/',
+	"output correct"
+);
+
+#-------------------------------------------------------------------------------
+#--- check_multi decode (of encoded command) -----------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -f command%20%5B%20encode%20%5D%20%3D%20echo%20encode%0A",
+);
+is(
+	$result->return_code, 
+	0, 
+	"decode encoded command - RC0"
+);
+like(
+	$result->output,
+	'/OK - 1 plugins checked, 1 ok\n'. 
+	'\[ 1\] encode encode\|check_multi::check_multi::plugins=1 time=\d+\.\d+/',
+	"output correct"
+);
+
+#-------------------------------------------------------------------------------
+#--- check_multi recursive -----------------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -s report=1+4 -x \'command [ child1 ] = @PERL@ ../check_multi -s dont_be_paranoid=1 -s tmp_dir=\"./tmp\" -x \"command [ grandchild1 ] = echo g1\"\'"
+);
+is(
+	$result->return_code, 
+	0, 
+	"recursive (check_multi calls check_multi) - RC0"
+);
+like(
+	$result->output,
+	'/^OK - 1 plugins checked, 1 ok\n'.
+	'\[ 1\] child1 OK - 1 plugins checked, 1 ok\n'.
+	' \[ 1\] grandchild1 g1$/',
+	"output correct"
+);
+#-------------------------------------------------------------------------------
+#--- overloading ---------------------------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -s report=1+4 -x 'command [ eins ] = echo original' -x 'command [ eins ] = echo overloaded'",
+);
+is(
+	$result->return_code, 
+	0, 
+	"overloading commands - RC0"
+);
+like(
+	$result->output,
+	'/^OK - 1 plugins checked, 1 ok\n'.
+	'\[ 1\] eins overloaded$/',
+	"output correct"
+);
+#-------------------------------------------------------------------------------
+#--- killing me softly - checking signal handler -------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -s report=1+4 -x 'eeval [ killing me HUPly ] = kill 1, \$\$;'",
+);
+is(
+	$result->return_code, 
+	3, 
+	"testing signal handler - RC0"
+);
+like(
+	$result->output,
+	'/^OK - 1 plugins checked, 1 ok \[HUP generated at line 1 in.*\]\n'.
+	'\[ 1\] killing me HUPly $/',
+	"output correct"
+);
+#-------------------------------------------------------------------------------
+#--- output / head -------------------------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -s report=1+4 -x 'command [ procs ] = echo \"PROCS OK: 99 processes\"' -x 'output [ head ] = \"%.20s processes running\",(split(/\\s+/,\"\$procs\$\"))\[2\]'",
+);
+is(
+	$result->return_code, 
+	0, 
+	"custom output for header line - RC0"
+);
+like(
+	$result->output,
+	'/\\d+ processes running\n'.
+	'\[ 1\] procs PROCS OK: \\d+ processes$/',
+	"output correct"
+);
+#-------------------------------------------------------------------------------
+#--- check_multi attribute -----------------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -s report=1+4+8 -x 'command [ with_perfdata ] = echo \"eins\|eins=1\"' -x 'attribute [ with_perfdata::process_perfdata ] = 0'",
+);
+is(
+	$result->return_code, 
+	0, 
+	"changes child check attributes - RC0"
+);
+like(
+	$result->output,
+	'/OK - 1 plugins checked, 1 ok\n'.
+	'\[ 1\] with_perfdata eins\|check_multi::check_multi::plugins=1 time=[\d\.]+ $/',
+	"output correct"
+);
+#-------------------------------------------------------------------------------
+#--- check_multi cumulate ------------------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -x 'cumulate [ two ] = (echo abc\ 123; echo def\ 456; echo abc\ 123; echo def\ 456; echo abc\ 123; echo def\ 456; exit 0)'",
+);
+is(
+	$result->return_code, 
+	0, 
+	"cumulates data like top - RC0"
+);
+like(
+	$result->output,
+	'/OK - 5 plugins checked, 5 ok\n'.
+	'\[ 1\] two_def 1368\n'.
+	'\[ 2\] two_abc 369|'.
+	'check_multi::check_multi::plugins=2 time=[\d\.]+ two_def::cumulate::two_def=1368 two_abc::cumulate::two_abc=369 $/',
+	"output correct"
+);
+#-------------------------------------------------------------------------------
+#--- check_multi object drops illegal characters -------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -x 'eeval [ string_with_carriage_return ] = \"Hello\rWorld!\"' -r 1+4",
+);
+is(
+	$result->return_code, 
+	0, 
+	"illegal characters are dropped - RC0"
+);
+like(
+	$result->output,
+	'/OK - 1 plugins checked, 1 ok\n'.
+	'\[ 1\] string_with_carriage_return HelloWorld!/',
+	"output correct"
+);
+#-------------------------------------------------------------------------------
+#--- check_multi object deals with empty illegal character variable ------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -x 'eeval [ string_with_carriage_return ] = \"Hello\rWorld!\"' -r 1+4 -s illegal_chars=\"\"",
+);
+is(
+	$result->return_code, 
+	0, 
+	"illegal character variable is empty - RC0"
+);
+like(
+	$result->output,
+	'/OK - 1 plugins checked, 1 ok\n'.
+	'\[ 1\] string_with_carriage_return Hello\rWorld!/',
+	"output correct"
+);
+#-------------------------------------------------------------------------------
+#--- check_multi child, global timeout shorter than local timeout --------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -s report=1+4 -s TIMEOUT=5 -s timeout=10 -x 'command [ one ] = echo one'",
+);
+is(
+	$result->return_code, 
+	3, 
+	"timeout check: global timeout shorter than local timeout - RC3"
+);
+like(
+	$result->output,
+	'/check_multi: error - child timeout 10s must not be greater than parent timeout 5s/',
+	"output correct"
+);
+#-------------------------------------------------------------------------------
+#--- check_multi child and global timeout --------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -s report=1+4 -s timeout=1 -s TIMEOUT=2 -s cancel_before_global_timeout=1 -x 'command [ one ] = ( sleep 2; echo one)' -x 'command [ two ] = echo two'",
+);
+is(
+	$result->return_code, 
+	3, 
+	"timeout check: child one killed, child two cancelled - RC3"
+);
+like(
+	$result->output,
+	'/UNKNOWN - 2 plugins checked, 2 unknown \(one, two\)\n'.
+	'\[ 1\] one  \[timeout encountered after 1s\]\n'.
+	'\[ 2\] two UNKNOWN - execution cancelled due to global timeout \(2s\)/',
+	"output correct"
+);

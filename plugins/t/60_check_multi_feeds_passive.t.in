@@ -1,0 +1,56 @@
+#! @PERL@ -w -I ..
+#
+# Process Tests via check_multi
+# thanks to Ton Voon for his persistency on testing ;)
+#
+
+use strict;
+use Test::More;
+use NPTest;
+use testopts;
+
+my $t;
+
+#--- add $libexec_dir to PATH to be sure that plugins will be called from libexec_dir
+my $libexec_dir="@libexecdir@";
+my $plugin_path="@plugin_path@";
+$ENV{PATH}="$libexec_dir:$plugin_path:$ENV{PATH}";
+
+#--- check needed plugins for tests
+my @plugins=(
+	"@PERL@",
+);
+foreach my $plugin (@plugins) {
+	my $path_to_plugin=`which $plugin`; chomp $path_to_plugin;
+	if (! -x "$path_to_plugin") {
+		plan skip_all => "tests because component $plugin not found or not executable as \'$path_to_plugin\'";
+	}
+}
+unless (eval "require XML::Simple;1") {
+	plan skip_all => "tests because perl module XML::Simple not installed";
+}
+
+
+plan tests => 2;
+
+my $result;
+#my $testopts="-s dont_be_paranoid=1";
+my $testopts=testopts::get_testopts;
+
+#-------------------------------------------------------------------------------
+#--- check_multi feeds check_multi ---------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -s report=256+4 -x 'command [ procs ] = echo \"PROCS OK: 99 processes\"' | @PERL@ ../check_multi -f - $testopts -s report=1",
+);
+is(
+	$result->return_code, 
+	0, 
+	"feeds check_multi - RC0 - passed"
+);
+like(
+	$result->output,
+	'/OK - 1 plugins checked, 1 ok\n'.
+	'\[ 1\] procs PROCS OK: \d+ processes$/',
+	"output correct - passed"
+);
