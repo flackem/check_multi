@@ -1056,6 +1056,18 @@ sub config_string {
 }
 
 #---
+#--- taken from perl cookbook: trim
+#---
+sub trim {
+	my @output = @_;
+   	for (@output) {
+		s/^\s+//;	
+		s/\s+$//;
+	}
+	return wantarray ? @output : $output[0];
+}
+
+#---
 #--- substitute macros a la $HOSTNAME$ from environment
 #---
 sub substitute_macros {
@@ -1541,6 +1553,10 @@ sub parse_lines {
 
 		#--- header line (regex contains all allowed commands)
 		if (($type,$name,$cmd)=($line=~/^\s*(${valid_commands})\s*\[\s*(\S[$opt{set}{valid_tag_chars}]*\S)\s*\]\s*=\s*(.*)\s*/i)) {
+
+			#--- remove remaining blanks 
+			$name=trim($name);
+			$cmd=trim($cmd);
 
 			#--- macros?
 			$name=substitute_macros($name);

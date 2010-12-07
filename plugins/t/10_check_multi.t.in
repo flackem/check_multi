@@ -28,7 +28,7 @@ foreach my $plugin (@plugins) {
 	}
 }
 
-plan tests => 52;
+plan tests => 54;
 
 my $result;
 #my $testopts="-s dont_be_paranoid=1 -s tmp_dir=/tmp/check_multi";
@@ -507,6 +507,23 @@ like(
 	$result->output,
 	'/OK - 1 plugins checked, 1 ok\n'.
 	'\[ 1\] string_with_carriage_return HelloWorld!/',
+	"output correct"
+);
+#-------------------------------------------------------------------------------
+#--- check_multi with blanks in TAG and blanks around its lines ----------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -x 'eeval [ blank is blank ] =  \"- either starting blank or trailing blank will be removed, but not    multiple blanks in between\" ' -r 1+4",
+);
+is(
+	$result->return_code, 
+	0, 
+	"blanks everywhere, in the TAG and around the command - RC0"
+);
+like(
+	$result->output,
+	'/OK - 1 plugins checked, 1 ok\n'.
+	'\[ 1\] blank is blank - either starting blank or trailing blank will be removed, but not    multiple blanks in between/',
 	"output correct"
 );
 #-------------------------------------------------------------------------------
