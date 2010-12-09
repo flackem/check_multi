@@ -556,12 +556,9 @@ PACKAGE_URL=''
 ac_default_prefix=/usr/local/nagios
 ac_subst_vars='LTLIBOBJS
 LIBOBJS
-nagios_name
 verbose
-child_timeout
-parent_timeout
-tmp_dir_permissions
 tmp_etc
+tmp_dir_permissions
 tmp_dir
 target
 tag_notes_link
@@ -570,19 +567,22 @@ snmp_port
 snmp_community
 signal_rc
 service_definition_template
-loose_perfdata
 report
 pnp_url
+pnp_add2url
+pnp_version
 plugin_path
 persistent
+perfdata_pass_through
+parent_timeout
 notes_url
+nagios_name
 omd_environment
 objects_cache_delimiter
 objects_cache
 no_checks_rc
 name
-pnp_version
-perfdata_pass_through
+loose_perfdata
 indent
 indent_label
 image_path
@@ -594,17 +594,18 @@ findbin
 feed_passive_dir_permissions
 feed_passive_dir
 feed_passive_autocreate
-exec_open3
-ethtool
 extended_perfdata
 extinfo_in_status
+exec_open3
+ethtool
 empty_output_is_unknown
 cumulate_ignore_zero
 config_dir
-cmdfile_update_interval
-collapse
-checkresults_dir
 contrib_dir
+collapse
+cmdfile_update_interval
+child_timeout
+checkresults_dir
 child_interval
 cancel_before_global_timeout
 action_url
@@ -708,6 +709,7 @@ with_omd_environment
 with_persistent
 with_perfdata_pass_through
 with_plugin_path
+with_pnp_add2url
 with_pnp_url
 with_pnp_version
 with_report
@@ -1378,6 +1380,7 @@ detail settings:
   --with-persistent=<0|1>                  persistency: saving of state data between two calls (default:0)
   --with-perfdata_pass_through=<0|1>       pass performance data through (default:0)
   --with-plugin_path=</path/to/plugins>    path to plugins (default:"/usr/local/nagios/libexec")
+  --with-pnp_add2url=<URL addon>           URL addon for PNP (default:"")
   --with-pnp_url=<URL>                     relative URL to PNP (default for PNP 0.6:"/pnp4nagios")
   --with-pnp_version=<0.6|0.4>             PNP version (default: 0.6)
   --with-report=<NN>                       default report option (default:13)
@@ -2587,6 +2590,14 @@ else
 fi
 
 
+# Check whether --with-pnp_add2url was given.
+if test "${with_pnp_add2url+set}" = set; then :
+  withval=$with_pnp_add2url; pnp_add2url=$withval
+else
+  pnp_add2url=""
+fi
+
+
 # Check whether --with-pnp_url was given.
 if test "${with_pnp_url+set}" = set; then :
   withval=$with_pnp_url; pnp_url=$withval
@@ -2733,6 +2744,7 @@ fi
 
 
 #--- substitutions
+
 
 
 

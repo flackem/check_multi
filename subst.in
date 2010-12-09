@@ -56,6 +56,7 @@ my $parent_timeout=@parent_timeout@;
 my $perfdata_pass_through=@perfdata_pass_through@;
 my $persistent=@persistent@;
 my $plugin_path="@plugin_path@";
+my $pnp_add2url="@pnp_add2url@";
 my $pnp_url="@pnp_url@";
 my $pnp_version="@pnp_version@";
 my $report="@report@";
@@ -143,6 +144,7 @@ while (my $f = shift @ARGV) {
 		s|\@perfdata_pass_through\@|$perfdata_pass_through|g;
 		s|\@persistent\@|$persistent|g;
 		s|\@pnp_url\@|$pnp_url|g;
+		s|\@pnp_add2url\@|$pnp_add2url|g;
 		s|\@pnp_version\@|$pnp_version|g;
 		s|\@report\@|$report|g;
 		s|\@loose_perfdata\@|$loose_perfdata|g;
