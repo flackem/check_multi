@@ -123,7 +123,6 @@ my %opt=(
 		"state"		=> 1,
 		"output"	=> 1,
 	},
-	"cmdregex"	=> join('\|',keys(%{$opt{commands}})),
 	"execute"	=> [],
 	"filename"	=> [],
 	"help"		=> 0,
@@ -466,6 +465,9 @@ sub process_input {
 
 	#---
 	#--- getting commands - either per command file or per command parameter
+
+	#--- first generate regex which contains all allowed commands (we need it later)
+	$opt{cmdregex}=join('|',keys(%{$opt{commands}}));
 
 	#--- allowed characters: 'a-zA-Z0-9_-'
 	if ($opt{set}{name}=~/[\[\]]+/) {
@@ -1523,7 +1525,6 @@ sub parse_files {
 sub parse_lines {
 	my @lines=@_;
 	my ($line,$cmd,$type,$name,$plugin,$pplugin,$expr,$lineno,$i,$last_command);
-	my $valid_commands=join('|',sort keys %{$opt{commands}});
 
 	$lineno=0;	# count sourcefile lines
 	DEBUG4("starting with " . $#cmds . " command(s)");
@@ -1555,7 +1556,7 @@ sub parse_lines {
 		$line=~s/\\\s*$// if ($line=~/\\\s*/);
 
 		#--- header line (regex contains all allowed commands)
-		if (($type,$name,$cmd)=($line=~/^\s*(${valid_commands})\s*\[\s*(\S[$opt{set}{valid_tag_chars}]*\S)\s*\]\s*=\s*(.*)\s*/i)) {
+		if (($type,$name,$cmd)=($line=~/^\s*($opt{cmdregex})\s*\[\s*(\S[$opt{set}{valid_tag_chars}]*\S)\s*\]\s*=\s*(.*)\s*/i)) {
 
 			#--- remove remaining blanks 
 			$name=trim($name);
@@ -1582,7 +1583,7 @@ sub parse_lines {
 
 		#--- proper header line with invalid keyword
 		} elsif ($line=~/^\s*(\w+)\s*\[\s*([$opt{set}{valid_tag_chars}]*)\s*\]\s*=\s*(.*)\s*/) {
-			add_error(0,"Invalid keyword \'$1\' specified, valid are ${valid_commands}");
+			add_error(0,"Invalid keyword \'$1\' specified, valid are \'$opt{cmdregex}\'");
 			return;
 
 		#--- continuation line for previous command
@@ -1609,7 +1610,6 @@ sub parse_lines {
 sub parse_header {
 	my ($type,$name,$cmd,$lineno)=@_;
 	my ($i,$key,$host,$service);
-	my $valid_commands=join('|',sort keys %{$opt{commands}});
 
 	#--- split name::key. If key is not available, its empty.
 	($name,$key)=split(/::/,$name);
@@ -1624,7 +1624,7 @@ sub parse_header {
 
 	#--- overloading: if child check with same name exists,
 	#--- overload its attributes. Otherwise append new check
-	} elsif ($type=~/(${valid_commands})/) {
+	} elsif ($type=~/($opt{cmdregex})/) {
 		for ($i=1; $i<=$#cmds;$i++) {
 			last if ($cmds[$i]{name} eq $name);
 		}

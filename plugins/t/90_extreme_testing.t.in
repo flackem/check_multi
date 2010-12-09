@@ -75,7 +75,7 @@ for (my $i=1;$i<=40;$i++) {
 #-------------------------------------------------------------------------------
 #--- random macros -------------------------------------------------------------
 #-------------------------------------------------------------------------------
-my $macrolen=80;
+$macrolen=80;
 my $valid_macro_chars=`@PERL@ ../check_multi -x 'eval [ chars ] = print "\$opt{set}{valid_macro_chars}\"; exit 0;'`;
 print "valid_macro_chars:>>>$valid_macro_chars<<<\n";
 my @macro_chars=();
