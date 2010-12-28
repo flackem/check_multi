@@ -1276,9 +1276,9 @@ sub set_env_vars {
 
 	my $name=($no==0)?"head":$cmds[$no]{name};
 
-	if ($cmds[$no]{output}) {
+	if (defined($cmds[$no]{output})) {
 		$ENV{"MULTI_$name"}="$cmds[$no]{output}";
-	} elsif (error($no)) {
+	} elsif (defined(error($no))) {
 		$ENV{"MULTI_$name"}=error($no);
 	}
 	$ENV{"MULTI_ERROR_$name"}=error($no);

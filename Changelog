@@ -1,6 +1,7 @@
 
 ===== Changelog =====
 
+	* fixed 0 value environment variables
 	* new tests (random tags/macros), test restructured
 	* fixed problem with tags parsing
 	* variables set on command line are still exported as MULTI_var

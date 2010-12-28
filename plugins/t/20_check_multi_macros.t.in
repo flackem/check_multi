@@ -28,7 +28,7 @@ foreach my $plugin (@plugins) {
 	}
 }
 
-plan tests => 14;
+plan tests => 16;
 
 my $result;
 my $testopts=testopts::get_testopts;
@@ -99,6 +99,24 @@ like(
 	$result->output,
 	'/^OK - 1 plugins checked, 1 ok\n'.
 	'\[ 1\] test var has a test value$/',
+	"output correct"
+);
+#-------------------------------------------------------------------------------
+#--- environment macro with 0 value --------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -s report=1+4 -x 'command [ test var ] = echo 0' -x 'command [ read test var ] = echo \$test var\$'",
+);
+is(
+	$result->return_code, 
+	0, 
+	"reading custom variable - RC0"
+);
+like(
+	$result->output,
+	'/^OK - 2 plugins checked, 2 ok\n'.
+	'\[ 1\] test var 0\n'.
+	'\[ 2\] read test var 0$/',
 	"output correct"
 );
 #-------------------------------------------------------------------------------
