@@ -1361,7 +1361,7 @@ detail settings:
   --with-extinfo_in_status=<0|1>           display check_multi output in status.cgi
   --with-feed_passive_autocreate=<0|1>>    flag, if feed passive service definitions should be created automatically (default:1)
   --with-feed_passive_dir=<path>           directory for automatically created feed passive service definitions (default:${sysconfdir}/check_multi/feed_passive)
-  --with-feed_passive_dir_permissions=<octal perms> permissions for feed passive config dir (default:0750)
+  --with-feed_passive_dir_permissions=<octal perms> permissions for feed passive config dir (default:41777)
   --with-findbin=<0|1>                     use Perl module FindBin for addressing plugins (default:1)
   --with-file_extension=<ext>              default extension for check_multi command files (default:"cmd")
   --with-ignore_missing_cmd_file=<0|1>     if missing cmd files should be ignored (default:0)
@@ -1391,7 +1391,7 @@ detail settings:
   --with-tag_notes_link=<URL>              documentation URL for child checks (default:"")
   --with-target=<target_frame>             HTML target frame for URLs (default:_self)
   --with-tmp_dir=<path>                    /path/to/tmp_dir (default:/tmp/check_multi)
-  --with-tmp_dir_permissions=<octal perms> permissions of tmp_dir (default:0750)
+  --with-tmp_dir_permissions=<octal perms> permissions of tmp_dir (default:41777)
   --with-tmp_etc=<path>                    /path/to/tmp_dir/etc (default:$tmp_dir/etc)
 
 major settings:
@@ -2442,7 +2442,7 @@ fi
 if test "${with_feed_passive_dir_permissions+set}" = set; then :
   withval=$with_feed_passive_dir_permissions; feed_passive_dir_permissions=$withval
 else
-  feed_passive_dir_permissions="0750"
+  feed_passive_dir_permissions="41777"
 fi
 
 
@@ -2504,9 +2504,9 @@ fi
 
 # Check whether --with-livestatus was given.
 if test "${with_livestatus+set}" = set; then :
-  withval=$with_livestatus; checkresults_dir=$withval
+  withval=$with_livestatus; livestatus=$withval
 else
-  checkresults_dir="${localstatedir}/var/rw/live"
+  livestatus="${localstatedir}/var/rw/live"
 fi
 
 
@@ -2682,7 +2682,7 @@ fi
 if test "${with_tmp_dir_permissions+set}" = set; then :
   withval=$with_tmp_dir_permissions; tmp_dir_permissions=$withval
 else
-  tmp_dir_permissions="0750"
+  tmp_dir_permissions="41777"
 fi
 
 

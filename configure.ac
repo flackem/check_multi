@@ -80,7 +80,7 @@ AC_ARG_WITH(extended_perfdata,		[  --with-extended_perfdata=<0|1>           prov
 AC_ARG_WITH(extinfo_in_status,		[  --with-extinfo_in_status=<0|1>           display check_multi output in status.cgi],extinfo_in_status=$withval,extinfo_in_status=0)
 AC_ARG_WITH(feed_passive_autocreate,	[  --with-feed_passive_autocreate=<0|1>>    flag, if feed passive service definitions should be created automatically (default:1)],feed_passive_autocreate=$withval,feed_passive_autocreate="1")
 AC_ARG_WITH(feed_passive_dir,		[  --with-feed_passive_dir=<path>           directory for automatically created feed passive service definitions (default:${sysconfdir}/check_multi/feed_passive)],feed_passive_dir=$withval,feed_passive_dir="${sysconfdir}/check_multi/feed_passive")
-AC_ARG_WITH(feed_passive_dir_permissions,[  --with-feed_passive_dir_permissions=<octal perms> permissions for feed passive config dir (default:0750)],feed_passive_dir_permissions=$withval,feed_passive_dir_permissions="0750")
+AC_ARG_WITH(feed_passive_dir_permissions,[  --with-feed_passive_dir_permissions=<octal perms> permissions for feed passive config dir (default:41777)],feed_passive_dir_permissions=$withval,feed_passive_dir_permissions="41777")
 AC_ARG_WITH(findbin,			[  --with-findbin=<0|1>                     use Perl module FindBin for addressing plugins (default:1)],findbin=$withval,findbin=1)
 AC_ARG_WITH(file_extension,		[  --with-file_extension=<ext>              default extension for check_multi command files (default:"cmd")],file_extension=$withval,file_extension="cmd")
 AC_ARG_WITH(ignore_missing_cmd_file,	[  --with-ignore_missing_cmd_file=<0|1>     if missing cmd files should be ignored (default:0)],ignore_missing_cmd_file=$withval,ignore_missing_cmd_file="0")
@@ -88,7 +88,7 @@ AC_ARG_WITH(illegal_chars,		[  --with-illegal_chars=<chars>             characte
 AC_ARG_WITH(image_path,			[  --with-image_path=<URL>                  relative URL to nagios images (default:"/nagios/images")],image_path=$withval,image_path="/nagios/images")
 AC_ARG_WITH(indent,			[  --with-indent=<char>                     ASCII output indent character (default:" ")],indent=$withval,indent=" ")
 AC_ARG_WITH(indent_label,		[  --with-indent_label=<0|1>                indentation of child checks? (default:1)],indent_label=$withval,indent_label=1)
-AC_ARG_WITH(livestatus, 		[  --with-livestatus=<path>                 /path/to/livestatus-socket (default:${localstatedir}/rw/live)],checkresults_dir=$withval,checkresults_dir="${localstatedir}/var/rw/live")
+AC_ARG_WITH(livestatus, 		[  --with-livestatus=<path>                 /path/to/livestatus-socket (default:${localstatedir}/rw/live)],livestatus=$withval,livestatus="${localstatedir}/var/rw/live")
 AC_ARG_WITH(loose_perfdata,		[  --with-loose_perfdata=1                  loose performance data (default:1)],loose_perfdata=$withval,loose_perfdata=1)
 AC_ARG_WITH(name,			[  --with-name=<name>                       default name for check_multi label (default:"")],name=$withval,name="")
 AC_ARG_WITH(no_checks_rc,		[  --with-no_checks_rc=<RC>                 RC if no checks are specified (default:3-UNKNOWN)],no_checks_rc=$withval,no_checks_rc=3)
@@ -110,7 +110,7 @@ AC_ARG_WITH(style_plus_minus,		[  --with-style_plus_minus=<HTML code>      HTML 
 AC_ARG_WITH(tag_notes_link,		[  --with-tag_notes_link=<URL>              documentation URL for child checks (default:"")],tag_notes_link=$withval,tag_notes_link="")
 AC_ARG_WITH(target,			[  --with-target=<target_frame>             HTML target frame for URLs (default:_self)],target=$withval,target="_self")
 AC_ARG_WITH(tmp_dir,			[  --with-tmp_dir=<path>                    /path/to/tmp_dir (default:/tmp/check_multi)],tmp_dir=$withval,tmp_dir="/tmp/check_multi")
-AC_ARG_WITH(tmp_dir_permissions,	[  --with-tmp_dir_permissions=<octal perms> permissions of tmp_dir (default:0750)],tmp_dir_permissions=$withval,tmp_dir_permissions="0750")
+AC_ARG_WITH(tmp_dir_permissions,	[  --with-tmp_dir_permissions=<octal perms> permissions of tmp_dir (default:41777)],tmp_dir_permissions=$withval,tmp_dir_permissions="41777")
 AC_ARG_WITH(tmp_etc,			[  --with-tmp_etc=<path>                    /path/to/tmp_dir/etc (default:$tmp_dir/etc)],tmp_etc=$withval,tmp_etc="$tmp_dir/etc")
 AC_ARG_WITH(parent_timeout,		[ 
 major settings:

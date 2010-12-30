@@ -1,6 +1,7 @@
 
 ===== Changelog =====
 
+	* tmp_dir with tolerant permissions
 	* fixed 0 value environment variables
 	* new tests (random tags/macros), test restructured
 	* fixed problem with tags parsing

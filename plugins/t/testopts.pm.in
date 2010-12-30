@@ -26,7 +26,7 @@ sub get_testopts  {
 		extinfo_in_status		=> "0",
 		extended_perfdata		=> "0",
 		feed_passive_autocreate		=> "1",
-		feed_passive_dir_permissions	=> "0750",
+		feed_passive_dir_permissions	=> "1777",
 		feed_passive_dir		=> "'./tmp/feed_passive'",
 		file_extension			=> "cmd",
 		HOSTADDRESS			=> "127.0.0.1",
@@ -66,7 +66,7 @@ sub get_testopts  {
 		TIMEOUT				=> 60,
 		tmp_dir				=> "'./tmp'",
 		tmp_etc				=> "'./tmp/etc'",
-		tmp_dir_permissions		=> "0750",
+		tmp_dir_permissions		=> "1777",
 		verbose				=> 0,
 		eml_elements			=> "'name,rc,output,error,plugin,command,performance,starttime,endtime,runtime,type'",
 	};
