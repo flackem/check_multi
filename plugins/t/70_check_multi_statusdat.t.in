@@ -11,7 +11,7 @@ use testopts;
 
 my $t;
 
-plan tests => 14;
+plan tests => 18;
 
 my $result;
 #my $testopts="-s status_dat=status.dat -s dont_be_paranoid=1";
@@ -117,6 +117,40 @@ like(
 	$result->output,
 	#'/OK - 1 plugins checked, 1 ok\n\[ 1\] test_localhost.*PING OK.*\|check_multi\:\:check_multi\:\:plugins=1/s', 
 	'/OK - 1 plugins checked, 1 ok\n\[ 1\] host_localhost PING OK.*/s', 
+	"hosts output correct - passed"
+);
+
+#-------------------------------------------------------------------------------
+#--- host host.is.down ---------------------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -x 'statusdat [ host ] = host.is.down'",
+);
+is(
+	$result->return_code, 
+	$result->return_code, 
+	"check_multi checks down host in status.dat - RC".$result->return_code." - passed"
+);
+like(
+	$result->output,
+	'/CRITICAL - 1 plugins checked, 1 critical \(host_host.is.down\)\n\[ 1\] host_host.is.down CRITICAL.*/s', 
+	"hosts output correct - passed"
+);
+
+#-------------------------------------------------------------------------------
+#--- host host.is.unreachable --------------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -x 'statusdat [ host ] = host.is.unreachable'",
+);
+is(
+	$result->return_code, 
+	$result->return_code, 
+	"check_multi checks unreachable host in status.dat - RC".$result->return_code." - passed"
+);
+like(
+	$result->output,
+	'/UNKNOWN - 1 plugins checked, 1 unknown \(host_host.is.unreachable\)\n\[ 1\] host_host.is.unreachable CRITICAL.*/s', 
 	"hosts output correct - passed"
 );
 

@@ -1,6 +1,7 @@
 
 ===== Changelog =====
 
+	* fixed host states for statusdat: down->critical,unreachable->unknown
 	* repeat writing of feed_passive config files after time period
 	* tmp_dir with tolerant permissions
 	* fixed 0 value environment variables

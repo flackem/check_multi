@@ -2278,6 +2278,12 @@ sub exec_command {
 			if ($cmds[$no]{rc} == -1) {
 				add_error($no,"statusdat $cmds[$no]{name}: cannot find host \'$cmds[$no]{host}\' in \'$opt{set}{status_dat}\'");
 				$cmds[$no]{rc}=$UNKNOWN;
+			#--- DOWN host becomes CRITICAL check_multi service
+			} elsif ($cmds[$no]{rc} == 1) {
+				$cmds[$no]{rc}=$CRITICAL;
+			#--- UNREACHABLE host becomes UNKNOWN check_multi service
+			} elsif ($cmds[$no]{rc} == 2) {
+				$cmds[$no]{rc}=$UNKNOWN;
 			}
 		}
 	} elsif ($cmds[$no]{type} eq "snmp") {
