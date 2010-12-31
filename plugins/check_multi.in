@@ -4091,8 +4091,14 @@ sub check_and_create_service_definition {
 	if (! my_mkdir("$opt{set}{feed_passive_dir}/$hostname",$opt{set}{feed_passive_dir_permissions})) {
 		add_error(0,"check_and_create_service_definition: cannot create directory $opt{set}{feed_passive_dir}/$hostname: $!");
 	}
-	#--- create service definition in host directory
-	if (! -f "$opt{set}{feed_passive_dir}/$hostname/${service_definition}.cfg") {
+	#--- check age of service definition file and recreate if too old
+	my $cfgfile_age=time-(stat("$opt{set}{feed_passive_dir}/$hostname/${service_definition}.cfg"))[10] 
+		if (-f "$opt{set}{feed_passive_dir}/$hostname/${service_definition}.cfg");
+
+	#--- create in any case if it does not exist
+	if (! -f "$opt{set}{feed_passive_dir}/$hostname/${service_definition}.cfg" || 
+		$cfgfile_age>$opt{set}{cmdfile_update_interval}) {
+
 		my $content=$opt{set}{service_definition_template_default};
 		$content=~s/\$HOSTNAME\$/$hostname/g;
 		$content=~s/\$SERVICEDESC\$/$service_definition/g;
