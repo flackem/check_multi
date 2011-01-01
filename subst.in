@@ -21,6 +21,7 @@ if (-f "CM_VERSION") {
 my $INSTALL_OPTS="@INSTALL_OPTS@";
 my $PERL="@PERL@";
 my $action_mouseover="@action_mouseover@";
+my $add_tag_to_list_entries="@add_tag_to_list_entries@";
 my $action_url="@action_url@";
 my $child_interval="@child_interval@";
 my $client_perl="@client_perl@";
@@ -107,6 +108,7 @@ while (my $f = shift @ARGV) {
 		s|\@INSTALL_OPTS\@|$INSTALL_OPTS|g;
 		s|\@PERL\@|$PERL|g;
 		s|\@action_mouseover\@|$action_mouseover|g;
+		s|\@add_tag_to_list_entries\@|$add_tag_to_list_entries|g;
 		s|\@action_url\@|$action_url|g;
 		s|\@cancel_before_global_timeout\@|$cancel_before_global_timeout|g;
 		s|\@child_interval\@|$child_interval|g;

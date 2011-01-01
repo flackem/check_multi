@@ -11,7 +11,7 @@ use testopts;
 
 my $t;
 
-plan tests => 18;
+plan tests => 20;
 
 my $result;
 #my $testopts="-s status_dat=status.dat -s dont_be_paranoid=1";
@@ -115,8 +115,24 @@ is(
 );
 like(
 	$result->output,
-	#'/OK - 1 plugins checked, 1 ok\n\[ 1\] test_localhost.*PING OK.*\|check_multi\:\:check_multi\:\:plugins=1/s', 
 	'/OK - 1 plugins checked, 1 ok\n\[ 1\] host_localhost PING OK.*/s', 
+	"hosts output correct - passed"
+);
+
+#-------------------------------------------------------------------------------
+#--- host localhost without prefix ---------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -x 'statusdat [ host ] = localhost' -s add_tag_to_list_entries=0",
+);
+is(
+	$result->return_code, 
+	$result->return_code, 
+	"check_multi finds localhost in status.dat without prefix- RC".$result->return_code." - passed"
+);
+like(
+	$result->output,
+	'/OK - 1 plugins checked, 1 ok\n\[ 1\] localhost PING OK.*/s', 
 	"hosts output correct - passed"
 );
 

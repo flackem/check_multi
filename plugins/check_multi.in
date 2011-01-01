@@ -129,6 +129,8 @@ my %opt=(
 	"set"		=> {
 		# mouse_over & action_url: shows PNP chart popup triggered by mouse
 		action_mouseover => @action_mouseover@,
+		# place tags at the beginning of list entries (e.g. tag_host_servicedesc)
+		add_tag_to_list_entries => @add_tag_to_list_entries@,
 		# cancel child check before it can reach global timeout
 		cancel_before_global_timeout => @cancel_before_global_timeout@,
 		# checkresults_dir
@@ -842,6 +844,7 @@ Set options:
 -s, --set <option>=<value>
    <KEY>=<VALUE> - set multi variable \$<KEY>\$ to <VALUE>
    action_mouseover=<0|1> - mouse triggers PNP popup chart
+   add_tag_to_list_entries=<0|1> - add tag as a prefix to list entries (default:$opt{set}{add_tag_to_list_entries})
    checkresults_dir=<path> - path to Nagios checkresults directory (direct insertion of checkresults)
    child_interval=<time> - time in seconds to sleep between child_checks, may be fraction of seconds (default:$opt{set}{child_interval})
    cmdfile_update_interval=<seconds> - update config file (if HTTP/FTP/...), default:$opt{set}{cmdfile_update_interval}
@@ -1556,7 +1559,7 @@ sub parse_lines {
 		$line=~s/\\\s*$// if ($line=~/\\\s*/);
 
 		#--- header line (regex contains all allowed commands)
-		if (($type,$name,$cmd)=($line=~/^\s*($opt{cmdregex})\s*\[\s*(\S[$opt{set}{valid_tag_chars}]*\S)\s*\]\s*=\s*(.*)\s*/i)) {
+		if (($type,$name,$cmd)=($line=~/^\s*($opt{cmdregex})\s*\[\s*(\S[$opt{set}{valid_tag_chars}]*\S|\S{1})\s*\]\s*=\s*(.*)\s*/i)) {
 
 			#--- remove remaining blanks 
 			$name=trim($name);
@@ -1582,7 +1585,7 @@ sub parse_lines {
 			$last_command=parse_header($type,$name,$cmd,$lineno);
 
 		#--- proper header line with invalid keyword
-		} elsif ($line=~/^\s*(\w+)\s*\[\s*([$opt{set}{valid_tag_chars}]*)\s*\]\s*=\s*(.*)\s*/) {
+		} elsif ($line=~/^\s*(\w+)\s*\[\s*(\S[$opt{set}{valid_tag_chars}]*\S|\S{1})\s*\]\s*=\s*(.*)\s*/) {
 			add_error(0,"Invalid keyword \'$1\' specified, valid are \'$opt{cmdregex}\'");
 			return;
 
@@ -1834,7 +1837,8 @@ sub parse_header {
 					$cmds[$i]{host}="UNKNOWN";
 					$cmds[$i]{service}="UNKNOWN";
 				}
-				$cmds[$i]{name}="${name}_$cmds[$i]{host}_$cmds[$i]{service}";
+				$cmds[$i]{name}=($opt{set}{add_tag_to_list_entries})?"${name}_":"";
+				$cmds[$i]{name}.="$cmds[$i]{host}_$cmds[$i]{service}";
 				$cmds[$i]{name}=~s/[^A-Z0-9_-]+/_/gi;
 				DEBUG4("added host:$cmds[$i]{host} / service:$cmds[$i]{service} / output:$cmds[$i]{output}");
 				$i++;
@@ -1873,7 +1877,8 @@ sub parse_header {
 				if ($cmds[$i]{host} eq "-1") {
 					$cmds[$i]{host}="UNKNOWN";
 				}
-				$cmds[$i]{name}="${name}_$cmds[$i]{host}";
+				$cmds[$i]{name}=($opt{set}{add_tag_to_list_entries})?"${name}_":"";
+				$cmds[$i]{name}.="$cmds[$i]{host}";
 				$cmds[$i]{name}=~s/[^A-Z0-9_-]+/_/gi;
 				DEBUG4("added host:$cmds[$i]{host} / output:$cmds[$i]{output}");
 				$i++;
@@ -1966,7 +1971,8 @@ sub parse_header {
 					$cmds[$i]{host}="UNKNOWN";
 					$cmds[$i]{service}="UNKNOWN";
 				}
-				$cmds[$i]{name}="${name}_$cmds[$i]{host}_$cmds[$i]{service}";
+				$cmds[$i]{name}=($opt{set}{add_tag_to_list_entries})?"${name}_":"";
+				$cmds[$i]{name}.="$cmds[$i]{host}_$cmds[$i]{service}";
 				DEBUG4("added host:$cmds[$i]{host} / service:$cmds[$i]{service}");
 				$i++;
 			}
@@ -2003,7 +2009,8 @@ sub parse_header {
 				if ($cmds[$i]{host} eq "-1") {
 					$cmds[$i]{host}="UNKNOWN";
 				}
-				$cmds[$i]{name}="${name}_$cmds[$i]{host}";
+				$cmds[$i]{name}=($opt{set}{add_tag_to_list_entries})?"${name}_":"";
+				$cmds[$i]{name}.="$cmds[$i]{host}";
 				DEBUG4("added host:$cmds[$i]{host}");
 				$i++;
 			}
@@ -2509,8 +2516,10 @@ sub get_status_dat_service {
 		DEBUG4("found data for $host_name:$service_description: RC $status_dat->{servicestatus}->{$host_name}->{$service_description}->{current_state} and output \'$status_dat->{servicestatus}->{$host_name}->{$service_description}->{plugin_output}\', long_output \'$status_dat->{servicestatus}->{$host_name}->{$service_description}->{long_plugin_output}\'");
 		return (
 			$status_dat->{servicestatus}->{$host_name}->{$service_description}->{current_state},
-			$status_dat->{servicestatus}->{$host_name}->{$service_description}->{plugin_output}."\n".
-			$status_dat->{servicestatus}->{$host_name}->{$service_description}->{long_plugin_output}
+			($status_dat->{servicestatus}->{$host_name}->{$service_description}->{long_plugin_output})
+				? $status_dat->{servicestatus}->{$host_name}->{$service_description}->{plugin_output}."\n".
+				  $status_dat->{servicestatus}->{$host_name}->{$service_description}->{long_plugin_output}
+				: $status_dat->{servicestatus}->{$host_name}->{$service_description}->{plugin_output}
 		);
 	}
 }

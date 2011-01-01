@@ -608,6 +608,7 @@ child_timeout
 checkresults_dir
 child_interval
 cancel_before_global_timeout
+add_tag_to_list_entries
 action_url
 action_mouseover
 ac_configure_args
@@ -674,6 +675,7 @@ ac_subst_files=''
 ac_user_opts='
 enable_option_checking
 with_action_url
+with_add_tag_to_list_entries
 with_action_mouseover
 with_cancel_before_global_timeout
 with_client_perl
@@ -1345,6 +1347,7 @@ Optional Packages:
 
 detail settings:
   --with-action_url=<URL>                  action URL (default:"")
+  --with-add_tag_to_list_entries=<0|1>     add tag as prefix to list entries (default:1)
   --with-action_mouseover=<0|1>            show PNP chart popup triggered by mouseover (default:0)
   --with-cancel_before_global_timeout=<0|1>  cancel checks being *near* a timeout? (default:0)
   --with-client_perl=<perl path>           sets perl cmdline / path (e.g. #!/usr/bin/perl)
@@ -2264,6 +2267,14 @@ else
 fi
 
 
+# Check whether --with-add_tag_to_list_entries was given.
+if test "${with_add_tag_to_list_entries+set}" = set; then :
+  withval=$with_add_tag_to_list_entries; add_tag_to_list_entries=$withval
+else
+  add_tag_to_list_entries=1
+fi
+
+
 # Check whether --with-action_mouseover was given.
 if test "${with_action_mouseover+set}" = set; then :
   withval=$with_action_mouseover; action_mouseover=$withval
@@ -2744,6 +2755,7 @@ fi
 
 
 #--- substitutions
+
 
 
 
