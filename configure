@@ -1377,7 +1377,7 @@ detail settings:
   --with-name=<name>                       default name for check_multi label (default:"")
   --with-no_checks_rc=<RC>                 RC if no checks are specified (default:3-UNKNOWN)
   --with-notes_url=<URL>                   notes URL (default:"")
-  --with-objects_cache=</path/to/objects.cache>    path to objects.cache (default:"/usr/local/nagios/var/objects.cache")
+  --with-objects_cache=</path/to/objects.cache>    path to objects.cache (default:"${localstatedir}/objects.cache")
   --with-objects_cache_delimiter=<char>    character to separate objects.cache results (default:",")
   --with-omd_environment=<0|1>             Run check_multi within OMD enviroment (default:0)
   --with-persistent=<0|1>                  persistency: saving of state data between two calls (default:0)
@@ -2517,7 +2517,7 @@ fi
 if test "${with_livestatus+set}" = set; then :
   withval=$with_livestatus; livestatus=$withval
 else
-  livestatus="${localstatedir}/var/rw/live"
+  livestatus="${localstatedir}/rw/live"
 fi
 
 
@@ -2557,7 +2557,7 @@ fi
 if test "${with_objects_cache+set}" = set; then :
   withval=$with_objects_cache; objects_cache=$withval
 else
-  objects_cache="/usr/local/nagios/var/objects.cache"
+  objects_cache="${localstatedir}/objects.cache"
 fi
 
 
