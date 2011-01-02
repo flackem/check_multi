@@ -1,6 +1,7 @@
 
 ===== Changelog =====
 
+	* 'attribute [ key ] = value' now sets internal variables
 	* new option add_tag_to_list_entries provides lists without prefix
 	* fixed host states for statusdat: down->critical,unreachable->unknown
 	* repeat writing of feed_passive config files after time period

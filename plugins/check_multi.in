@@ -661,11 +661,6 @@ sub process_input {
 		return $UNKNOWN;
 	}
 
-	#--- add all set options as environment variables, so client scripts can use it
-	foreach my $option (sort keys(%{$opt{set}})) {
-		$ENV{"MULTI_set_".$option}=$opt{set}{$option} if defined($opt{set}{$option});
-	}
-
 	#--- add _the_ parent pid as indicator of the absolute first instance in a check_multi tree
 	#--- there can be multiple recursive called instances and they need to detect which is the first
 	$ENV{"MULTI_PPID"}=$$ if (!defined($ENV{"MULTI_PPID"}));
@@ -1272,6 +1267,16 @@ sub substitute_states {
 
 
 #---
+#--- sets settings as environment variables
+#---
+sub set_env_settings {
+	#--- add all set options as environment variables, so client scripts can use it
+	foreach my $option (sort keys(%{$opt{set}})) {
+		$ENV{"MULTI_set_".$option}=$opt{set}{$option} if defined($opt{set}{$option});
+	}
+}
+
+#---
 #--- sets result environment variables
 #---
 sub set_env_vars {
@@ -1641,13 +1646,19 @@ sub parse_header {
 
 	#--- format: 'attribute [ tag::variable ] = value'
 	if ($type eq "attribute") {
+		#--- 1. 'attribute [ variable ] = value' - update set variable
 		if ($key eq "") {
-			add_error(0,"parse_header: invalid statement \'attribute [ $name ] = ...\', correct is \'attribute [ TAG::key ] = value\'");
-			return undef;
-		}
-		if (! defined($cmds[$i]{name})) {
+			if (!defined($opt{set}{$name})) {
+				DEBUG2("created variable \$opt{set}{$name}=$cmd");
+			} else {
+				DEBUG2("updated variable \$opt{set}{$name}=$cmd");
+			}
+			$opt{set}{$name}=$cmd;
+		#--- 2. 'attribute [ tag::variable ] = value' - tag not found
+		} elsif (! defined($cmds[$i]{name})) {
 			add_error(0,"parse_header: attribute [ ${name}::${key} ] can not be set: child check with name \'$name\' not found");
 			return undef;
+		#--- 3. 'attribute [ tag::variable ] = value' - update attribute
 		} else {
 			if (!defined($cmds[$i]{$key})) {
 				DEBUG2("key $key attribute \'$cmd\' inserted into object $name (\$cmds[$i])");
@@ -4147,6 +4158,9 @@ add_error(0,"please don't run plugins as root!") if ($opt{set}{user}=~/root/ && 
 
 #--- parse single command lines
 &parse_lines(@{$opt{execute}});
+
+#--- provide settings as env variables
+&set_env_settings;
 
 #--- quick exit if only encoding of commands requested
 if ($opt{set}{report} & $DETAIL_ENCODE_COMMANDS) {

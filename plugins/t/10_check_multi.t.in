@@ -28,7 +28,7 @@ foreach my $plugin (@plugins) {
 	}
 }
 
-plan tests => 54;
+plan tests => 56;
 
 my $result;
 #my $testopts="-s dont_be_paranoid=1 -s tmp_dir=/tmp/check_multi";
@@ -471,6 +471,23 @@ like(
 	$result->output,
 	'/OK - 1 plugins checked, 1 ok\n'.
 	'\[ 1\] with_perfdata eins\|check_multi::check_multi::plugins=1 time=[\d\.]+ $/',
+	"output correct"
+);
+#-------------------------------------------------------------------------------
+#--- check_multi attribute sets internal variable ------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -s report=1 -x 'eeval [ eins ] = \"zwei\"' -x 'attribute [ name ] = drei'",
+);
+is(
+	$result->return_code, 
+	0, 
+	"changes global variables with attributes - RC0"
+);
+like(
+	$result->output,
+	'/drei OK - 1 plugins checked, 1 ok\n'.
+	'\[ 1\] eins zwei$/',
 	"output correct"
 );
 #-------------------------------------------------------------------------------
