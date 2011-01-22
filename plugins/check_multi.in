@@ -361,6 +361,7 @@ sub process_input {
 	if (! GetOptions(
 		"f|filename=s"	=> \@{$opt{filename}},
 		"h|help:+"	=> \$opt{help},
+		"i|instant=s"	=> \$opt{set}{instant},
 		"l|libexec=s"	=> \$opt{set}{libexec},
 		"n|name=s"	=> \$opt{set}{name},
 		"r|report=s"	=> \$opt{set}{report},
@@ -791,6 +792,7 @@ Common options:
 
 Extended command line - command file options also available on command line:
 -x, --execute "command [ tag ] = check_xyz"
+-i, --instant "tag"
 -w, --warning  <expression>
 -c, --critical <expression>
 -u, --unknown  <expression>
@@ -4175,6 +4177,22 @@ if ($#cmds<1) {
 	$rc{expr}[$OK]="0==1" if ($opt{set}{no_checks_rc} != $OK);
 } else {
 	DEBUG4("running " . ($#cmds - 1) . " child checks");
+}
+
+#--- instant check execution defined? then do it right now
+if ($opt{set}{instant}) {
+	DEBUG4("Instant execution of \'$opt{set}{instant}\' requested");
+	for ($no=1;$no<=$#cmds;$no++) {
+		if ($cmds[$no]{name} eq $opt{set}{instant}) {
+			exec_command($no);
+			DEBUG4("Instant execution of \'$opt{set}{instant}\': $cmds[$no]{output}, RC:$cmds[$no]{rc}");
+			print "$cmds[$no]{output}\n";	
+			exit $cmds[$no]{rc};
+		}
+	}
+	#--- instant tag not found: bail out with error
+	print "UNKNOWN - tag \'$opt{set}{instant}\' not found for instant execution\n";
+	exit $UNKNOWN;
 }
 
 #--- create unique hash for check

@@ -28,7 +28,7 @@ foreach my $plugin (@plugins) {
 	}
 }
 
-plan tests => 56;
+plan tests => 60;
 
 my $result;
 #my $testopts="-s dont_be_paranoid=1 -s tmp_dir=/tmp/check_multi";
@@ -471,6 +471,38 @@ like(
 	$result->output,
 	'/OK - 1 plugins checked, 1 ok\n'.
 	'\[ 1\] with_perfdata eins\|check_multi::check_multi::plugins=1 time=[\d\.]+ $/',
+	"output correct"
+);
+#-------------------------------------------------------------------------------
+#--- check_multi with instant execution ----------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"/usr/bin/perl ../check_multi $testopts -x 'command [ eins ] = (echo eins; exit 1)' -x 'command [ zwei ] = (echo zwei; exit 2)' -i eins",
+);
+is(
+	$result->return_code, 
+	1, 
+	"instant execution of child check (feeded command reschedule) - RC1"
+);
+like(
+	$result->output,
+	'/^eins$/',
+	"output correct"
+);
+#-------------------------------------------------------------------------------
+#--- check_multi with instant execution, wrong tag -----------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"/usr/bin/perl ../check_multi $testopts -x 'command [ eins ] = (echo eins; exit 1)' -x 'command [ zwei ] = (echo zwei; exit 2)' -i drei",
+);
+is(
+	$result->return_code, 
+	3, 
+	"instant execution of child check, wrong tag - RC3"
+);
+like(
+	$result->output,
+	'/^UNKNOWN - tag \'drei\' not found for instant execution$/',
 	"output correct"
 );
 #-------------------------------------------------------------------------------

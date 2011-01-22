@@ -1,6 +1,7 @@
 
 ===== Changelog =====
 
+	* instant execution of a child check: -i TAG
 	* 'attribute [ key ] = value' now sets internal variables
 	* new option add_tag_to_list_entries provides lists without prefix
 	* fixed host states for statusdat: down->critical,unreachable->unknown
