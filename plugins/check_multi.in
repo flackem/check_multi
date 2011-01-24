@@ -186,7 +186,7 @@ my %opt=(
 		# plugin directory to be added to check_multi search path
 		libexec		=> "@libexecdir@",
 		# livestatus socket
-		livestatus	=> "@localstatedir@/rw/live",
+		livestatus	=> "@livestatus@",
 		# loose (German) performance data (replace commata by decimal points)
 		loose_perfdata => "@loose_perfdata@",
 		# pnp_version needed for mouseover: 0.6,0,4

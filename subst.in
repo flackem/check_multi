@@ -47,6 +47,7 @@ my $illegal_chars="@illegal_chars@";
 my $image_path="@image_path@";
 my $indent="@indent@";
 my $indent_label=@indent_label@;
+my $livestatus="@livestatus@";
 my $name="@name@";
 my $no_checks_rc=@no_checks_rc@;
 my $notes_url="@notes_url@";
@@ -135,7 +136,7 @@ while (my $f = shift @ARGV) {
 		s|\@illegal_chars\@|$illegal_chars|g;
 		s|\@indent_label\@|$indent_label|g;
 		s|\@indent\@|$indent|g;
-		s|\@localstatedir\@|$localstatedir|g;
+		s|\@livestatus\@|$livestatus|g;
 		s|\@nagios_name\@|$nagios_name|g;
 		s|\@name\@|$name|g;
 		s|\@no_checks_rc\@|$no_checks_rc|g;

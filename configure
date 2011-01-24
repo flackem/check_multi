@@ -583,6 +583,7 @@ objects_cache
 no_checks_rc
 name
 loose_perfdata
+livestatus
 indent
 indent_label
 image_path
@@ -2755,6 +2756,7 @@ fi
 
 
 #--- substitutions
+
 
 
 
