@@ -103,6 +103,8 @@ test-statusdat:
 	@ cd $(SRC_PL_TEST)  && $(MAKE) -e $@
 test-extreme:
 	@ cd $(SRC_PL_TEST)  && $(MAKE) -e $@
+test-test:
+	@ cd $(SRC_PL_TEST)  && $(MAKE) -e $@
 
 #---
 #--- install sections

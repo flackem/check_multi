@@ -1,0 +1,121 @@
+#! @PERL@ -w -I ..
+#
+# Process Tests via check_multi
+# thanks to Ton Voon for his persistency on testing ;)
+#
+
+use strict;
+use Test::More;
+use NPTest;
+use testopts;
+
+my $t;
+
+#--- add $libexec_dir to PATH to be sure that plugins will be called from libexec_dir
+my $libexec_dir="@libexecdir@";
+my $plugin_path="@plugin_path@";
+$ENV{PATH}="$libexec_dir:$plugin_path:$ENV{PATH}";
+
+#--- check needed plugins for tests
+my @plugins=(
+	"echo",
+	"@PERL@",
+);
+foreach my $plugin (@plugins) {
+	my $path_to_plugin=`which $plugin`; chomp $path_to_plugin;
+	if (! -x "$path_to_plugin") {
+		plan skip_all => "tests because component $plugin not found or not executable as \'$path_to_plugin\'";
+	}
+}
+
+plan tests => 60;
+
+my $result;
+#my $testopts="-s dont_be_paranoid=1 -s tmp_dir=/tmp/check_multi";
+my $testopts=testopts::get_testopts;
+#-------------------------------------------------------------------------------
+#--- check_multi local timeout reduced due to global timeout -------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -s report=1+4 -s TIMEOUT=2 -s timeout=2 -x 'command [ one ] = sleep 1; echo one' -x 'command [ two ] = echo two' ",
+);
+is(
+	$result->return_code, 
+	0, 
+	"timeout check: local timeout reduced due to global timeout - RC0"
+);
+like(
+	$result->output,
+	'/OK - 2 plugins checked, 2 ok\n'.
+	'\[ 1\] one one\n'.
+	'\[ 2\] two two \[timeout reduced to 1 seconds due to global timeout\]/',
+	"output correct"
+);
+#-------------------------------------------------------------------------------
+#--- check_multi child check timeout -------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -s report=1+4 -s TIMEOUT=2 -s timeout=1 -x 'command [ two ] = sleep 2; echo two' ",
+);
+is(
+	$result->return_code, 
+	3, 
+	"timeout check: local timeout after 1 second - RC3"
+);
+like(
+	$result->output,
+	'/UNKNOWN - 1 plugins checked, 1 unknown \(two\)\n'.
+	'\[ 1\] two  \[timeout encountered after 1s/',
+	"output correct"
+);
+#-------------------------------------------------------------------------------
+#--- check_multi child check timeout (eval) ------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -s report=1+4 -s TIMEOUT=2 -s timeout=1 -x 'eeval [ two ] = sleep 2; return \"two\"' ",
+);
+is(
+	$result->return_code, 
+	3, 
+	"timeout check: eval local timeout after 1 second - RC3"
+);
+like(
+	$result->output,
+	'/UNKNOWN - 1 plugins checked, 1 unknown \(two\)\n'.
+	'\[ 1\] two two \[timeout after 1s/',
+	"output correct"
+);
+#-------------------------------------------------------------------------------
+#--- check_multi with timeout at instant check print ---------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -s report=1+4 -s TIMEOUT=2 -s timeout=2 -x 'command [ one ] = sleep 1; echo one' -x 'command [ two ] = echo two' -i two ",
+);
+is(
+	$result->return_code, 
+	0, 
+	"timeout check: reduced timeout with instant output - RC0"
+);
+like(
+	$result->output,
+	'/two/',
+	"output correct"
+);
+#-------------------------------------------------------------------------------
+#--- check_multi child and global timeout --------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -s report=1+4 -s timeout=1 -s TIMEOUT=2 -s cancel_before_global_timeout=1 -x 'command [ one ] = ( sleep 2; echo one)' -x 'command [ two ] = echo two'",
+);
+is(
+	$result->return_code, 
+	3, 
+	"timeout check: child one killed, child two cancelled - RC3"
+);
+like(
+	$result->output,
+	'/UNKNOWN - 2 plugins checked, 2 unknown \(one, two\)\n'.
+	'\[ 1\] one  \[timeout encountered after 1s\]\n'.
+	'\[ 2\] two UNKNOWN - execution cancelled due to global timeout \(2s\)/',
+	"output correct"
+);

@@ -19,6 +19,7 @@ clean:
 	-rm -f 70_check_multi_statusdat.t
 	-rm -f 80_check_multi_livestatus.t
 	-rm -f 90_extreme_testing.t
+	-rm -f 90_extreme_timeout.t
 	-rm -f testopts.pm
 	-rm -rf tmp
 
@@ -43,8 +44,6 @@ test-statusdat:
 	@PERL@ 70_check_multi_statusdat.t
 test-livestatus:
 	@PERL@ 80_check_multi_livestatus.t
-test-extreme:
-	@PERL@ 90_extreme_testing.t
 test-all:
 	@PERL@ 10_check_multi.t
 	@PERL@ 20_check_multi_macros.t
@@ -53,4 +52,8 @@ test-all:
 	@PERL@ 60_check_multi_feeds_passive.t
 	@PERL@ 70_check_multi_statusdat.t
 	@PERL@ 80_check_multi_livestatus.t
+test-extreme:
 	@PERL@ 90_extreme_testing.t
+	@PERL@ 90_extreme_timeout.t
+test-test:
+	@PERL@ 90_extreme_timeout.t

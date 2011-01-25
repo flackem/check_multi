@@ -2235,6 +2235,7 @@ sub exec_command {
 	} elsif ($cmds[$no]{type} eq "eval" || $cmds[$no]{type} eq "eeval") {
 		local $SIG{ALRM} = sub {
 			add_error($no,"timeout after $opt{set}{timeout}s");
+			$?=$UNKNOWN<<8;
 		};
 		set_alarm($no,$opt{set}{timeout});
 		$cmds[$no]{output}=eval($cmds[$no]{command});
@@ -2288,6 +2289,7 @@ sub exec_command {
 	} elsif ($cmds[$no]{type} eq "statusdat") {
 		local $SIG{ALRM} = sub {
 			add_error($no,"$cmds[$no]{name}: timeout after $opt{set}{timeout}s");
+			$?=$UNKNOWN<<8;
 		};
 		set_alarm($no,$opt{set}{timeout});
 		#--- service check
@@ -2314,6 +2316,7 @@ sub exec_command {
 	} elsif ($cmds[$no]{type} eq "snmp") {
 		local $SIG{ALRM} = sub {
 			add_error($no,"$cmds[$no]{name}: timeout after $opt{set}{timeout}s");
+			$?=$UNKNOWN<<8;
 		};
 		set_alarm($no,$opt{set}{timeout});
 		($cmds[$no]{rc},$cmds[$no]{output})=get_snmp($cmds[$no]{host},$opt{set}{snmp_port},$opt{set}{snmp_community},$cmds[$no]{command},$cmds[$no]{translate});
