@@ -4179,6 +4179,13 @@ if ($#cmds<1) {
 	DEBUG4("running " . ($#cmds - 1) . " child checks");
 }
 
+#--- create unique hash for check
+$cmds[0]{hash}=&my_hash(&config_string(\@cmds));
+
+#--- initialize timer for overall timeout
+$cmds[0]{starttime}=time;
+$cmds[0]{timeouttime}=$cmds[0]{starttime} + $opt{set}{TIMEOUT};
+
 #--- instant check execution defined? then do it right now
 if ($opt{set}{instant}) {
 	DEBUG4("Instant execution of \'$opt{set}{instant}\' requested");
@@ -4194,13 +4201,6 @@ if ($opt{set}{instant}) {
 	print "UNKNOWN - tag \'$opt{set}{instant}\' not found for instant execution\n";
 	exit $UNKNOWN;
 }
-
-#--- create unique hash for check
-$cmds[0]{hash}=&my_hash(&config_string(\@cmds));
-
-#--- initialize timer for overall timeout
-$cmds[0]{starttime}=time;
-$cmds[0]{timeouttime}=$cmds[0]{starttime} + $opt{set}{TIMEOUT};
 
 #--- loop over commands in order of config file
 $no=1;
