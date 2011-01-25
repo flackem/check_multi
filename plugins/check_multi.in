@@ -36,16 +36,21 @@ BEGIN {
 	#--- OMD environment? Then we have to be sure that vars are defined
 	#--- otherwise somebody copied check_multi from OMD to remote hosts
         if (@omd_environment@ && (!$ENV{OMD_SITE} || !$ENV{OMD_ROOT})) {
-                print "Error: OMD_SITE or OMD_ROOT variables not defined\n";
-                print "Are you running check_multi outside of OMD environment?\n";
+                print "Error: OMD_SITE or OMD_ROOT variables not found.\n".
+                	"If you're running check_multi outside of OMD environment,\n".
+			"add OMD_ROOT and OMD_SITE to the environment\n";
                 exit 3;
-        }
+	#--- add OMD_ROOT and OMD_SITE vars to check_multi internal environment
+	#--- then $OMD_ROOT$ and $OMD_SITE$ can be used in command files
+        } elsif (@omd_environment@) {
+		$ENV{MULTI_OMD_ROOT}=$ENV{OMD_ROOT};
+		$ENV{MULTI_OMD_SITE}=$ENV{OMD_SITE};
+	}
 	#--- if hires timer available, use it
 	eval("use Time::HiRes qw(time sleep)");
 	if (! $@) {
 		$opt{set}{use_time_hires}=1;
 	}
-
 	#--- if FindBin module available, use it for finding plugins
 	if (@findbin@) {
 		eval("use FindBin");
