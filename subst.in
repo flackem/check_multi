@@ -68,6 +68,7 @@ my $loose_perfdata="@loose_perfdata@";
 my $snmp_community="@snmp_community@";
 my $snmp_port="@snmp_port@";
 my $style_plus_minus="@style_plus_minus@";
+my $status_dat="@status_dat@";
 my $tag_notes_link="@tag_notes_link@";
 my $target="@target@";
 my $tmp_dir="@tmp_dir@";
@@ -156,6 +157,7 @@ while (my $f = shift @ARGV) {
 		s|\@snmp_community\@|$snmp_community|g;
 		s|\@snmp_port\@|$snmp_port|g;
 		s|\@style_plus_minus\@|$style_plus_minus|g;
+		s|\@status_dat\@|$status_dat|g;
 		s|\@tag_notes_link\@|$tag_notes_link|g;
 		s|\@target\@|$target|g;
 		s|\@tmp_dir\@|$tmp_dir|g;

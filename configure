@@ -563,6 +563,7 @@ tmp_dir
 target
 tag_notes_link
 style_plus_minus
+status_dat
 snmp_port
 snmp_community
 signal_rc
@@ -719,6 +720,7 @@ with_report
 with_signal_rc
 with_snmp_community
 with_snmp_port
+with_status_dat
 with_style_plus_minus
 with_tag_notes_link
 with_target
@@ -1391,6 +1393,7 @@ detail settings:
   --with-signal_rc=<RC>                    RC if check_multi caught a signal default:3-UNKNOWN)
   --with-snmp_community=<community>        SNMP community (default:public)
   --with-snmp_port=<port>                  SNMP port (default:161)
+  --with-status_dat=<URL>                  path to nagios status.dat (default:"${localstatedir}/status.dat")
   --with-style_plus_minus=<HTML code>      HTML style for plus/minus (default:$ACTION_URL)
   --with-tag_notes_link=<URL>              documentation URL for child checks (default:"")
   --with-target=<target_frame>             HTML target frame for URLs (default:_self)
@@ -2658,6 +2661,14 @@ else
 fi
 
 
+# Check whether --with-status_dat was given.
+if test "${with_status_dat+set}" = set; then :
+  withval=$with_status_dat; status_dat=$withval
+else
+  status_dat="${localstatedir}/status.dat"
+fi
+
+
 # Check whether --with-style_plus_minus was given.
 if test "${with_style_plus_minus+set}" = set; then :
   withval=$with_style_plus_minus; style_plus_minus=$withval
@@ -2756,6 +2767,7 @@ fi
 
 
 #--- substitutions
+
 
 
 

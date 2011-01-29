@@ -267,7 +267,7 @@ my %opt=(
 		# snmp_community
 		snmp_port	=> "@snmp_port@",
 		# path to status.dat
-		status_dat	=> "@localstatedir@/status.dat",
+		status_dat	=> "@status_dat@",
 		# style of plus/minus char
 		style_plus_minus => "style='color:#4444FF;line-height:0.3em;font-size:1.5em;cursor:crosshair'",
 		# documentation URL to be added to child check tags
