@@ -2125,7 +2125,7 @@ sub exec_command {
 					setpgrp(0,0) if ($^O!~/Win32/);
 					exec("$cmds[$no]{command} 1>$tmp_stdout 2>$tmp_stderr") or do {
 							my $error = $!;                  # safe error output
-							open(my $fh, '>>', $tmp_stdout); # and write it to the output file
+							open(my $fh, ">>$tmp_stdout");   # and write it to the output file
 							print $fh "exec failed: $error"; # so our parent can read it
 							close($fh);
 						};
