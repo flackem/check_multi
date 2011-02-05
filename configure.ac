@@ -216,8 +216,8 @@ $PERL subst plugins/t/50_check_multi_checkresults.t
 $PERL subst plugins/t/60_check_multi_feeds_passive.t
 $PERL subst plugins/t/70_check_multi_statusdat.t
 $PERL subst plugins/t/80_check_multi_livestatus.t
-$PERL subst plugins/t/90_extreme_testing.t
-$PERL subst plugins/t/90_extreme_timeout.t
+$PERL subst plugins/t/90_extreme_tags.t
+$PERL subst plugins/t/91_extreme_timeout.t
 
 $PERL subst contrib/Makefile
 $PERL subst contrib/status_query/Makefile

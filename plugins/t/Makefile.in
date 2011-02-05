@@ -7,6 +7,7 @@ prefix=@prefix@
 HTMLDIR=@datarootdir@
 INSTALL=@INSTALL@
 INSTALL_OPTS=@INSTALL_OPTS@
+PERLOPTS=-MExtUtils::Command::MM -e "test_harness($(VERBOSE))"
 
 all:
 
@@ -18,8 +19,8 @@ clean:
 	-rm -f 60_check_multi_feeds_passive.t
 	-rm -f 70_check_multi_statusdat.t
 	-rm -f 80_check_multi_livestatus.t
-	-rm -f 90_extreme_testing.t
-	-rm -f 90_extreme_timeout.t
+	-rm -f 90_extreme_tags.t
+	-rm -f 91_extreme_timeout.t
 	-rm -f testopts.pm
 	-rm -rf tmp
 
@@ -29,31 +30,38 @@ distclean: clean
 devclean: distclean
 
 test: 
-	@PERL@ 10_check_multi.t
-	@PERL@ 20_check_multi_macros.t
-	@PERL@ 30_check_multi_perfdata.t
+	@PERL@ $(PERLOPTS) \
+		10_check_multi.t \
+		20_check_multi_macros.t \
+		30_check_multi_perfdata.t
 test-macros:
-	@PERL@ 20_check_multi_macros.t
+	@PERL@ $(PERLOPTS) 20_check_multi_macros.t
 test-perfdata:
-	@PERL@ 30_check_multi_perfdata.t
+	@PERL@ $(PERLOPTS) 30_check_multi_perfdata.t
 test-checkresults:
-	@PERL@ 50_check_multi_checkresults.t
+	@PERL@ $(PERLOPTS) 50_check_multi_checkresults.t
 test-feeds-passive:
-	@PERL@ 60_check_multi_feeds_passive.t
+	@PERL@ $(PERLOPTS) 60_check_multi_feeds_passive.t
 test-statusdat:
-	@PERL@ 70_check_multi_statusdat.t
+	@PERL@ $(PERLOPTS) 70_check_multi_statusdat.t
 test-livestatus:
-	@PERL@ 80_check_multi_livestatus.t
+	@PERL@ $(PERLOPTS) 80_check_multi_livestatus.t
+test-tags:
+	@PERL@ $(PERLOPTS) 91_extreme_tags.t
+test-timeout:
+	@PERL@ $(PERLOPTS) 91_extreme_timeout.t
 test-all:
-	@PERL@ 10_check_multi.t
-	@PERL@ 20_check_multi_macros.t
-	@PERL@ 30_check_multi_perfdata.t
-	@PERL@ 50_check_multi_checkresults.t
-	@PERL@ 60_check_multi_feeds_passive.t
-	@PERL@ 70_check_multi_statusdat.t
-	@PERL@ 80_check_multi_livestatus.t
+	@PERL@ $(PERLOPTS) \
+		10_check_multi.t \
+		20_check_multi_macros.t \
+		30_check_multi_perfdata.t \
+		50_check_multi_checkresults.t \
+		60_check_multi_feeds_passive.t \
+		70_check_multi_statusdat.t \
+		80_check_multi_livestatus.t
 test-extreme:
-	@PERL@ 90_extreme_testing.t
-	@PERL@ 90_extreme_timeout.t
+	@PERL@ $(PERLOPTS) \
+		90_extreme_tags.t \
+		91_extreme_timeout.t
 test-test:
-	@PERL@ 90_extreme_timeout.t
+	@PERL@ $(PERLOPTS) 91_extreme_timeout.t
