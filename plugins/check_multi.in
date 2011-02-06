@@ -2409,7 +2409,7 @@ sub get_cumulated_top {
 	my ($output, $max_row)=@_;
 	my %c=();
 	foreach my $line (split('\n',$output)) {
-		if ($line=~/\s*(\S*)\s+(\d+)\s*/) {
+		if ($line=~/\s*(\S*)\s+([\d\.]+)\s*/) {
 			#--- zero value? count it if cumulate_ignore_zero=0
 			if ($opt{set}{cumulate_ignore_zero}) {
 				$c{"$1"}+=$2 if ($2);

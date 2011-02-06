@@ -1,6 +1,7 @@
 
 ===== Changelog =====
 
+	* added floting point support for cumulate
 	* instant execution of a child check: -i TAG
 	* 'attribute [ key ] = value' now sets internal variables
 	* new option add_tag_to_list_entries provides lists without prefix

@@ -28,7 +28,7 @@ foreach my $plugin (@plugins) {
 	}
 }
 
-plan tests => 60;
+plan tests => 62;
 
 my $result;
 #my $testopts="-s dont_be_paranoid=1 -s tmp_dir=/tmp/check_multi";
@@ -539,6 +539,25 @@ like(
 	'\[ 1\] two_def 1368\n'.
 	'\[ 2\] two_abc 369|'.
 	'check_multi::check_multi::plugins=2 time=[\d\.]+ two_def::cumulate::two_def=1368 two_abc::cumulate::two_abc=369 $/',
+	"output correct"
+);
+#-------------------------------------------------------------------------------
+#--- check_multi cumulate with floating point ----------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -x 'cumulate [ two ] = (echo abc\ 123.456; echo def\ 456.789; echo abc\ 123.123; echo def\ 456.456; echo abc\ 123.321; echo def\ 456.654; exit 0)'",
+);
+is(
+	$result->return_code, 
+	0, 
+	"cumulates data like top - RC0"
+);
+like(
+	$result->output,
+	'/OK - 5 plugins checked, 5 ok\n'.
+	'\[ 1\] two_def 1369.899\n'.
+	'\[ 2\] two_abc 369.9|'.
+	'check_multi::check_multi::plugins=2 time=[\d\.]+ two_def::cumulate::two_def=1369.899 two_abc::cumulate::two_abc=369.9 $/',
 	"output correct"
 );
 #-------------------------------------------------------------------------------
