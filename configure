@@ -568,6 +568,7 @@ snmp_port
 snmp_community
 signal_rc
 service_definition_template
+report_inherit
 report
 pnp_url
 pnp_add2url
@@ -717,6 +718,7 @@ with_pnp_add2url
 with_pnp_url
 with_pnp_version
 with_report
+with_report_inherit
 with_signal_rc
 with_snmp_community
 with_snmp_port
@@ -1390,6 +1392,7 @@ detail settings:
   --with-pnp_url=<URL>                     relative URL to PNP (default for PNP 0.6:"/pnp4nagios")
   --with-pnp_version=<0.6|0.4>             PNP version (default: 0.6)
   --with-report=<NN>                       default report option (default:13)
+  --with-report_inherit=<0|1>              default report inherit option (default:1)
   --with-signal_rc=<RC>                    RC if check_multi caught a signal default:3-UNKNOWN)
   --with-snmp_community=<community>        SNMP community (default:public)
   --with-snmp_port=<port>                  SNMP port (default:161)
@@ -2637,6 +2640,14 @@ else
 fi
 
 
+# Check whether --with-report_inherit was given.
+if test "${with_report_inherit+set}" = set; then :
+  withval=$with_report_inherit; report_inherit=$withval
+else
+  report_inherit="1"
+fi
+
+
 # Check whether --with-signal_rc was given.
 if test "${with_signal_rc+set}" = set; then :
   withval=$with_signal_rc; signal_rc=$withval
@@ -2767,6 +2778,7 @@ fi
 
 
 #--- substitutions
+
 
 
 

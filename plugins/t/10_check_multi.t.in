@@ -28,7 +28,7 @@ foreach my $plugin (@plugins) {
 	}
 }
 
-plan tests => 62;
+plan tests => 64;
 
 my $result;
 #my $testopts="-s dont_be_paranoid=1 -s tmp_dir=/tmp/check_multi";
@@ -387,6 +387,24 @@ like(
 	"output correct"
 );
 
+#-------------------------------------------------------------------------------
+#--- check_multi inherits report option ----------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi -r 1 -x \'command [ eins ] = @PERL@ ../check_multi -s dont_be_paranoid=1 -s tmp_dir=\"./tmp\" -x \"eeval [ zwei ] = 2\"\'"
+);
+is(
+	$result->return_code, 
+	0, 
+	"recursive (with inherited report option) - RC0"
+);
+like(
+	$result->output,
+	'/^OK - 1 plugins checked, 1 ok\n'.
+	'\[ 1\] eins OK - 1 plugins checked, 1 ok\n'.
+	' \[ 1\] zwei 2$/',
+	"output correct"
+);
 #-------------------------------------------------------------------------------
 #--- check_multi recursive -----------------------------------------------------
 #-------------------------------------------------------------------------------
