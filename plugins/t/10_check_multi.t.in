@@ -28,7 +28,7 @@ foreach my $plugin (@plugins) {
 	}
 }
 
-plan tests => 64;
+plan tests => 66;
 
 my $result;
 #my $testopts="-s dont_be_paranoid=1 -s tmp_dir=/tmp/check_multi";
@@ -391,7 +391,7 @@ like(
 #--- check_multi inherits report option ----------------------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi -r 1 -x \'command [ eins ] = @PERL@ ../check_multi -s dont_be_paranoid=1 -s tmp_dir=\"./tmp\" -x \"eeval [ zwei ] = 2\"\'"
+	"@PERL@ ../check_multi -r 1 -s dont_be_paranoid=1 -s tmp_dir=\"./tmp\" -x \'command [ eins ] = @PERL@ ../check_multi -s dont_be_paranoid=1 -s tmp_dir=\"./tmp\" -x \"eeval [ zwei ] = 2\"\'"
 );
 is(
 	$result->return_code, 
@@ -403,6 +403,25 @@ like(
 	'/^OK - 1 plugins checked, 1 ok\n'.
 	'\[ 1\] eins OK - 1 plugins checked, 1 ok\n'.
 	' \[ 1\] zwei 2$/',
+	"output correct"
+);
+
+#-------------------------------------------------------------------------------
+#--- check_multi inherits report option with mask ------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi -r 1+8 -s dont_be_paranoid=1 -s tmp_dir=\"./tmp\" -x \'command [ eins ] = @PERL@ ../check_multi -s report_inherit_mask=1 -s dont_be_paranoid=1 -s tmp_dir=\"./tmp\" -x \"eeval [ zwei ] = 2\"\'"
+);
+is(
+	$result->return_code, 
+	0, 
+	"recursive (with inherited report option and mask) - RC0"
+);
+like(
+	$result->output,
+	'/^OK - 1 plugins checked, 1 ok\n'.
+	'\[ 1\] eins OK - 1 plugins checked, 1 ok\n'.
+	' \[ 1\] zwei 2\|check_multi::check_multi::plugins=1 time=\d+\.\d+ $/',
 	"output correct"
 );
 #-------------------------------------------------------------------------------

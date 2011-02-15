@@ -221,7 +221,7 @@ my %opt=(
 		# report option, binary coded as sum of detail options
 		report		=> @report@,
 		# report option, binary coded as sum of detail options
-		report_inherit	=> @report_inherit@,
+		report_inherit_mask => @report_inherit_mask@,
 		#--- send_gearman: path to binary
 		send_gearman	=> "/usr/local/bin/send_gearman",
 		#--- send_gearman: encryption (0|1)
@@ -617,9 +617,9 @@ sub process_input {
 	}
 
 	#--- inherit report settings from parent check_multi
-	if ($opt{set}{report_inherit} && defined($ENV{MULTI_set_report}) && "$ENV{MULTI_set_report}") {
-		$opt{set}{report}=$ENV{MULTI_set_report};
-		DEBUG3("inherited reportstring $opt{set}{report} from parent check_multi");
+	if ($opt{set}{report_inherit_mask} && defined($ENV{MULTI_set_report}) && "$ENV{MULTI_set_report}") {
+		$opt{set}{report}=$ENV{MULTI_set_report} & $opt{set}{report_inherit_mask};
+		DEBUG3("inherited reportstring $opt{set}{report} from parent check_multi, derived from $ENV{MULTI_set_report} with mask $opt{set}{report_inherit_mask}");
 	}
 
 	#--- report option candy - allow speaking strings '1+2+4+8' instead of bare '15'
@@ -885,7 +885,7 @@ Set options:
    pnp_add2url=<string> - PNP URL addon string, default:$opt{set}{pnp_add2url}
    pnp_version=<0.6|0.4> - pnp_version needed for mouseover popups? default:$opt{set}{pnp_version}
    report=<number> - binary coded report option, default:$opt{set}{report}
-   report_inherit=<0|1> - report option will be inherited, default:$opt{set}{report_inherit}
+   report_inherit_mask=<0|1> - report option will be inherited and masked, default:$opt{set}{report_inherit_mask}
    send_nsca=<path/to/send_nsca> - path to send_nsca binary, default:$opt{set}{send_nsca}
    send_nsca_cfg=</path/to/send_nsca.cfg> -  path to send_nsca cfg file, default:$opt{set}{send_nsca_cfg}
    send_nsca_srv=<NSCA server> - server to send NSCA messages to, default:$opt{set}{send_nsca_srv}

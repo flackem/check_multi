@@ -62,7 +62,7 @@ my $pnp_add2url="@pnp_add2url@";
 my $pnp_url="@pnp_url@";
 my $pnp_version="@pnp_version@";
 my $report="@report@";
-my $report_inherit="@report_inherit@";
+my $report_inherit_mask="@report_inherit_mask@";
 my $service_definition_template="@service_definition_template@";
 my $signal_rc="@signal_rc@";
 my $loose_perfdata="@loose_perfdata@";
@@ -152,7 +152,7 @@ while (my $f = shift @ARGV) {
 		s|\@pnp_add2url\@|$pnp_add2url|g;
 		s|\@pnp_version\@|$pnp_version|g;
 		s|\@report\@|$report|g;
-		s|\@report_inherit\@|$report_inherit|g;
+		s|\@report_inherit_mask\@|$report_inherit_mask|g;
 		s|\@loose_perfdata\@|$loose_perfdata|g;
 		s|\@service_definition_template\@|$service_definition_template|g;
 		s|\@signal_rc\@|$signal_rc|g;
