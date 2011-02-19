@@ -410,7 +410,7 @@ like(
 #--- check_multi inherits report option with mask ------------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi -r 1+8 -s dont_be_paranoid=1 -s tmp_dir=\"./tmp\" -x \'command [ eins ] = @PERL@ ../check_multi -s report_inherit_mask=1 -s dont_be_paranoid=1 -s tmp_dir=\"./tmp\" -x \"eeval [ zwei ] = 2\"\'"
+	"@PERL@ ../check_multi $testopts -r 1+8 -x \'command [ eins ] = @PERL@ ../check_multi -s report_inherit_mask=1 -s dont_be_paranoid=1 -s tmp_dir=\"./tmp\" -s extended_perfdata=0 -x \"eeval [ zwei ] = 2\"\'"
 );
 is(
 	$result->return_code, 
