@@ -1,6 +1,7 @@
 
 ===== Changelog =====
 
+	* included nail to contrib/notify_service 
 	* report options are inherited from parent check_multi
 	* added floating point support for cumulate
 	* instant execution of a child check: -i TAG

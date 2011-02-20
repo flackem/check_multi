@@ -81,7 +81,7 @@ my $bindir="@bindir@";
 my $checkresults_dir="@checkresults_dir@";
 my $config_dir="@config_dir@";
 my $contrib_dir="@contrib_dir@";
-my $datadir="@datadir@";
+my $datarootdir="@datarootdir@";
 my $feed_passive_dir="@feed_passive_dir@";
 my $libdir="@libdir@";
 my $libexecdir="@libexecdir@";
@@ -170,7 +170,7 @@ while (my $f = shift @ARGV) {
 		s|\@sbindir\@|$sbindir|g;		# put all --with-vars before directories
 		s|\@checkresults_dir\@|$checkresults_dir|g;
 		s|\@sysconfdir\@|$sysconfdir|g;
-		s|\@datadir\@|$datadir|g;
+		s|\@datarootdir\@|$datarootdir|g;
 		s|\@image_path\@|$image_path|g;		
 		s|\@localstatedir\@|$localstatedir|g;
 		s|\@libexecdir\@|$libexecdir|g;	

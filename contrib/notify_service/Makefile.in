@@ -10,8 +10,10 @@ INSTALL=@INSTALL@
 INSTALL_OPTS=@INSTALL_OPTS@
 
 all: 
+	cd nail && $(MAKE) -e $@
 
 clean:
+	cd nail && $(MAKE) -e $@
 	-rm -f notify_service_html.sh
 
 distclean: clean
@@ -22,4 +24,5 @@ devclean: distclean
 install-contrib: 
 	$(INSTALL) -m 755 $(INSTALL_OPTS) -d $(DESTDIR)$(LIBEXECDIR)
 	$(INSTALL) -m 755 $(INSTALL_OPTS) notify_service_html.sh $(DESTDIR)$(LIBEXECDIR)
+	$(INSTALL) -m 755 $(INSTALL_OPTS) nail/mailx $(DESTDIR)$(LIBEXECDIR)
 
