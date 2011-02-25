@@ -26,8 +26,8 @@ devclean: distclean
 install-config: 
 	$(PERL) gencfg 10
 	$(INSTALL) -m 755 $(INSTALL_OPTS) -d $(DESTDIR)${CFGDIR}/feed_passive
-	$(INSTALL) -m 755 $(INSTALL_OPTS) addhosts.cfg $(DESTDIR)${CFGDIR}/feed_passive
+	$(INSTALL) -m 644 $(INSTALL_OPTS) addhosts.cfg $(DESTDIR)${CFGDIR}/feed_passive
 	$(INSTALL) -m 755 $(INSTALL_OPTS) gencfg $(DESTDIR)${CFGDIR}/feed_passive
-	$(INSTALL) -m 755 $(INSTALL_OPTS) feed_passive.cmd $(DESTDIR)${CFGDIR}/feed_passive
-	$(INSTALL) -m 755 $(INSTALL_OPTS) feed_passive.cfg $(DESTDIR)${CFGDIR}/feed_passive
-	$(INSTALL) -m 755 $(INSTALL_OPTS) service_definition.tpl $(DESTDIR)${CFGDIR}/feed_passive
+	$(INSTALL) -m 644 $(INSTALL_OPTS) feed_passive.cmd $(DESTDIR)${CFGDIR}/feed_passive
+	$(INSTALL) -m 644 $(INSTALL_OPTS) feed_passive.cfg $(DESTDIR)${CFGDIR}/feed_passive
+	$(INSTALL) -m 644 $(INSTALL_OPTS) service_definition.tpl $(DESTDIR)${CFGDIR}/feed_passive

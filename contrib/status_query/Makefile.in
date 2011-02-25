@@ -24,4 +24,4 @@ install-contrib:
 	$(INSTALL) -m 755 $(INSTALL_OPTS) -d $(DESTDIR)$(CGIDIR)
 	$(INSTALL) -m 755 $(INSTALL_OPTS) status_query.cgi $(DESTDIR)$(CGIDIR)
 	$(INSTALL) -m 755 $(INSTALL_OPTS) -d $(DESTDIR)$(HTMLDIR)
-	$(INSTALL) -m 755 $(INSTALL_OPTS) query_examples.html $(DESTDIR)$(HTMLDIR)
+	$(INSTALL) -m 644 $(INSTALL_OPTS) query_examples.html $(DESTDIR)$(HTMLDIR)

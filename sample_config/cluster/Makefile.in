@@ -20,7 +20,7 @@ devclean: distclean
 
 install-config: 
 	$(INSTALL) -m 755 $(INSTALL_OPTS) -d $(DESTDIR)${CFGDIR}/cluster
-	$(INSTALL) -m 755 $(INSTALL_OPTS) download.cfg $(DESTDIR)${CFGDIR}/cluster
-	$(INSTALL) -m 755 $(INSTALL_OPTS) download.cmd $(DESTDIR)${CFGDIR}/cluster
-	$(INSTALL) -m 755 $(INSTALL_OPTS) download_my-plugin.cmd $(DESTDIR)${CFGDIR}/cluster
-	$(INSTALL) -m 755 $(INSTALL_OPTS) download_sourceforge.cmd $(DESTDIR)${CFGDIR}/cluster
+	$(INSTALL) -m 644 $(INSTALL_OPTS) download.cfg $(DESTDIR)${CFGDIR}/cluster
+	$(INSTALL) -m 644 $(INSTALL_OPTS) download.cmd $(DESTDIR)${CFGDIR}/cluster
+	$(INSTALL) -m 644 $(INSTALL_OPTS) download_my-plugin.cmd $(DESTDIR)${CFGDIR}/cluster
+	$(INSTALL) -m 644 $(INSTALL_OPTS) download_sourceforge.cmd $(DESTDIR)${CFGDIR}/cluster
