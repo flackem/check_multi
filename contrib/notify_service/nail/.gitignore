@@ -1,0 +1,4 @@
+!Makefile
+LIBS
+config.h
+config.log
