@@ -1,6 +1,8 @@
 
 ===== Changelog =====
 
+
+**0.25**	26.02.2011
 	* included nail to contrib/notify_service 
 	* report options are inherited from parent check_multi
 	* added floating point support for cumulate
