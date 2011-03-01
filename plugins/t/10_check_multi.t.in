@@ -28,7 +28,7 @@ foreach my $plugin (@plugins) {
 	}
 }
 
-plan tests => 66;
+plan tests => 68;
 
 my $result;
 #my $testopts="-s dont_be_paranoid=1 -s tmp_dir=/tmp/check_multi";
@@ -647,6 +647,22 @@ like(
 	'/OK - 1 plugins checked, 1 ok\n'.
 	'\[ 1\] string_with_carriage_return Hello\rWorld!/',
 	"output correct"
+);
+#-------------------------------------------------------------------------------
+#--- check_multi with invalid command line, no -s parameter --------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+        "@PERL@ ../check_multi $testopts -r 1 -s",
+);
+is(
+	$result->return_code,
+	3,
+	"option s requires an argument - RC3",
+);
+like(
+	$result->output,
+	'/OK - 0 plugins checked,  \[Option s requires an argument.*\]/',
+	"output correct",
 );
 #-------------------------------------------------------------------------------
 #--- check_multi child, global timeout shorter than local timeout --------------
