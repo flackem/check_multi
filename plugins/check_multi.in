@@ -3785,7 +3785,7 @@ sub parse_perfdata {
 		#--- perfdata has label and data, now do detailed checks
 		my ($value,$warning,$critical,$min,$max)=split(/;/,$data);
 		return "$label: no value in data \'$data\'" if ($value eq "");
-		if ($value=~/([-0-9.]+)([^0-9-.]{0,2})/) {
+		if ($value=~/([-0-9.]+)([^0-9-.]*)/) {
 			$value=$1;
 			$uom=$2;
 		}
@@ -3799,7 +3799,7 @@ sub parse_perfdata {
 		}
 
 		$error.= "$label: bad value \'$value\' in data \'$data\' " if ($value && $value !~/^[-0-9.]+$/);
-		$error.= "$label: bad UOM \'$uom\' in data \'$data\' " if ($uom ne "" && ($uom!~/s$/ && $uom!~/%$/ && $uom!~/b$/i && $uom!~/c$/));
+		$error.= "$label: bad UOM \'$uom\' in data \'$data\' " if ($uom ne "" && ($uom!~/^[nm]s$/i && $uom!~/^%$/ && $uom!~/^[kmgt]b$/i && $uom!~/^c$/i));
 		$error.= "$label: bad warning \'$warning\' in data \'$data\' " if ($warning && $warning !~/^[\@\~]?[-0-9.:]+$/);
 		$error.= "$label: bad critical \'$critical\' in data \'$data\' " if ($critical && $critical !~/^[\@\~]?[-0-9.:]+$/);
 		$error.= "$label: bad min \'$min\' in data \'$data\' " if ($min && $min !~/^[-0-9.]+$/);

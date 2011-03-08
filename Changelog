@@ -1,6 +1,7 @@
 
 ===== Changelog =====
 
+	* better perfdata error output for invalid UOM
 
 **0.25**	26.02.2011
 	* included nail to contrib/notify_service 

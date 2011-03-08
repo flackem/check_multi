@@ -28,7 +28,7 @@ foreach my $plugin (@plugins) {
 	}
 }
 
-plan tests => 32;
+plan tests => 38;
 
 my $result;
 #my $testopts="-s dont_be_paranoid=1 -s tmp_dir=/tmp/check_multi";
@@ -216,7 +216,57 @@ like(
 	'\[ 1\] eins eins\|check_multi::check_multi::plugins=1 time=\d+\.\d+ eins::echo::eins=1;1;1; $/',
 	"output correct"
 );
-
+#-------------------------------------------------------------------------------
+#--- discarding perfdata - UOM MB/s---------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -s report=1+4+8 -x 'command [ eins ] = echo \"eins|eins=1MB/s\"'",
+);
+is(
+	$result->return_code, 
+	0, 
+	"discards perfdata with invalid UOM 'MB/s' - RC0"
+);
+like(
+	$result->output,
+	'/^OK - 1 plugins checked, 1 ok\n'.
+	'\[ 1\] eins eins \[eins perfdata discarded for eins: bad UOM \'MB/s\' in data \'1MB/s\' \]\|check_multi::check_multi::plugins=1 time=\d+\.\d+ $/',
+	"output correct"
+);
+#-------------------------------------------------------------------------------
+#--- perfdata with allowed UOM MB ----------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -s report=1+4+8 -x 'command [ eins ] = echo \"eins|eins=1MB\"'",
+);
+is(
+	$result->return_code, 
+	0, 
+	"perfdata with allowed UOM 'MB' - RC0"
+);
+like(
+	$result->output,
+	'/^OK - 1 plugins checked, 1 ok\n'.
+	'\[ 1\] eins eins|check_multi::check_multi::plugins=1 time=\d+\.\d+ eins::echo::eins=1MB $/',
+	"output correct"
+);
+#-------------------------------------------------------------------------------
+#--- perfdata with allowed UOM % -----------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -s report=1+4+8 -x 'command [ eins ] = echo \"eins|eins=1%\"'",
+);
+is(
+	$result->return_code, 
+	0, 
+	"perfdata with allowed UOM '%' - RC0"
+);
+like(
+	$result->output,
+	'/^OK - 1 plugins checked, 1 ok\n'.
+	'\[ 1\] eins eins|check_multi::check_multi::plugins=1 time=\d+\.\d+ eins::echo::eins=1% $/',
+	"output correct"
+);
 #-------------------------------------------------------------------------------
 #--- perfdata with range (2)----------------------------------------------------
 #-------------------------------------------------------------------------------
