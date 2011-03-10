@@ -3961,7 +3961,9 @@ sub report_checkresult_file {
 		#--- create checkresults file
 		my ($th,$tf)=File::Temp::tempfile("cXXXXXX",DIR=>"$opt{set}{checkresults_dir}");
 		my $escaped_output=$cmds[$i]{output}; $escaped_output=~s/\n/\\n/g;
-		$escaped_output.='|'.$cmds[$i]{performance} if ($cmds[$i]{process_perfdata} && defined($cmds[$i]{performance}) && $cmds[$i]{performance});
+		if ($cmds[$i]{process_perfdata} && defined($cmds[$i]{performance}) && $cmds[$i]{performance}) {
+			$escaped_output.='|'.$cmds[$i]{performance}.' ['.$cmds[$i]{plugin}.']';
+		}
 		$escaped_output="(No output returned from plugin)" if ($escaped_output eq "");
 		my $content=checkresult(
 			"host_name=$opt{set}{HOSTNAME}",

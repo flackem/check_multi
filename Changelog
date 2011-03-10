@@ -1,6 +1,7 @@
 
 ===== Changelog =====
 
+	* feed_passive with perfdata [ plugin ] at the end
 	* better perfdata error output for invalid UOM
 
 **0.25**	26.02.2011
