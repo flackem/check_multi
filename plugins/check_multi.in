@@ -3965,6 +3965,7 @@ sub report_checkresult_file {
 			$escaped_output.='|'.$cmds[$i]{performance}.' ['.$cmds[$i]{plugin}.']';
 		}
 		$escaped_output="(No output returned from plugin)" if ($escaped_output eq "");
+		DEBUG4("escaped_output:\'$escaped_output\'");
 		my $content=checkresult(
 			"host_name=$opt{set}{HOSTNAME}",
 			"service_description=$cmds[$i]{name}",
@@ -4010,7 +4011,7 @@ sub checkresult {
 	);
 	#--- read and check parameter pairs (should be key=value)
 	foreach my $parameter (@parms) {
-		if (my ($key,$val)=($parameter=~/\s*(\S+)\s*=\s*(.*)\s*/)) {
+		if (my ($key,$val)=($parameter=~/\s*([^=]+)\s*=\s*(.*)\s*/)) {
 			#--- perform only allowed (= already defined) pairs
 			if (exists($att{$key})) {
 				$att{$key}=$val;
