@@ -304,13 +304,19 @@ my %opt=(
 );
 
 #--- Array of commands
-my @cmds=(
+my @cmds = (
 	#--- 0: parent check
 	{
 		command		=> "none",	# no command for parent
 		critical	=> "",		# state definition: CRITICAL
 		endtime		=> 0.0,		# end timestamp
 		error		=> [ ],		# stderr and other errors
+		state		=> [		# state definitions
+					"1",			# OK
+					"COUNT(WARNING)>0", 	# WARNING
+					"COUNT(CRITICAL)>0", 	# CRITICAL
+					"COUNT(UNKNOWN)>0"	# UNKNOWN
+				],
 		hash		=> "",		# hash for all child checks
 		nallchecks	=> 0,		# number of all child checks (with non-displayed checks)
 		name		=> "",		# no predefined name for parent (-n option)
@@ -329,26 +335,22 @@ my @cmds=(
 	}
 	#--- elements 1..x will be added by parse_lines / parse_header
 );
-my %rc=(
-	count	=> [ 0, 0, 0, 0, ],	# count displayed RCs
-	count_all => [ 0, 0, 0, 0, ],	# cound all RCs
-	list	=> [ [],[],[],[], ],	# list of displayed child checks
-	list_all => [ [],[],[],[], ],	# list of all child checks
-	expr	=> [ "1", "COUNT(WARNING)>0", "COUNT(CRITICAL)>0", "COUNT(UNKNOWN)>0" ],
-	match	=> [ 0, 0, 0, 0, ],	#
+my %rc = (
+	count		=> [ 0, 0, 0, 0,  ],	# count displayed RCs
+	count_all	=> [ 0, 0, 0, 0,  ],	# cound all RCs
+	list		=> [ [],[],[],[], ],	# list of displayed child checks
+	list_all	=> [ [],[],[],[], ],	# list of all child checks
+	match		=> [ 0, 0, 0, 0,  ],	#
 );
-my $check_multi={
+my $check_multi = {
 	cmds	=> \@cmds,
 	rc	=> \%rc,
 	opt	=> \%opt
 };
 
-
-
 #-------------------------------------------------------------------------------
 #--- subs ----------------------------------------------------------------------
 #-------------------------------------------------------------------------------
-
 
 #---
 #--- process command line parameters and STDIN (if any)
@@ -668,10 +670,10 @@ sub process_input {
 	$ENV{PATH}="$opt{set}{libexec}${path_sep}$ENV{PATH}" if ($opt{set}{libexec});
 
 	#--- all state definitions can be set via command line
-	$rc{expr}[$OK]=$cmds[0]{ok} if ($cmds[0]{ok});
-	$rc{expr}[$WARNING]=$cmds[0]{warning} if ($cmds[0]{warning});
-	$rc{expr}[$CRITICAL]=$cmds[0]{critical} if ($cmds[0]{critical});
-	$rc{expr}[$UNKNOWN]=$cmds[0]{unknown} if ($cmds[0]{unknown});
+	$cmds[0]{state}[$OK]=$cmds[0]{ok} if ($cmds[0]{ok});
+	$cmds[0]{state}[$WARNING]=$cmds[0]{warning} if ($cmds[0]{warning});
+	$cmds[0]{state}[$CRITICAL]=$cmds[0]{critical} if ($cmds[0]{critical});
+	$cmds[0]{state}[$UNKNOWN]=$cmds[0]{unknown} if ($cmds[0]{unknown});
 
 	#--- timeout checking: overall TIMEOUT has to be greater than child check timeout
 	if ($opt{set}{timeout} && $opt{set}{TIMEOUT} && $opt{set}{timeout} > $opt{set}{TIMEOUT}) {
@@ -1528,7 +1530,7 @@ sub parse_files {
 			next if ($opt{set}{ignore_missing_cmd_file});
 			add_error(0,"parse_files: cannot open config file $filename: $!");
 			$cmds[0]{rc}=$UNKNOWN;	# head RC to UNKNOWN
-			$rc{expr}[$OK]="0==1";	# OK: false
+			$cmds[0]{state}[$OK]="0==1";	# OK: false
 			next;
 		#--- read file
 		} else {
@@ -1620,7 +1622,7 @@ sub parse_lines {
 				add_error(0,"parse_lines: invalid format in line $lineno: $line");
 				next LINE;
 			} elsif ($last_command=~/OK|UNKNOWN|WARNING|CRITICAL/i) {
-				$rc{expr}[$def{code}{lc($last_command)}].=$line;
+				$cmds[0]{state}[$def{code}{lc($last_command)}].=$line;
 			} elsif ($last_command > 0) {
 				$cmds[$last_command]{command}.=$line;
 			} else {
@@ -2060,7 +2062,7 @@ sub parse_header {
 		#--- store state expression only if NOT set via commandline
 		if (!defined($opt{lc($name)})) {
 			DEBUG3("added state{$def{code}{$name}} expression: $cmd");
-			$rc{expr}[$def{code}{$name}]=$cmd;
+			$cmds[0]{state}[$def{code}{$name}]=$cmd;
 		} else {
 			DEBUG3("command line precedence over state expression. Using \$opt{$name}: $opt{$name}");
 		}
@@ -2997,7 +2999,7 @@ sub global_result_rating {
 
 		my $state=$def{s2r}{$s};
 
-		my ($result,$message)=eval_result($rc{expr}[$state]);
+		my ($result,$message)=eval_result($cmds[0]{state}[$state]);
 		if (! defined($result) || $result eq "") {
 			; # do nothing
 		} elsif ($result < 0) {
@@ -3240,8 +3242,8 @@ sub report_ascii {
 	DEBUG1(sprintf "%-8s %-55s %s", "State","Expression","Evaluates to");
 	DEBUG1("-" x 80);
 	foreach my $s (sort numerically keys %{$def{s2r}}) {
-		DEBUG1(sprintf "%-8s %-55s %s", $def{label}{$def{s2r}{$s}}, chomp($rc{expr}[$def{s2r}{$s}]), ($rc{match}[$def{s2r}{$s}]) ? "TRUE" : "FALSE");
-		DEBUG2(state_string_ascii($rc{expr}[$def{s2r}{$s}]));
+		DEBUG1(sprintf "%-8s %-55s %s", $def{label}{$def{s2r}{$s}}, chomp($cmds[0]{state}[$def{s2r}{$s}]), ($rc{match}[$def{s2r}{$s}]) ? "TRUE" : "FALSE");
+		DEBUG2(state_string_ascii($cmds[0]{state}[$def{s2r}{$s}]));
 	}
 	DEBUG1("-" x 80);
 	DEBUG1(sprintf "%8s %55s %s", "", "Overall state =>", $def{label}{$cmds[0]{rc}});
@@ -3470,7 +3472,7 @@ sub report_html {
 		$output.="<table><tr style='text-align:left' bgcolor='" . $colors[$flipflop] . "'><th>State</th><th>Expression</th><th>Evaluates to</th></tr>";
 		foreach my $s (sort numerically keys %{$def{s2r}}) {
 			$flipflop=!$flipflop;
-			$output.=sprintf "<tr bgcolor='" . $colors[$flipflop] . "'><td>%s</td><td>%s</td><td>%s</td></tr>", $def{label}{$def{s2r}{$s}}, $rc{expr}[$def{s2r}{$s}], ($rc{match}[$def{s2r}{$s}]) ? "TRUE" : "FALSE";
+			$output.=sprintf "<tr bgcolor='" . $colors[$flipflop] . "'><td>%s</td><td>%s</td><td>%s</td></tr>", $def{label}{$def{s2r}{$s}}, $cmds[0]{state}[$def{s2r}{$s}], ($rc{match}[$def{s2r}{$s}]) ? "TRUE" : "FALSE";
 		}
 		$flipflop=!$flipflop;
 		$output.="<tr bgcolor='" . $colors[$flipflop] . "'><td></td><td style='text-align:right'>Overall state</td><td style='font-weight:bold'>$def{label}{$cmds[0]{rc}}</td></tr>";
@@ -4204,7 +4206,7 @@ if ($opt{set}{report} & $DETAIL_ENCODE_COMMANDS) {
 if ($#cmds<1) {
 	add_error(0,"no checks defined");
 	$cmds[0]{rc}=$opt{set}{no_checks_rc};
-	$rc{expr}[$OK]="0==1" if ($opt{set}{no_checks_rc} != $OK);
+	$cmds[0]{state}[$OK]="0==1" if ($opt{set}{no_checks_rc} != $OK);
 } else {
 	DEBUG4("running " . ($#cmds - 1) . " child checks");
 }
