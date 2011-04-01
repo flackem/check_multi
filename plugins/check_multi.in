@@ -336,7 +336,6 @@ my %rc=(
 	list_all => [ [],[],[],[], ],	# list of all child checks
 	expr	=> [ "1", "COUNT(WARNING)>0", "COUNT(CRITICAL)>0", "COUNT(UNKNOWN)>0" ],
 	match	=> [ 0, 0, 0, 0, ],	#
-	head	=> $OK,			# overall RC
 );
 my $check_multi={
 	cmds	=> \@cmds,
@@ -1396,14 +1395,14 @@ sub signal_handler {
 	add_error(0,"$signal generated at line $loc[2] in $loc[1] ($loc[3])");
 	DEBUG4("with message $signal");
 	&global_result_rating;
-	DEBUG4("RC code $rc{head}");
+	DEBUG4("RC code $cmds[0]{rc}");
 	&report_all;
 
 	#--- cleanup end exit
 	unlink $tmp_stdout, $tmp_stderr if (!$opt{set}{exec_open3});
 
-	#--- exit with predefined exit code or with head rc
-	my $RC=(defined($opt{set}{signal_rc})) ? $opt{set}{signal_rc} : $rc{head};
+	#--- exit with predefined exit code or with rc of parent
+	my $RC=(defined($opt{set}{signal_rc})) ? $opt{set}{signal_rc} : $cmds[0]{rc};
 	DEBUG4("signal_rc is $opt{set}{signal_rc} - exiting with RC code $RC");
 	exit($RC);
 }
@@ -1528,7 +1527,7 @@ sub parse_files {
 		} elsif (!open(FILE, $filename)) {
 			next if ($opt{set}{ignore_missing_cmd_file});
 			add_error(0,"parse_files: cannot open config file $filename: $!");
-			$rc{head}=$UNKNOWN;	# head RC to UNKNOWN
+			$cmds[0]{rc}=$UNKNOWN;	# head RC to UNKNOWN
 			$rc{expr}[$OK]="0==1";	# OK: false
 			next;
 		#--- read file
@@ -3005,7 +3004,7 @@ sub global_result_rating {
 			add_error(0,"global_result_rating: parsing error ($message)");
 		} else {
 			$rc{match}[$state]=1;
-			$rc{head}=$state;
+			$cmds[0]{rc}=$state;
 
 		}
 	}
@@ -3150,11 +3149,11 @@ sub report_ascii {
 		eval($output);
 	} elsif ($opt{set}{report} & $DETAIL_NAGIOS2) {
 		print "$opt{set}{name} " if $opt{set}{name};
-		print "$def{label}{$rc{head}}";
+		print "$def{label}{$cmds[0]{rc}}";
 	} else {
 		#--- print header line (1): name, state, number of plugins
 		print "$opt{set}{name} " if $opt{set}{name};
-		print "$def{label}{$rc{head}} - $cmds[0]{nchecks} plugins checked, ";
+		print "$def{label}{$cmds[0]{rc}} - $cmds[0]{nchecks} plugins checked, ";
 
 		#--- print header line (2): summary for particular states
 		if ($opt{set}{report} & $DETAIL_LIST_FULL) {
@@ -3245,7 +3244,7 @@ sub report_ascii {
 		DEBUG2(state_string_ascii($rc{expr}[$def{s2r}{$s}]));
 	}
 	DEBUG1("-" x 80);
-	DEBUG1(sprintf "%8s %55s %s", "", "Overall state =>", $def{label}{$rc{head}});
+	DEBUG1(sprintf "%8s %55s %s", "", "Overall state =>", $def{label}{$cmds[0]{rc}});
 	DEBUG1("-" x 80);
 }
 
@@ -3280,7 +3279,7 @@ sub report_html {
 	} else {
 		#--- print header line (1): name, state, number of plugins
 		$output.="$opt{set}{name} " if $opt{set}{name};
-		$output.="$def{label}{$rc{head}} - $cmds[0]{nchecks} plugins checked, ";
+		$output.="$def{label}{$cmds[0]{rc}} - $cmds[0]{nchecks} plugins checked, ";
 
 		#--- print header line (2): summary for particular states
 		if ($opt{set}{report} & $DETAIL_LIST_FULL) {
@@ -3310,8 +3309,8 @@ sub report_html {
 	#--- collapse of contents with javascript
 	if ($opt{set}{collapse} == 1) {
 		$output.="<SCRIPT LANGUAGE='JavaScript'> function Toggle(node) { if (node.nextSibling.style.display == 'none') { if (node.childNodes.length > 0) { node.childNodes.item(0).replaceData(0,1,String.fromCharCode(8211)) } node.nextSibling.style.display = 'block' } else { if (node.childNodes.length > 0) { node.childNodes.item(0).replaceData(0,1,'+') } node.nextSibling.style.display = 'none' } } </SCRIPT>";
-		if (($rc{head} == $OK && $ENV{"MULTI_PPID"} != $$) ||
-		    ($rc{head} == $OK && $opt{set}{extinfo_in_status})) {
+		if (($cmds[0]{rc} == $OK && $ENV{"MULTI_PPID"} != $$) ||
+		    ($cmds[0]{rc} == $OK && $opt{set}{extinfo_in_status})) {
 			$output.="<A onClick='Toggle(this)' ".$opt{set}{style_plus_minus}.">+</A>";
 			$output.="<DIV style='display:none'>";
 		} else {
@@ -3327,7 +3326,7 @@ sub report_html {
 		next if ($cmds[$no]{type} eq "eval");
 
 		#--- hide all OK results if there is any check not OK  (by Timo Kempkens)
-		next if (($opt{set}{report} & $DETAIL_HIDEIFOK) && ($cmds[$no]{rc} == $OK && $rc{head} != $OK));
+		next if (($opt{set}{report} & $DETAIL_HIDEIFOK) && ($cmds[$no]{rc} == $OK && $cmds[0]{rc} != $OK));
 
 		#--- allow commands to get tag name
 		$ENV{"MULTI_TAG"}=$cmds[$no]{name};
@@ -3474,7 +3473,7 @@ sub report_html {
 			$output.=sprintf "<tr bgcolor='" . $colors[$flipflop] . "'><td>%s</td><td>%s</td><td>%s</td></tr>", $def{label}{$def{s2r}{$s}}, $rc{expr}[$def{s2r}{$s}], ($rc{match}[$def{s2r}{$s}]) ? "TRUE" : "FALSE";
 		}
 		$flipflop=!$flipflop;
-		$output.="<tr bgcolor='" . $colors[$flipflop] . "'><td></td><td style='text-align:right'>Overall state</td><td style='font-weight:bold'>$def{label}{$rc{head}}</td></tr>";
+		$output.="<tr bgcolor='" . $colors[$flipflop] . "'><td></td><td style='text-align:right'>Overall state</td><td style='font-weight:bold'>$def{label}{$cmds[0]{rc}}</td></tr>";
 		$output.="</table></div>";
 	}
 
@@ -3667,7 +3666,7 @@ sub report_perfdata {
 				$rc{count}[$WARNING],
 				$rc{count}[$CRITICAL],
 				$rc{count}[$UNKNOWN],
-				$rc{head};
+				$cmds[0]{rc};
 		}
 		#--- one line per command, format: tag=output
 		for ($no=1;$no<=$#cmds;$no++) {
@@ -4204,7 +4203,7 @@ if ($opt{set}{report} & $DETAIL_ENCODE_COMMANDS) {
 #--- no child checks defined yet? Throw UNKNOWN
 if ($#cmds<1) {
 	add_error(0,"no checks defined");
-	$rc{head}=$opt{set}{no_checks_rc};
+	$cmds[0]{rc}=$opt{set}{no_checks_rc};
 	$rc{expr}[$OK]="0==1" if ($opt{set}{no_checks_rc} != $OK);
 } else {
 	DEBUG4("running " . ($#cmds - 1) . " child checks");
@@ -4270,5 +4269,5 @@ $cmds[0]{endtime}=time;
 &report_all;
 
 #--- return rc with highest severity
-DEBUG4("This is the end - with RC $rc{head}");
-exit $rc{head};
+DEBUG4("This is the end - with RC $cmds[0]{rc}");
+exit $cmds[0]{rc};
