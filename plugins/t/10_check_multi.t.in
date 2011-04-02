@@ -28,7 +28,7 @@ foreach my $plugin (@plugins) {
 	}
 }
 
-plan tests => 68;
+plan tests => 74;
 
 my $result;
 #my $testopts="-s dont_be_paranoid=1 -s tmp_dir=/tmp/check_multi";
@@ -231,6 +231,62 @@ like(
 	$result->output,
 	'/^UNKNOWN - 1 plugins checked, 0 critical, 0 warning, 1 unknown, 0 ok\n'.
 	'\[ 1\] procs  \[sh: check_prox: (command )?not found,RC was 127!\]$/',
+	"output correct"
+);
+#-------------------------------------------------------------------------------
+#--- report option 16 ----------------------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -s report=16 -x 'command [ eins ] = echo 1'"
+);
+is(
+	$result->return_code, 
+	0, 
+	"report option 16 (state in output and in long plugin output) - RC0"
+);
+like(
+	$result->output,
+	'/^OK - 1 plugins checked, 0 critical, 0 warning, 0 unknown, 1 ok \[OK - TRUE - 1\] \[UNKNOWN - FALSE - COUNT\(UNKNOWN\) > 0\] \[WARNING - FALSE - COUNT\(WARNING\) > 0\] \[CRITICAL - FALSE - COUNT\(CRITICAL\) > 0\]\n'.
+	'\[ 1\] eins 1\n'.
+	'\[OK\] TRUE  - 1\n'.
+	'\[UN\] FALSE - COUNT\(UNKNOWN\) > 0\n'.
+	'\[WA\] FALSE - COUNT\(WARNING\) > 0\n'.
+	'\[CR\] FALSE - COUNT\(CRITICAL\) > 0$/',
+	"output correct"
+);
+#-------------------------------------------------------------------------------
+#--- report option 16+2 (HTML) -------------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -s report=16+2 -x 'command [ eins ] = echo 1'"
+);
+is(
+	$result->return_code, 
+	0, 
+	"report option 16 (state in output and in long plugin output / HTML) - RC0"
+);
+like(
+	$result->output,
+	'/^OK - 1 plugins checked, 0 critical, 0 warning, 0 unknown, 1 ok \[OK - TRUE - 1\] \[UNKNOWN - FALSE - COUNT\(UNKNOWN\) > 0\] \[WARNING - FALSE - COUNT\(WARNING\) > 0\] \[CRITICAL - FALSE - COUNT\(CRITICAL\) > 0\]\n'.
+	'.*OK.*UNKN.*WARN.*CRIT.*/',
+	"output correct"
+);
+#-------------------------------------------------------------------------------
+#--- report option 1 with extra state option -----------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -s report=1 -x 'command [ eins ] = (echo 1; exit 1)' -w 'count(WARNING)==1'"
+);
+is(
+	$result->return_code, 
+	1, 
+	"report option 0 (extra warning state is shown) - RC1"
+);
+like(
+	$result->output,
+	'/^WARNING - 1 plugins checked, 1 warning \(eins\) \[WARNING - TRUE - count\(WARNING\)==1\]\n'.
+	'\[ 1\] eins 1\n'.
+	'\[WA\] TRUE  - count\(WARNING\)==1$/',
 	"output correct"
 );
 #-------------------------------------------------------------------------------
