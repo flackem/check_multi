@@ -312,16 +312,16 @@ my @cmds = (
 		endtime		=> 0.0,		# end timestamp
 		error		=> [ ],		# stderr and other errors
 		state_default	=> [		# state definitions
-					"COUNT(OK)>0",		# OK
-					"COUNT(WARNING)>0", 	# WARNING
-					"COUNT(CRITICAL)>0", 	# CRITICAL
-					"COUNT(UNKNOWN)>0"	# UNKNOWN
+					"1",			# OK
+					"COUNT(WARNING) > 0", 	# WARNING
+					"COUNT(CRITICAL) > 0", 	# CRITICAL
+					"COUNT(UNKNOWN) > 0"	# UNKNOWN
 				],
 		state		=> [
-					"COUNT(OK)>0",		# OK
-					"COUNT(WARNING)>0", 	# WARNING
-					"COUNT(CRITICAL)>0", 	# CRITICAL
-					"COUNT(UNKNOWN)>0"	# UNKNOWN
+					"1",			# OK
+					"COUNT(WARNING) > 0", 	# WARNING
+					"COUNT(CRITICAL) > 0", 	# CRITICAL
+					"COUNT(UNKNOWN) > 0"	# UNKNOWN
 				],
 		hash		=> "",		# hash for all child checks
 		nallchecks	=> 0,		# number of all child checks (with non-displayed checks)
@@ -675,10 +675,10 @@ sub process_input {
 	#--- set libexec directory at the beginning of PATH variable
 	$ENV{PATH}="$opt{set}{libexec}${path_sep}$ENV{PATH}" if ($opt{set}{libexec});
 
-	#--- if a state definition is not set via cmdline, take default
-	#foreach my $state (sort numerically keys %{$def{s2r}}) {
-	#$cmds[0]{state}[$state]=$cmds[0]{state_default}[$state] if (!$cmds[0]{state}[$state]);
-	#}
+	#--- be sure that there is no newline at state definitions end
+	foreach my $state (sort numerically keys %{$def{s2r}}) {
+		chomp($cmds[0]{state}[$state]);
+	}
 
 	#--- timeout checking: overall TIMEOUT has to be greater than child check timeout
 	if ($opt{set}{timeout} && $opt{set}{TIMEOUT} && $opt{set}{timeout} > $opt{set}{TIMEOUT}) {
@@ -3181,6 +3181,15 @@ sub report_ascii {
 				"$rc{count}[$UNKNOWN] unknown, " .
 				"$rc{count}[$OK] ok";
 		}
+		foreach my $s (sort numerically keys %{$def{s2r}}) {
+			#--- if state matches
+			if (($cmds[0]{state}[$def{s2r}{$s}] ne $cmds[0]{state_default}[$def{s2r}{$s}] && $rc{match}[$def{s2r}{$s}]) ||
+			     $opt{set}{report} & $DETAIL_LIST_FULL ) {
+				printf " [%s - %s - %s]", $def{label}{$def{s2r}{$s}}, $rc{match}[$def{s2r}{$s}]?"TRUE":"FALSE", $cmds[0]{state}[$def{s2r}{$s}];
+			} else {
+				DEBUG3("No match ($def{s2r}{$s} - $def{s2r}{$def{s2r}{$s}}): $rc{match}[$def{s2r}{$def{s2r}{$s}}]");
+			}
+		}
 	}
 	#--- print general errors if any occured
 	print error(0);
@@ -3247,14 +3256,14 @@ sub report_ascii {
 	DEBUG1(sprintf "%-8s %-55s %s", "State","Expression","Evaluates to");
 	DEBUG1("-" x 80);
 	foreach my $s (sort numerically keys %{$def{s2r}}) {
-		DEBUG1(sprintf "%-8s %-55s %s", $def{label}{$def{s2r}{$s}}, chomp($cmds[0]{state}[$def{s2r}{$s}]), ($rc{match}[$def{s2r}{$s}]) ? "TRUE" : "FALSE");
+		DEBUG1(sprintf "%-8s %-55s %s", $def{label}{$def{s2r}{$s}}, $cmds[0]{state}[$def{s2r}{$s}], ($rc{match}[$def{s2r}{$s}]) ? "TRUE" : "FALSE");
 		DEBUG2(state_string_ascii($cmds[0]{state}[$def{s2r}{$s}]));
 		#--- if state matches
-		if (($cmds[0]{state}[$s] ne $cmds[0]{state_default}[$s] && $rc{match}[$s]) ||
+		if (($cmds[0]{state}[$def{s2r}{$s}] ne $cmds[0]{state_default}[$def{s2r}{$s}] && $rc{match}[$def{s2r}{$s}]) ||
 		     $opt{set}{report} & $DETAIL_LIST_FULL ) {
-			printf "\n[%2.2s] %-5s - %s", $def{label}{$s}, $rc{match}[$s]?"TRUE":"FALSE", $cmds[0]{state}[$s];
+			printf "\n[%2.2s] %-5s - %s", $def{label}{$def{s2r}{$s}}, $rc{match}[$def{s2r}{$s}]?"TRUE":"FALSE", $cmds[0]{state}[$def{s2r}{$s}];
 		} else {
-			DEBUG3("No match ($s - $def{s2r}{$s}): $rc{match}[$def{s2r}{$s}]");
+			DEBUG3("No match ($def{s2r}{$s} - $def{s2r}{$def{s2r}{$s}}): $rc{match}[$def{s2r}{$def{s2r}{$s}}]");
 		}
 	}
 	DEBUG1("-" x 80);
@@ -3313,6 +3322,15 @@ sub report_html {
 				"$rc{count}[$WARNING] warning, " .
 				"$rc{count}[$UNKNOWN] unknown, " .
 				"$rc{count}[$OK] ok";
+		}
+		foreach my $s (sort numerically keys %{$def{s2r}}) {
+			#--- if state matches
+			if (($cmds[0]{state}[$def{s2r}{$s}] ne $cmds[0]{state_default}[$def{s2r}{$s}] && $rc{match}[$def{s2r}{$s}]) ||
+			     $opt{set}{report} & $DETAIL_LIST_FULL ) {
+				$output.=sprintf " [%s - %s - %s]", $def{label}{$def{s2r}{$s}}, $rc{match}[$def{s2r}{$s}]?"TRUE":"FALSE", $cmds[0]{state}[$def{s2r}{$s}];
+			} else {
+				DEBUG3("No match ($def{s2r}{$s} - $def{s2r}{$def{s2r}{$s}}): $rc{match}[$def{s2r}{$def{s2r}{$s}}]");
+			}
 		}
 	}
 
@@ -3458,12 +3476,12 @@ sub report_html {
 	}
 	foreach my $s (sort numerically keys %{$def{s2r}}) {
 		#--- if state matches
-		if (($cmds[0]{state}[$s] ne $cmds[0]{state_default}[$s] && $rc{match}[$s]) ||
+		if (($cmds[0]{state}[$def{s2r}{$s}] ne $cmds[0]{state_default}[$def{s2r}{$s}] && $rc{match}[$def{s2r}{$s}]) ||
 		     $opt{set}{report} & $DETAIL_LIST_FULL ) {
-			$output.=sprintf "<tr style='font-size:8pt'><td nowrap colspan='3'><table style='background-color:%s'><tr style='vertical-align:middle'><td style='font-size:6pt'>[%2.2s]</td></tr></table></td>",
-				$def{color}{$s},
-				$def{label}{$s};
-			$output.=sprintf "<td>%s</td><td>%s</td>", $rc{match}[$s]?"TRUE":"FALSE", $cmds[0]{state}[$s];
+			$output.=sprintf "<tr style='font-size:8pt'><td nowrap colspan='3'><table style='background-color:%s'><tr style='vertical-align:middle'><td style='font-size:6pt'>%4.4s</td></tr></table></td>",
+				$def{color}{$def{s2r}{$s}},
+				$def{label}{$def{s2r}{$s}};
+			$output.=sprintf "<td>%s</td><td>%s</td>", $rc{match}[$def{s2r}{$s}]?"TRUE":"FALSE", $cmds[0]{state}[$def{s2r}{$s}];
 			$output.="</tr>";
 		}
 	}
