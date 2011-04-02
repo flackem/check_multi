@@ -3252,13 +3252,9 @@ sub report_ascii {
 		#--- if state matches
 		if (($cmds[0]{state}[$s] ne $cmds[0]{state_default}[$s] && $rc{match}[$s]) ||
 		     $opt{set}{report} & $DETAIL_LIST_FULL ) {
-			printf "\n[ %-8s ] %-5s - %s", $def{label}{$s}, $rc{match}[$s]?"TRUE":"FALSE", $cmds[0]{state}[$s];
+			printf "\n[%2.2s] %-5s - %s", $def{label}{$s}, $rc{match}[$s]?"TRUE":"FALSE", $cmds[0]{state}[$s];
 		} else {
-			DEBUG1("No match ($s - $def{s2r}{$s}): $rc{match}[$def{s2r}{$s}]");
-			for my $i (0..3) {
-				DEBUG1("Match[$i]: $rc{match}[$i]");
-			}
-			#print state_string_ascii($cmds[0]{state}[$def{s2r}{$s}]);
+			DEBUG3("No match ($s - $def{s2r}{$s}): $rc{match}[$def{s2r}{$s}]");
 		}
 	}
 	DEBUG1("-" x 80);
@@ -3459,6 +3455,17 @@ sub report_html {
 		}
 		$output.=error($no) if ($opt{set}{report} & $DETAIL_STDERR);
 		$output.="</tr>";
+	}
+	foreach my $s (sort numerically keys %{$def{s2r}}) {
+		#--- if state matches
+		if (($cmds[0]{state}[$s] ne $cmds[0]{state_default}[$s] && $rc{match}[$s]) ||
+		     $opt{set}{report} & $DETAIL_LIST_FULL ) {
+			$output.=sprintf "<tr style='font-size:8pt'><td nowrap colspan='3'><table style='background-color:%s'><tr style='vertical-align:middle'><td style='font-size:6pt'>[%2.2s]</td></tr></table></td>",
+				$def{color}{$s},
+				$def{label}{$s};
+			$output.=sprintf "<td>%s</td><td>%s</td>", $rc{match}[$s]?"TRUE":"FALSE", $cmds[0]{state}[$s];
+			$output.="</tr>";
+		}
 	}
 	$output.="</table></div>";
 	$output.="</div>" if ($opt{set}{collapse} == 1 && ! $opt{set}{extinfo_in_status});
