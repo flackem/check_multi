@@ -1,6 +1,7 @@
 
 ===== Changelog =====
 
+	* print matching state rule in long plugin output
 	* feed_passive with perfdata [ plugin ] at the end
 	* better perfdata error output for invalid UOM
 

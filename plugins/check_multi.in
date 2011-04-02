@@ -311,8 +311,14 @@ my @cmds = (
 		critical	=> "",		# state definition: CRITICAL
 		endtime		=> 0.0,		# end timestamp
 		error		=> [ ],		# stderr and other errors
-		state		=> [		# state definitions
-					"1",			# OK
+		state_default	=> [		# state definitions
+					"COUNT(OK)>0",		# OK
+					"COUNT(WARNING)>0", 	# WARNING
+					"COUNT(CRITICAL)>0", 	# CRITICAL
+					"COUNT(UNKNOWN)>0"	# UNKNOWN
+				],
+		state		=> [
+					"COUNT(OK)>0",		# OK
 					"COUNT(WARNING)>0", 	# WARNING
 					"COUNT(CRITICAL)>0", 	# CRITICAL
 					"COUNT(UNKNOWN)>0"	# UNKNOWN
@@ -385,10 +391,10 @@ sub process_input {
 		"v|verbose:+"	=> \$opt{set}{verbose},
 		"V|version"	=> \$opt{version},
 		"x|execute=s"	=> \@{$opt{execute}},
-		"o|O|ok=s"	=> \$cmds[0]{ok},
-		"w|W|warning=s"	=> \$cmds[0]{warning},
-		"c|C|critical=s"=> \$cmds[0]{critical},
-		"u|U|unknown=s"	=> \$cmds[0]{unknown},)
+		"o|O|ok=s"	=> \$cmds[0]{state}[0],
+		"w|W|warning=s"	=> \$cmds[0]{state}[1],
+		"c|C|critical=s"=> \$cmds[0]{state}[2],
+		"u|U|unknown=s"	=> \$cmds[0]{state}[3],)
 	) {
 		short_usage();
 		return $UNKNOWN;
@@ -669,11 +675,10 @@ sub process_input {
 	#--- set libexec directory at the beginning of PATH variable
 	$ENV{PATH}="$opt{set}{libexec}${path_sep}$ENV{PATH}" if ($opt{set}{libexec});
 
-	#--- all state definitions can be set via command line
-	$cmds[0]{state}[$OK]=$cmds[0]{ok} if ($cmds[0]{ok});
-	$cmds[0]{state}[$WARNING]=$cmds[0]{warning} if ($cmds[0]{warning});
-	$cmds[0]{state}[$CRITICAL]=$cmds[0]{critical} if ($cmds[0]{critical});
-	$cmds[0]{state}[$UNKNOWN]=$cmds[0]{unknown} if ($cmds[0]{unknown});
+	#--- if a state definition is not set via cmdline, take default
+	#foreach my $state (sort numerically keys %{$def{s2r}}) {
+	#$cmds[0]{state}[$state]=$cmds[0]{state_default}[$state] if (!$cmds[0]{state}[$state]);
+	#}
 
 	#--- timeout checking: overall TIMEOUT has to be greater than child check timeout
 	if ($opt{set}{timeout} && $opt{set}{TIMEOUT} && $opt{set}{timeout} > $opt{set}{TIMEOUT}) {
@@ -3244,6 +3249,17 @@ sub report_ascii {
 	foreach my $s (sort numerically keys %{$def{s2r}}) {
 		DEBUG1(sprintf "%-8s %-55s %s", $def{label}{$def{s2r}{$s}}, chomp($cmds[0]{state}[$def{s2r}{$s}]), ($rc{match}[$def{s2r}{$s}]) ? "TRUE" : "FALSE");
 		DEBUG2(state_string_ascii($cmds[0]{state}[$def{s2r}{$s}]));
+		#--- if state matches
+		if (($cmds[0]{state}[$s] ne $cmds[0]{state_default}[$s] && $rc{match}[$s]) ||
+		     $opt{set}{report} & $DETAIL_LIST_FULL ) {
+			printf "\n[ %-8s ] %-5s - %s", $def{label}{$s}, $rc{match}[$s]?"TRUE":"FALSE", $cmds[0]{state}[$s];
+		} else {
+			DEBUG1("No match ($s - $def{s2r}{$s}): $rc{match}[$def{s2r}{$s}]");
+			for my $i (0..3) {
+				DEBUG1("Match[$i]: $rc{match}[$i]");
+			}
+			#print state_string_ascii($cmds[0]{state}[$def{s2r}{$s}]);
+		}
 	}
 	DEBUG1("-" x 80);
 	DEBUG1(sprintf "%8s %55s %s", "", "Overall state =>", $def{label}{$cmds[0]{rc}});
