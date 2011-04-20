@@ -1117,10 +1117,10 @@ sub substitute_macros {
 			DEBUG3("1st run: var - replacing var \'$match_var\' with \'$ENV{\"MULTI_${match_var}\"}\'");
 			$input=~s/\$${match_var}\$/$ENV{"MULTI_${match_var}"}/gi;
 		} elsif ($ENV{"${NAGIOS}_${match_var}"}) {
-			DEBUG3("1st run: var - replacing var \'$match_var\' with \'$ENV{\"NAGIOS_${match_var}\"}\'");
+			DEBUG3("1st run: var - replacing var \'$match_var\' with \'$ENV{\"${NAGIOS}_${match_var}\"}\'");
 			$input=~s/\$${match_var}\$/$ENV{"${NAGIOS}_${match_var}"}/gi;
 		} else {
-			DEBUG3("1st run: var - var \'$match_var\' matching neither MULTI_var nor NAGIOS_var!");
+			DEBUG3("1st run: var - var \'$match_var\' matching neither MULTI_var nor ${NAGIOS}_var!");
 		}
 	}
 	DEBUG3("expression \'$input\' after 1st run (nagios var substitution)");
