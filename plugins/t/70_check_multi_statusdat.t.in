@@ -128,7 +128,7 @@ $result = NPTest->testCmd(
 is(
 	$result->return_code, 
 	$result->return_code, 
-	"check_multi finds localhost in status.dat without prefix- RC".$result->return_code." - passed"
+	"check_multi finds localhost in status.dat without prefix - RC".$result->return_code." - passed"
 );
 like(
 	$result->output,

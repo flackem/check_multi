@@ -2483,9 +2483,9 @@ sub get_status_dat_host {
 		DEBUG2("did not found RC and output for $host_name");
 		return (-1,"");
 	} else {
-		DEBUG4("found data for $host_name: RC $status_dat->{hoststatus}->{$host_name}->{current_state} and output \'$status_dat->{hoststatus}->{$host_name}->{plugin_output}\', long_output \'$status_dat->{hoststatus}->{$host_name}->{long_plugin_output}\'");
+		DEBUG4("found data for $host_name: RC $status_dat->{hoststatus}->{$host_name}->{last_hard_state} and output \'$status_dat->{hoststatus}->{$host_name}->{plugin_output}\', long_output \'$status_dat->{hoststatus}->{$host_name}->{long_plugin_output}\'");
 		return (
-			$status_dat->{hoststatus}->{$host_name}->{current_state},
+			$status_dat->{hoststatus}->{$host_name}->{last_hard_state},
 			$status_dat->{hoststatus}->{$host_name}->{plugin_output}."\n".
 			$status_dat->{hoststatus}->{$host_name}->{long_plugin_output}
 		);
@@ -2560,9 +2560,9 @@ sub get_status_dat_service {
 		DEBUG2("did not found RC and output for $host_name:$service_description");
 		return (-1,"");
 	} else {
-		DEBUG4("found data for $host_name:$service_description: RC $status_dat->{servicestatus}->{$host_name}->{$service_description}->{current_state} and output \'$status_dat->{servicestatus}->{$host_name}->{$service_description}->{plugin_output}\', long_output \'$status_dat->{servicestatus}->{$host_name}->{$service_description}->{long_plugin_output}\'");
+		DEBUG4("found data for $host_name:$service_description: RC $status_dat->{servicestatus}->{$host_name}->{$service_description}->{last_hard_state} and output \'$status_dat->{servicestatus}->{$host_name}->{$service_description}->{plugin_output}\', long_output \'$status_dat->{servicestatus}->{$host_name}->{$service_description}->{long_plugin_output}\'");
 		return (
-			$status_dat->{servicestatus}->{$host_name}->{$service_description}->{current_state},
+			$status_dat->{servicestatus}->{$host_name}->{$service_description}->{last_hard_state},
 			($status_dat->{servicestatus}->{$host_name}->{$service_description}->{long_plugin_output})
 				? $status_dat->{servicestatus}->{$host_name}->{$service_description}->{plugin_output}."\n".
 				  $status_dat->{servicestatus}->{$host_name}->{$service_description}->{long_plugin_output}
@@ -2636,14 +2636,14 @@ sub read_status_dat {
 		if (/^hoststatus\s+\{/) {
 			my $plugin_output="";
 			my $long_plugin_output="";
-			my $current_state=0;
+			my $last_hard_state=0;
 			my $host_name="";
 
 			while (<DAT>) {
 				NEXT: if (/\thost_name=(.+)$/) {
 					$host_name=$1;
-				} elsif (/\tcurrent_state=(.*)/) {
-					$current_state=$1;
+				} elsif (/\tlast_hard_state=(.*)/) {
+					$last_hard_state=$1;
 				} elsif (/\tplugin_output=(.*)/) {
 					$plugin_output=$1;
 				} elsif (/\tlong_plugin_output=(.*)/) {
@@ -2657,7 +2657,7 @@ sub read_status_dat {
 						}
 					}
 				} elsif (/^\t\}$/) {
-					$status_dat->{hoststatus}->{$host_name}->{current_state}=$current_state;
+					$status_dat->{hoststatus}->{$host_name}->{last_hard_state}=$last_hard_state;
 					$status_dat->{hoststatus}->{$host_name}->{plugin_output}=$plugin_output;
 					$status_dat->{hoststatus}->{$host_name}->{long_plugin_output}=$long_plugin_output;
 					last;
@@ -2667,7 +2667,7 @@ sub read_status_dat {
 		} elsif (/^servicestatus\s+\{/) {
 			my $plugin_output="";
 			my $long_plugin_output="";
-			my $current_state=0;
+			my $last_hard_state=0;
 			my $host_name="";
 			my $service_description="";
 
@@ -2676,8 +2676,8 @@ sub read_status_dat {
 					$host_name=$1;
 				} elsif (/\tservice_description=(.+)$/) {
 					$service_description=$1;
-				} elsif (/\tcurrent_state=(.*)/) {
-					$current_state=$1;
+				} elsif (/\tlast_hard_state=(.*)/) {
+					$last_hard_state=$1;
 				} elsif (/\tplugin_output=(.*)/) {
 					$plugin_output=$1;
 				} elsif (/\tlong_plugin_output=(.*)/) {
@@ -2691,7 +2691,7 @@ sub read_status_dat {
 						}
 					}
 				} elsif (/^\t\}$/) {
-					$status_dat->{servicestatus}->{$host_name}->{$service_description}->{current_state}=$current_state;
+					$status_dat->{servicestatus}->{$host_name}->{$service_description}->{last_hard_state}=$last_hard_state;
 					$status_dat->{servicestatus}->{$host_name}->{$service_description}->{plugin_output}=$plugin_output;
 					$status_dat->{servicestatus}->{$host_name}->{$service_description}->{long_plugin_output}=$long_plugin_output;
 					last;
@@ -2720,7 +2720,7 @@ sub expand_livestatus_service {
 	if (!$livestatus_service) {
 		DEBUG4("1st read, creating service tree");
 
-		$livestatus_service=read_livestatus($livestatus_path,"GET services\nColumns: host_name description state plugin_output long_plugin_output perf_data\n");
+		$livestatus_service=read_livestatus($livestatus_path,"GET services\nColumns: host_name description last_hard_state plugin_output long_plugin_output perf_data\n");
 		if (!$livestatus_service) {
 			add_error(0,"expand_livestatus_service: could not read $livestatus_path");
 			return (undef,undef);
@@ -2771,7 +2771,7 @@ sub expand_livestatus_host {
 	if (!$livestatus_host) {
 		DEBUG4("1st read, creating host tree");
 
-		$livestatus_host=read_livestatus($livestatus_path,"GET hosts\nColumns: host_name state plugin_output long_plugin_output perf_data\n");
+		$livestatus_host=read_livestatus($livestatus_path,"GET hosts\nColumns: host_name last_hard_state plugin_output long_plugin_output perf_data\n");
 		if (!$livestatus_host) {
 			add_error(0,"expand_livestatus_host: could not read $livestatus_path");
 			return (undef,undef);
