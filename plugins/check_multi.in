@@ -1021,6 +1021,22 @@ sub my_hash {
 	return $hash;
 }
 
+#--- 
+#--- detection of numbers / strings in input
+#--- gracefully taken from perlmonks (no 408607)
+#---
+sub seems_like_number {
+	my $thing = shift;
+	use warnings qw/FATAL all/;	# Promote warnings to fatal, so
+					# they can be trapped. The effect is
+					# lexically scoped.
+	eval {
+		$thing += 0;
+	};
+	DEBUG4(sprintf "input >$thing< has %sbeen identified as a number", $@ ? "not " : "");
+	return $@ ? 0 : 1;
+}
+
 #---
 #--- directories should not have separator characters
 #---
@@ -1284,7 +1300,7 @@ sub substitute_states {
 	$input=~s/\b(UNKNOWN)\b/$UNKNOWN/ig;
 
 	#--- 3. replace all vars with RC
-	for ($no=1;$no<=$#cmds;$no++) {
+	for (my $no=1;$no<=$#cmds;$no++) {
 		$input=~s/\b($cmds[$no]{name})\b/$cmds[$no]{rc}/ig;
 	}
 	#--- 4. replace IGNORE
@@ -1665,8 +1681,8 @@ sub parse_header {
 		}
 		if (defined($cmds[$i])) {
 			DEBUG2(defined($cmds[$i]{command})
-				? "parse_header: overloaded \'$name\' with $type \'$cmd\'"
-				: "parse_header: added \'$name\' with $type \'$cmd\'"
+				? "parse_header: overloaded \'$name\' with type $type \'$cmd\'"
+				: "parse_header: added \'$name\' with type $type \'$cmd\'"
 			);
 		}
 	}
@@ -1690,7 +1706,7 @@ sub parse_header {
 			if (!defined($cmds[$i]{$key})) {
 				DEBUG2("key $key attribute \'$cmd\' inserted into object $name (\$cmds[$i])");
 			} else {
-				DEBUG2("key $key attribute \'$cmd\' changed in object $name (\$cmds[$i]), was: $cmds[$i]{$key}");
+				DEBUG2("key $key attribute \'$cmd\' changed in object $name (\$cmds[$i]), was: \'$cmds[$i]{$key}\'");
 			}
 			$cmds[$i]{$key}=$cmd;
 		}
@@ -1840,7 +1856,7 @@ sub parse_header {
 		}
 		#--- livestatus: split host and service from command, format: host:service
 		if ($cmd=~/\s*([^:]*)\s*\:\s*(.*)\s*/) {
-			DEBUG4("expanding livestatus host:service $1:$2");
+			DEBUG4("expanding livestatus host:service >$1:$2<");
 			my @result=expand_livestatus_service($opt{set}{livestatus}, $1, $2);
 
 			if (!defined($result[0])) {
@@ -1882,7 +1898,7 @@ sub parse_header {
 				$i++;
 			}
 		} elsif ($cmd=~/\s*([^:]*)\s*/) {
-			DEBUG4("expanding livestatus host $1");
+			DEBUG4("expanding livestatus host >$1<");
 			my @result=expand_livestatus_host($opt{set}{livestatus}, $1);
 
 			if (!defined($result[0])) {
@@ -2741,14 +2757,14 @@ sub expand_livestatus_service {
 		if ($service->{host_name}=~/$host_name/ && $service->{description}=~/$service_description/) {
 			push @result,$service->{host_name};
 			push @result,$service->{description};
-			push @result,$service->{state};
+			push @result,$service->{last_hard_state};
 			my $output=defined($service->{plugin_output})?$service->{plugin_output}:"";
 			chomp($output);
 			$output.=defined($service->{long_plugin_output})?"\n$service->{long_plugin_output}":"";
 			chomp($output);
 			push @result,$output;
 			push @result,defined($service->{perf_data})?$service->{perf_data}:"";
-			DEBUG4("$service->{host_name}:$service->{description} matched $host_name:$service_description:$service->{state}");
+			DEBUG4("$service->{host_name}:$service->{description} matched $host_name:$service_description:$service->{last_hard_state}");
 		} else {
 			DEBUG4("$service->{host_name}:$service->{description} did not match $host_name:$service_description");
 		}
@@ -2788,16 +2804,16 @@ sub expand_livestatus_host {
 	my @result=();
 	#--- $host points to an array item
 	foreach my $host (@{$livestatus_host}) {
-		if ($host->{host_name}=~/$host_name/) {
+		if ("$host->{host_name}"=~/$host_name/) {
 			push @result,$host->{host_name};
-			push @result,$host->{state};
+			push @result,$host->{last_hard_state};
 			my $output=defined($host->{plugin_output})?$host->{plugin_output}:""; 
 			chomp($output);
 			$output.=defined($host->{long_plugin_output})?"\n$host->{long_plugin_output}":"";
 			chomp($output);
 			push @result,$output;
 			push @result,defined($host->{perf_data})?$host->{perf_data}:"";
-			DEBUG4("$host->{host_name} matched $host_name:$host->{state}");
+			DEBUG4("$host->{host_name} matched $host_name, state $host->{last_hard_state}");
 		} else {
 			DEBUG4("$host->{host_name} did not match $host_name");
 		}
@@ -2823,6 +2839,9 @@ sub read_livestatus {
 		return undef;
 	}
 	DEBUG4("$#{$livestatus} elements read");
+	if (module("Data::Dumper")) {
+		DEBUG4(Dumper($livestatus));
+	}
 	return $livestatus;
 }
 
@@ -2891,7 +2910,7 @@ sub eval_result {
 		return (-1,$message);
 	#--- return result
 	} else {
-		$message="eval_result: input:\'$input_org\' parsed:\'$input\' result:\'$result\'\n";
+		$message="eval_result: input:>$input_org< parsed:>$input< result:>$result<\n";
 		$message=~s/\n/ /g;
 		DEBUG4($message);
 		return ($result,$message);
@@ -3038,7 +3057,7 @@ sub single_result_rating {
 
 		#my ($result,$message)=eval_result("\'$cmds[$no]{output}\'$cmds[$no]{$def{llabel}{$state}}");
 		my ($result,$message)=eval_result("$cmds[$no]{$def{llabel}{$state}}");
-		DEBUG4("evaluating expression \'$cmds[$no]{$def{llabel}{$state}}\', result is $result");
+		DEBUG4("evaluating expression \"$cmds[$no]{$def{llabel}{$state}}\", result is $result");
 
 		if (! defined($result) || $result eq "") {
 			; # do nothing
@@ -4299,6 +4318,7 @@ while ($no<=$#cmds) {
 		}
 		#--- execute command
 		&exec_command($no);
+		#DEBUG4("Executed command $no: $cmds[$no]{output}, RC:$cmds[$no]{rc}");
 	}
 
 	$no++;

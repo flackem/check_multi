@@ -1,6 +1,8 @@
 
 ===== Changelog =====
 
+	* child checks state rules reorganized
+	* statusdat checks now only consider hard states
 	* print matching state rule in long plugin output
 	* feed_passive with perfdata [ plugin ] at the end
 	* better perfdata error output for invalid UOM
