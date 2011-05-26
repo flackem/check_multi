@@ -3383,8 +3383,10 @@ sub report_html {
 		#--- allow commands to get tag name
 		$ENV{"MULTI_TAG"}=$cmds[$no]{name};
 
-		$output.=sprintf "<tr style='font-size:8pt'><td nowrap><table style='background-color:%s'><tr style='vertical-align:middle'><td style='font-size:6pt'>%2.d</td></tr></table></td>",
+		$output.=sprintf "<tr style='font-size:8pt' title='%s'><td nowrap><table style='background-color:%s'><tr style='vertical-align:middle'><td style='font-size:6pt' title='%s'>%2.d</td></tr></table></td>",
+			xml_encode(error($no)),
 			$def{color}{$cmds[$no]{rc}},
+			xml_encode(error($no)),
 			$cmds[$no]{number};
 		#--- Action url (standard version)
 		if (	($opt{set}{report} & ($DETAIL_PERFORMANCE | $DETAIL_PERFORMANCE_CLASSIC)) &&
@@ -3491,7 +3493,6 @@ sub report_html {
 						: "${rclabel}$1</td></tr><tr><td></td><td colspan='5'>$2")
 					: "${rclabel}$cmds[$no]{output}";
 		}
-		$output.="<td>". xml_encode(error($no))."</td>" if ($opt{set}{report} & $DETAIL_STDERR);
 		$output.="</tr>";
 	}
 	foreach my $s (sort numerically keys %{$def{s2r}}) {
@@ -3689,7 +3690,13 @@ sub report_xml {
 #---
 sub xml_encode {
 	my $input=shift;
-	my %transtab=( '&'=>'&amp;','<'=>'&lt;','>'=>'&gt;','\|'=>'&#124;',);
+	my %transtab=(
+		'\''	=> '&#039;',
+		'&'	=> '&amp;',
+		'<'	=> '&lt;',
+		'>'	=> '&gt;',
+		'\|'	=> '&#124;',
+	);
 	for (keys(%transtab)) {
 		$input=~s/$_/$transtab{$_}/g;
 	}
