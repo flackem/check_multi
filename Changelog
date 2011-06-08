@@ -1,6 +1,7 @@
 
 ===== Changelog =====
 
+   * fixed handling of non existing child state rules
 	* child checks state rules reorganized
 	* statusdat checks now only consider hard states
 	* print matching state rule in long plugin output

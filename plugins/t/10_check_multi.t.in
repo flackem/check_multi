@@ -28,7 +28,7 @@ foreach my $plugin (@plugins) {
 	}
 }
 
-plan tests => 74;
+plan tests => 76;
 
 my $result;
 #my $testopts="-s dont_be_paranoid=1 -s tmp_dir=/tmp/check_multi";
@@ -564,6 +564,23 @@ like(
 	$result->output,
 	'/OK - 1 plugins checked, 1 ok\n'.
 	'\[ 1\] with_perfdata eins\|check_multi::check_multi::plugins=1 time=[\d\.]+ $/',
+	"output correct"
+);
+#-------------------------------------------------------------------------------
+#--- check_multi attribute (check not found) -----------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -s report=1+4 -x 'command [ eins ] = echo eins' -x 'attribute [ zwei::warning ] = 0'",
+);
+is(
+	$result->return_code, 
+	0, 
+	"changes child check attributes (child check not found) - RC0"
+);
+like(
+	$result->output,
+	'/OK - 1 plugins checked, 1 ok \[parse_header: attribute \[ zwei::warning \] can not be set: child check with name \'zwei\' not found\]\n'.
+	'\[ 1\] eins eins$/',
 	"output correct"
 );
 #-------------------------------------------------------------------------------

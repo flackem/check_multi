@@ -1699,7 +1699,7 @@ sub parse_header {
 			}
 			$opt{set}{$name}=$cmd;
 		#--- 2. 'attribute [ tag::variable ] = value' - tag not found
-		} elsif (! defined($cmds[$i]{name})) {
+		} elsif (! defined($cmds[$i]) || !defined($cmds[$i]{name})) {
 			add_error(0,"parse_header: attribute [ ${name}::${key} ] can not be set: child check with name \'$name\' not found");
 			return undef;
 		#--- 3. 'attribute [ tag::variable ] = value' - update attribute
