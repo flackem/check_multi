@@ -3016,13 +3016,13 @@ sub global_result_rating {
 	}
 
 	#--- sort in severity order
-	foreach my $s (sort numerically keys %{$def{s2r}}) {
-		$ENV{"MULTI_$def{label}{$s}_COUNT"}=$rc{count}[$s];
-		$ENV{"MULTI_$def{label}{$s}_LIST"}=join(',',@{$rc{list}[$s]});
-		$ENV{"MULTI_$def{label}{$s}_COUNT_ALL"}=$rc{count_all}[$s];
-		$ENV{"MULTI_$def{label}{$s}_LIST_ALL"}=join(',',@{$rc{list_all}[$s]});
+	foreach my $index ($OK..$UNKNOWN) {
+		$ENV{"MULTI_$def{label}{$index}_COUNT"}=$rc{count}[$index];
+		$ENV{"MULTI_$def{label}{$index}_LIST"}=join(',',@{$rc{list}[$index]});
+		$ENV{"MULTI_$def{label}{$index}_COUNT_ALL"}=$rc{count_all}[$index];
+		$ENV{"MULTI_$def{label}{$index}_LIST_ALL"}=join(',',@{$rc{list_all}[$index]});
 
-		my $state=$def{s2r}{$s};
+		my $state=$def{s2r}{$index};
 
 		my ($result,$message)=eval_result($cmds[0]{state}[$state]);
 		if (! defined($result) || $result eq "") {
@@ -3046,7 +3046,9 @@ sub single_result_rating {
 	my $no=shift;
 
 	#--- sort in severity order
-	foreach my $state (sort numerically keys %{$def{s2r}}) {
+	foreach my $index ($OK..$UNKNOWN) {
+
+		my $state=$def{r2s}{$index};
 
 		#--- no special settings for evaluation? then do not evaluete!
 		if (!$cmds[$no]{$def{llabel}{$state}}) {

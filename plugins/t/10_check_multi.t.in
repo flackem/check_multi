@@ -28,7 +28,7 @@ foreach my $plugin (@plugins) {
 	}
 }
 
-plan tests => 76;
+plan tests => 78;
 
 my $result;
 #my $testopts="-s dont_be_paranoid=1 -s tmp_dir=/tmp/check_multi";
@@ -564,6 +564,23 @@ like(
 	$result->output,
 	'/OK - 1 plugins checked, 1 ok\n'.
 	'\[ 1\] with_perfdata eins\|check_multi::check_multi::plugins=1 time=[\d\.]+ $/',
+	"output correct"
+);
+#-------------------------------------------------------------------------------
+#--- check_multi attribute sort order (severity) -------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -s report=1+4 -x 'command [ eins ] = echo \"eins\"' -x 'attribute [ eins::warning ] = eins eq eins' -x 'attribute [ eins::unknown ] = eins eq eins'",
+);
+is(
+	$result->return_code, 
+	1, 
+	"child check attributes in correct (severity) order - RC1"
+);
+like(
+	$result->output,
+	'/WARNING - 1 plugins checked, 1 warning \(eins\)\n'.
+	'\[ 1\] eins eins \[UNKNOWN: output matched rule \'eins eq eins\',WARNING: output matched rule \'eins eq eins\'\]$/',
 	"output correct"
 );
 #-------------------------------------------------------------------------------
