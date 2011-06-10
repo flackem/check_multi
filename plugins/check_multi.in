@@ -3044,13 +3044,22 @@ sub global_result_rating {
 #---
 sub single_result_rating {
 	my $no=shift;
+	my $old_rc=$cmds[$no]{rc};
 
 	#--- sort in severity order
-	foreach my $index ($OK..$UNKNOWN) {
+	foreach my $index (0..3) {
 
-		my $state=$def{r2s}{$index};
+		#--- getting state
+		my $state=$def{s2r}{$index};
+		DEBUG4("examining state $state ($def{llabel}{$state})");
 
-		#--- no special settings for evaluation? then do not evaluete!
+		#--- did we got a child check RC?
+		if ($state == $old_rc) {
+			$cmds[$no]{rc}=$old_rc;
+			DEBUG4("original RC was $old_rc -> moving this RC to child check RC");
+		}
+
+		#--- no special settings for evaluation? then do not evaluate!
 		if (!$cmds[$no]{$def{llabel}{$state}}) {
 			DEBUG4("no expression for $def{llabel}{$state} -> no evaluation");
 			next;

@@ -28,7 +28,7 @@ foreach my $plugin (@plugins) {
 	}
 }
 
-plan tests => 78;
+plan tests => 80;
 
 my $result;
 #my $testopts="-s dont_be_paranoid=1 -s tmp_dir=/tmp/check_multi";
@@ -570,7 +570,7 @@ like(
 #--- check_multi attribute sort order (severity) -------------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi $testopts -s report=1+4 -x 'command [ eins ] = echo \"eins\"' -x 'attribute [ eins::warning ] = eins eq eins' -x 'attribute [ eins::unknown ] = eins eq eins'",
+	"@PERL@ ../check_multi $testopts -s report=1+4 -x 'command [ eins ] = echo \"eins\"' -x 'attribute [ eins::warning ] = eins =~ /eins/' -x 'attribute [ eins::unknown ] = eins =~ /eins/'",
 );
 is(
 	$result->return_code, 
@@ -580,7 +580,24 @@ is(
 like(
 	$result->output,
 	'/WARNING - 1 plugins checked, 1 warning \(eins\)\n'.
-	'\[ 1\] eins eins \[UNKNOWN: output matched rule \'eins eq eins\',WARNING: output matched rule \'eins eq eins\'\]$/',
+	'\[ 1\] eins eins \[UNKNOWN: output matched rule \'eins =\~ \/eins\/\',WARNING: output matched rule \'eins =\~ \/eins\/\'\]$/',
+	"output correct"
+);
+#-------------------------------------------------------------------------------
+#--- check_multi attribute sort order (severity) with RC -----------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -s report=1+4 -x 'command [ zwei ] = (echo \"zwei\"; exit 2)' -x 'attribute [ zwei::warning ] = zwei =~ /zwei/' -x 'attribute [ zwei::unknown ] = zwei =~ /zwei/'",
+);
+is(
+	$result->return_code, 
+	2, 
+	"child check attributes in correct (severity) order with RC - RC2"
+);
+like(
+	$result->output,
+	'/CRITICAL - 1 plugins checked, 1 critical \(zwei\)\n'.
+	'\[ 1\] zwei zwei \[UNKNOWN: output matched rule \'zwei =\~ \/zwei\/\',WARNING: output matched rule \'zwei =\~ /zwei/\'\]$/',
 	"output correct"
 );
 #-------------------------------------------------------------------------------
