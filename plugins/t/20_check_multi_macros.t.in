@@ -36,7 +36,7 @@ my $testopts=testopts::get_testopts;
 #--- ENV vars MULTI_... via command --------------------------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi $testopts -x 'command [ echo ] = echo \"Hello World\"' -x 'command [ env ] = env | grep \"^MULTI\" | sort' -r 1+4",
+	"@PERL@ ../check_multi $testopts -x 'command [ echo ] = echo \"Hello World\"' -x 'command [ env ] = env | grep ^MULTI | sort' -r 1+4",
 );
 is(
 	$result->return_code, 
@@ -61,7 +61,7 @@ like(
 #--- ENV vars MULTI_... via eval -----------------------------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi $testopts -x 'eeval [ echo ] = \"Hello World\";' -x 'command [ env ] = env | grep \"^MULTI\" | sort' -r 1+4",
+	"@PERL@ ../check_multi $testopts -x 'eeval [ echo ] = \"Hello World\";' -x 'command [ env ] = env | grep ^MULTI | sort' -r 1+4",
 );
 is(
 	$result->return_code, 

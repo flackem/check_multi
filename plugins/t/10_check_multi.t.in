@@ -33,7 +33,7 @@ plan tests => 80;
 my $result;
 #my $testopts="-s dont_be_paranoid=1 -s tmp_dir=/tmp/check_multi";
 my $testopts=testopts::get_testopts;
-
+#-------------------------------------------------------------------------------
 #--- check_multi version -------------------------------------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
@@ -220,16 +220,17 @@ like(
 #--- report option 4 -----------------------------------------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi $testopts -s report=4 -x 'command [ procs ] = /check_prox'"
+	"@PERL@ ../check_multi $testopts -s report=4 -x 'command [ procs ] = check_prox'"
 );
-ok(
-	$result->return_code == 1 || $result->return_code == 3, 
+is(
+	$result->return_code, 
+	3, 
 	"report option 4 [error messages - stderr] - RC3"
 );
 like(
 	$result->output,
-	'/1 plugins checked.*0 ok\n'.
-	'\[ 1\] procs  \[sh: \/check_prox: (command )?not found(,RC was 127!)?\]$/',
+	'/^UNKNOWN - 1 plugins checked, 0 critical, 0 warning, 1 unknown, 0 ok\n'.
+	'\[ 1\] procs  \[sh: check_prox: (command )?not found,RC was 127!\]$/',
 	"output correct"
 );
 #-------------------------------------------------------------------------------
@@ -800,7 +801,7 @@ is(
 like(
 	$result->output,
 	'/UNKNOWN - 2 plugins checked, 2 unknown \(one, two\)\n'.
-	'\[ 1\] one  \[timeout encountered after 1s(,Terminated)?\]\n'.
+	'\[ 1\] one  \[timeout encountered after 1s\]\n'.
 	'\[ 2\] two UNKNOWN - execution cancelled due to global timeout \(2s\)/',
 	"output correct"
 );
