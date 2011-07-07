@@ -30,7 +30,6 @@ $DETAIL_LIST $DETAIL_LIST_FULL $DETAIL_HTML $DETAIL_STDERR $DETAIL_PERFORMANCE
 $DETAIL_PERFORMANCE_CLASSIC $DETAIL_STATUS $DETAIL_PERFORMANCE_LINK $DETAIL_XML $DETAIL_NAGIOS2
 $DETAIL_NOTES_LINK $DETAIL_SERVICE_DEFINITION $DETAIL_SEND_NSCA $DETAIL_FEED_PASSIVE
 $DETAIL_ENCODE_COMMANDS $DETAIL_HIDEIFOK $DETAIL_SEND_GEARMAN
-*DEBUG0 *DEBUG1 *DEBUG2 *DEBUG3 *DEBUG4
 );
 BEGIN {
 	#--- OMD environment? Then we have to be sure that vars are defined
@@ -359,6 +358,14 @@ my $check_multi = {
 #-------------------------------------------------------------------------------
 
 #---
+#--- Dummy subs for defaults, used before parameter parsing is done
+#---
+sub DEBUG1 {}
+sub DEBUG2 {}
+sub DEBUG3 {}
+sub DEBUG4 {}
+
+#---
 #--- process command line parameters and STDIN (if any)
 #---
 sub process_input {
@@ -395,10 +402,13 @@ sub process_input {
 	}
 
 	#--- 4 debug levels: 1. verbose 2. errors 3. detailed 4. programmers debugging
-	*DEBUG1=($opt{set}{verbose}>=1) ? \&debug_message : sub {};
-	*DEBUG2=($opt{set}{verbose}>=2) ? \&debug_message : sub {};
-	*DEBUG3=($opt{set}{verbose}>=3) ? \&debug_message : sub {};
-	*DEBUG4=($opt{set}{verbose}>=3) ? \&debug_message : sub {};
+    {
+        no warnings 'redefine';
+	    *DEBUG1=($opt{set}{verbose}>=1) ? \&debug_message : sub {};
+	    *DEBUG2=($opt{set}{verbose}>=2) ? \&debug_message : sub {};
+	    *DEBUG3=($opt{set}{verbose}>=3) ? \&debug_message : sub {};
+	    *DEBUG4=($opt{set}{verbose}>=3) ? \&debug_message : sub {};
+    }
 
 	#--- -V(ersion) option
 	if ($opt{version}) {
