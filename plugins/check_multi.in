@@ -1725,10 +1725,10 @@ sub parse_header {
 		my $plugin="";
 		if ($cmd=~/\s+/) {
 			$plugin=(split(/\s+/,"$cmd"))[0];
-			$plugin=~s/.*\///g; 	# basename(plugin) (thx Gerhard)
 		} else {
 			$plugin=$cmd;
 		}
+		$plugin=~s/.*\///g; 	# basename(plugin) (thx Gerhard)
 
 		$cmds[$i]{type}=$type;
 		$cmds[$i]{name}=$name;
