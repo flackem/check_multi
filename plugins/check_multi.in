@@ -372,12 +372,6 @@ sub process_input {
 		return $UNKNOWN;
 	}
 
-	#--- 4 debug levels: 1. verbose 2. errors 3. detailed 4. programmers debugging
-	*DEBUG1=($opt{set}{verbose}>=1) ? \&debug_message : sub {};
-	*DEBUG2=($opt{set}{verbose}>=2) ? \&debug_message : sub {};
-	*DEBUG3=($opt{set}{verbose}>=3) ? \&debug_message : sub {};
-	*DEBUG4=($opt{set}{verbose}>=3) ? \&debug_message : sub {};
-
 	if (! GetOptions(
 		"f|filename=s"	=> \@{$opt{filename}},
 		"h|help:+"	=> \$opt{help},
@@ -401,10 +395,10 @@ sub process_input {
 	}
 
 	#--- 4 debug levels: 1. verbose 2. errors 3. detailed 4. programmers debugging
-	undef *DEBUG1; *DEBUG1=($opt{set}{verbose}>=1) ? \&debug_message : sub {};
-	undef *DEBUG2; *DEBUG2=($opt{set}{verbose}>=2) ? \&debug_message : sub {};
-	undef *DEBUG3; *DEBUG3=($opt{set}{verbose}>=3) ? \&debug_message : sub {};
-	undef *DEBUG4; *DEBUG4=($opt{set}{verbose}>=3) ? \&debug_message : sub {};
+	*DEBUG1=($opt{set}{verbose}>=1) ? \&debug_message : sub {};
+	*DEBUG2=($opt{set}{verbose}>=2) ? \&debug_message : sub {};
+	*DEBUG3=($opt{set}{verbose}>=3) ? \&debug_message : sub {};
+	*DEBUG4=($opt{set}{verbose}>=3) ? \&debug_message : sub {};
 
 	#--- -V(ersion) option
 	if ($opt{version}) {
