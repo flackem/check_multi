@@ -118,7 +118,7 @@ AC_ARG_WITH(tmp_etc,			[  --with-tmp_etc=<path>                    /path/to/tmp_
 AC_ARG_WITH(parent_timeout,		[ 
 major settings:
   --with-parent_timeut=<NN>                timeout for parent check (default:60)],parent_timeout=$withval,parent_timeout="60")
-AC_ARG_WITH(child_timeout,		[  --with-child_timeout=<NN>                timeout for child checks (default:10)],child_timeout=$withval,child_timeout="10")
+AC_ARG_WITH(child_timeout,		[  --with-child_timeout=<NN>                timeout for child checks (default:11)],child_timeout=$withval,child_timeout="11")
 #AC_ARG_WITH(nagios_user,		[  --with-nagios-user=<user>                user name to run plugin (default:nagios)],nagios_user=$withval,nagios_user=nagios)
 #AC_ARG_WITH(nagios_group,		[  --with-nagios-group=<group>              group name to run plugin (default:nagios)],nagios_group=$withval,nagios_group=nagios)
 #--- taking user handling from Nagios plugins (default: install user)

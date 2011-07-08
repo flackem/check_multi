@@ -1406,7 +1406,7 @@ detail settings:
 
 major settings:
   --with-parent_timeut=<NN>                timeout for parent check (default:60)
-  --with-child_timeout=<NN>                timeout for child checks (default:10)
+  --with-child_timeout=<NN>                timeout for child checks (default:11)
   --with-nagios-user=USER                  installs executables with this user. Defaults to install user
   --with-nagios-group=GROUP                installs executables with this group. Defaults to install user
   --with-nagios-name=<nagios|icinga>       set nagios name (there might be some clones ;)) (default:nagios)
@@ -2740,7 +2740,7 @@ fi
 if test "${with_child_timeout+set}" = set; then :
   withval=$with_child_timeout; child_timeout=$withval
 else
-  child_timeout="10"
+  child_timeout="11"
 fi
 
 #AC_ARG_WITH(nagios_user,		[  --with-nagios-user=<user>                user name to run plugin (default:nagios)],nagios_user=$withval,nagios_user=nagios)
