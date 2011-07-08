@@ -354,6 +354,12 @@ my $check_multi = {
 	opt	=> \%opt
 };
 
+#--- DEBUG typeglobs: 1. verbose 2. errors 3. detailed 4. programmers debugging
+*DEBUG1=($opt{set}{verbose}>=1) ? \&debug_message : sub {};
+*DEBUG2=($opt{set}{verbose}>=2) ? \&debug_message : sub {};
+*DEBUG3=($opt{set}{verbose}>=3) ? \&debug_message : sub {};
+*DEBUG4=($opt{set}{verbose}>=3) ? \&debug_message : sub {};
+
 #-------------------------------------------------------------------------------
 #--- subs ----------------------------------------------------------------------
 #-------------------------------------------------------------------------------
@@ -371,12 +377,6 @@ sub process_input {
 		print "Error: module Getopt::Long version $Getopt::Long::VERSION is too old, minimum version is 2.27\n";
 		return $UNKNOWN;
 	}
-
-	#--- 4 debug levels: 1. verbose 2. errors 3. detailed 4. programmers debugging
-	*DEBUG1=($opt{set}{verbose}>=1) ? \&debug_message : sub {};
-	*DEBUG2=($opt{set}{verbose}>=2) ? \&debug_message : sub {};
-	*DEBUG3=($opt{set}{verbose}>=3) ? \&debug_message : sub {};
-	*DEBUG4=($opt{set}{verbose}>=3) ? \&debug_message : sub {};
 
 	if (! GetOptions(
 		"f|filename=s"	=> \@{$opt{filename}},
@@ -400,7 +400,7 @@ sub process_input {
 		return $UNKNOWN;
 	}
 
-	#--- 4 debug levels: 1. verbose 2. errors 3. detailed 4. programmers debugging
+	#--- redefine debug typeglobs, if verbose flag has been changed on cmdline
 	undef *DEBUG1; *DEBUG1=($opt{set}{verbose}>=1) ? \&debug_message : sub {};
 	undef *DEBUG2; *DEBUG2=($opt{set}{verbose}>=2) ? \&debug_message : sub {};
 	undef *DEBUG3; *DEBUG3=($opt{set}{verbose}>=3) ? \&debug_message : sub {};
