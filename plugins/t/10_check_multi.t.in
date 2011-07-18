@@ -679,10 +679,10 @@ is(
 );
 like(
 	$result->output,
-	'/OK - 5 plugins checked, 5 ok\n'.
-	'\[ 1\] two_def 1368\n'.
-	'\[ 2\] two_abc 369|'.
-	'check_multi::check_multi::plugins=2 time=[\d\.]+ two_def::cumulate::two_def=1368 two_abc::cumulate::two_abc=369 $/',
+	'/OK - 2 plugins checked, 2 ok\n'.
+	'\[ 1\] def 1368\n'.
+	'\[ 2\] abc 369|'.
+	'check_multi::check_multi::plugins=2 time=[\d\.]+ two::cumulate::def=1368 two::cumulate::abc=369 $/',
 	"output correct"
 );
 #-------------------------------------------------------------------------------
@@ -698,10 +698,10 @@ is(
 );
 like(
 	$result->output,
-	'/OK - 5 plugins checked, 5 ok\n'.
-	'\[ 1\] two_def 1369.899\n'.
-	'\[ 2\] two_abc 369.9|'.
-	'check_multi::check_multi::plugins=2 time=[\d\.]+ two_def::cumulate::two_def=1369.899 two_abc::cumulate::two_abc=369.9 $/',
+	'/OK - 2 plugins checked, 2 ok\n'.
+	'\[ 1\] def 1369.899\n'.
+	'\[ 2\] abc 369.9|'.
+	'check_multi::check_multi::plugins=2 time=[\d\.]+ two::cumulate::def=1369.899 two::cumulate::abc=369.9 $/',
 	"output correct"
 );
 #-------------------------------------------------------------------------------

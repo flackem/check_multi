@@ -1,6 +1,7 @@
 
 ===== Changelog =====
 
+	* cumulate perfdata handling fixed
 	* child timeout increased to 11s - no collision with 10s default
 	* fixed handling of non existing child state rules
 	* child checks state rules reorganized

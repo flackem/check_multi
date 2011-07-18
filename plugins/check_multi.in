@@ -2420,8 +2420,7 @@ sub exec_command {
 					$top[$i]{runtime}=0;
 					$top[$i]{type}=$cmds[$no]{type};
 					$top[$i]{process_perfdata}=1;
-					$top[$i]{performance}="$cmds[$no]{name}_$top[$i]{name}=$top[$i]{output}";
-					$top[$i]{name}="$cmds[$no]{name}_$top[$i]{name}";
+					$top[$i]{performance}="$cmds[$no]{name}::$cmds[$no]{type}::$top[$i]{name}=$top[$i]{output}";
 				}
 				#--- replace original part with new array
 				splice(@cmds,$no,1,@top);
@@ -3763,6 +3762,9 @@ sub report_perfdata {
 				if ($cmds[$no]{performance}=~/check_multi::check_multi::(.*)/) {
 					$perftmp="${name}::check_multi::$1 ";
 				} elsif ($cmds[$no]{performance}=~/::check_multi::/) {
+					$perftmp="$cmds[$no]{performance} ";
+				#--- cumulate perfdata: pass through
+				} elsif ($cmds[$no]{performance}=~/::cumulate::/) {
 					$perftmp="$cmds[$no]{performance} ";
 				} else {
 					#--- do we have an explicit plugin specification? take it
