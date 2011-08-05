@@ -3,7 +3,6 @@
 # Process Tests via check_multi
 # thanks to Ton Voon for his persistency on testing ;)
 #
-
 use strict;
 use Test::More;
 use NPTest;
@@ -28,7 +27,7 @@ foreach my $plugin (@plugins) {
 	}
 }
 
-plan tests => 80;
+plan tests => 90;
 
 my $result;
 #my $testopts="-s dont_be_paranoid=1 -s tmp_dir=/tmp/check_multi";
@@ -53,7 +52,6 @@ like(
 	'configure.*$/',
 	"output correct"
 );
-
 #-------------------------------------------------------------------------------
 #--- ENV vars MULTI_... via command --------------------------------------------
 #-------------------------------------------------------------------------------
@@ -104,7 +102,6 @@ like(
 	'.*$/s',
 	"output correct"
 );
-
 #-------------------------------------------------------------------------------
 #--- valid name option -------------------------------------------------------
 #-------------------------------------------------------------------------------
@@ -122,7 +119,6 @@ like(
 	'\[ 1\] procs PROCS OK: \d+ processes|check_multi::check_multi::plugins=1 time=\d+$/',
 	"output correct"
 );
-
 #-------------------------------------------------------------------------------
 #--- invalid name option -----------------------------------------------------
 #-------------------------------------------------------------------------------
@@ -139,8 +135,6 @@ like(
 	'/^check_multi error: name \'test\[\' invalid - \[ brackets \] are not allowed/',
 	"output correct"
 );
-
-
 #-------------------------------------------------------------------------------
 #--- simple OK output with 1 plugin --------------------------------------------
 #-------------------------------------------------------------------------------
@@ -158,8 +152,104 @@ like(
 	'\[ 1\] procs PROCS OK: \d+ processes|check_multi::check_multi::plugins=1 time=\d+$/',
 	"output correct"
 );
-
-
+#-------------------------------------------------------------------------------
+#--- parse_lines: simple command with continuation line and backslash ----------
+#-------------------------------------------------------------------------------
+`echo 'command [ two_lines ] = \\' >  ./tmp/test.cmd`;
+`echo 'echo \"two lines\"'         >> ./tmp/test.cmd`;
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -f ./tmp/test.cmd"
+);
+is(
+	$result->return_code, 
+	0, 
+	"command with backslashed continuation line - RC0"
+);
+like(
+	$result->output,
+	'/^OK - 1 plugins checked, 1 ok\n'.
+	'\[ 1\] two_lines two lines|check_multi::check_multi::plugins=1 time=\d+$/',
+	"output correct"
+);
+#-------------------------------------------------------------------------------
+#--- parse_lines: simple command with continuation lines without backslash -----
+#-------------------------------------------------------------------------------
+`echo 'command [ two_lines ] =' >  ./tmp/test.cmd`;
+`echo 'echo \"two lines\"'      >> ./tmp/test.cmd`;
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -f ./tmp/test.cmd"
+);
+is(
+	$result->return_code, 
+	0, 
+	"command with continuation line without backslash - RC0"
+);
+like(
+	$result->output,
+	'/^OK - 1 plugins checked, 1 ok\n'.
+	'\[ 1\] two_lines two lines|check_multi::check_multi::plugins=1 time=\d+$/',
+	"output correct"
+);
+#-------------------------------------------------------------------------------
+#--- parse_lines: simple command with continuation lines and empty line --------
+#-------------------------------------------------------------------------------
+`echo 'command [ two_lines ] =' >  ./tmp/test.cmd`;
+`echo                           >> ./tmp/test.cmd`;
+`echo 'echo \"two lines\"'      >> ./tmp/test.cmd`;
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -f ./tmp/test.cmd"
+);
+is(
+	$result->return_code, 
+	0, 
+	"command with (empty) continuation line - RC0"
+);
+like(
+	$result->output,
+	'/^OK - 1 plugins checked, 1 ok\n'.
+	'\[ 1\] two_lines two lines|check_multi::check_multi::plugins=1 time=\d+$/',
+	"output correct"
+);
+#-------------------------------------------------------------------------------
+#--- parse_lines: simple command with continuation lines and comment line ------
+#-------------------------------------------------------------------------------
+`echo 'command [ two_lines ] =' >  ./tmp/test.cmd`;
+`echo ' # this is a comment'    >> ./tmp/test.cmd`;
+`echo 'echo \"two lines\"'      >> ./tmp/test.cmd`;
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -f ./tmp/test.cmd"
+);
+is(
+	$result->return_code, 
+	0, 
+	"command with comment and continuation line - RC0"
+);
+like(
+	$result->output,
+	'/^OK - 1 plugins checked, 1 ok\n'.
+	'\[ 1\] two_lines two lines|check_multi::check_multi::plugins=1 time=\d+$/',
+	"output correct"
+);
+#-------------------------------------------------------------------------------
+#--- parse_lines: simple command with continuation lines and comment line --------
+#-------------------------------------------------------------------------------
+`echo 'command [ two_lines ] =' >  ./tmp/test.cmd`;
+`echo '# this is a comment line with a trailing backslash \\' >> ./tmp/test.cmd`;
+`echo 'echo \"two lines\"'      >> ./tmp/test.cmd`;
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -f ./tmp/test.cmd"
+);
+is(
+	$result->return_code, 
+	0, 
+	"command with comment with trailing backslash and continuation lines - RC0"
+);
+like(
+	$result->output,
+	'/^OK - 1 plugins checked, 1 ok\n'.
+	'\[ 1\] two_lines two lines|check_multi::check_multi::plugins=1 time=\d+$/',
+	"output correct"
+);
 #-------------------------------------------------------------------------------
 #--- report option 0 -----------------------------------------------------------
 #-------------------------------------------------------------------------------
@@ -177,8 +267,6 @@ like(
 	'\[ 1\] procs PROCS OK: \d+ processes$/',
 	"output correct"
 );
-
-
 #-------------------------------------------------------------------------------
 #--- report option 1 -----------------------------------------------------------
 #-------------------------------------------------------------------------------
@@ -196,8 +284,6 @@ like(
 	'\[ 1\] procs PROCS WARNING: \d+ processes$/',
 	"output correct"
 );
-
-
 #-------------------------------------------------------------------------------
 #--- report option 2 -----------------------------------------------------------
 #-------------------------------------------------------------------------------
@@ -215,7 +301,6 @@ like(
 	'<SCRIPT LANGUAGE=\'JavaScript\'> function Toggle.*PROCS OK: \d+ processes.*div>$/',
 	"output correct"
 );
-
 #-------------------------------------------------------------------------------
 #--- report option 4 -----------------------------------------------------------
 #-------------------------------------------------------------------------------
@@ -318,7 +403,6 @@ is(
 	0, 
 	"report option 256 (XML output) - RC0"
 );
-
 #<?xml version="1.0"?>
 #<?xml-stylesheet type="text/xsl" href="extinfo.xsl"?>
 #<div id="check_multi_xml" style='display:none'>
@@ -371,7 +455,6 @@ like(
 	'.*<type>command<\/type>.*$/s',
 	"output correct"
 );
-
 #-------------------------------------------------------------------------------
 #--- check_multi encode  (report option 16384) ---------------------------------
 #-------------------------------------------------------------------------------
@@ -388,7 +471,6 @@ like(
 	'/command%20%5B%20encode%20%5D%20%3D%20echo%20encode%0A/',
 	"output correct"
 );
-
 #-------------------------------------------------------------------------------
 #--- check_multi hide OK states (report option 32768) --------------------------
 #-------------------------------------------------------------------------------
@@ -406,7 +488,6 @@ like(
 	'\[ 2\] WARNING 1/',
 	"output correct"
 );
-
 #-------------------------------------------------------------------------------
 #--- check_multi hide OK states (report option 32770) --------------------------
 #-------------------------------------------------------------------------------
@@ -424,7 +505,6 @@ like(
 	'.*OK/',
 	"output correct"
 );
-
 #-------------------------------------------------------------------------------
 #--- check_multi decode (of encoded command) -----------------------------------
 #-------------------------------------------------------------------------------
@@ -442,7 +522,6 @@ like(
 	'\[ 1\] encode encode\|check_multi::check_multi::plugins=1 time=\d+\.\d+/',
 	"output correct"
 );
-
 #-------------------------------------------------------------------------------
 #--- check_multi inherits report option ----------------------------------------
 #-------------------------------------------------------------------------------
@@ -461,7 +540,6 @@ like(
 	' \[ 1\] zwei 2$/',
 	"output correct"
 );
-
 #-------------------------------------------------------------------------------
 #--- check_multi inherits report option with mask ------------------------------
 #-------------------------------------------------------------------------------

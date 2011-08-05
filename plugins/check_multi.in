@@ -1586,6 +1586,8 @@ sub parse_lines {
 	LINE: while (@lines) {
 
 		$line = shift(@lines);
+		chomp($line);
+		$line = trim($line);
 
 		#--- encode lines
 		if ($opt{set}{report} & $DETAIL_ENCODE_COMMANDS) {
@@ -1613,6 +1615,7 @@ sub parse_lines {
 		#--- header line (regex contains all allowed commands)
 		if (($type,$name,$cmd)=($line=~/^\s*($opt{cmdregex})\s*\[\s*(\S[$opt{set}{valid_tag_chars}]*\S|\S{1})\s*\]\s*=\s*(.*)\s*/i)) {
 
+			DEBUG4("command detected: command:$1 tag:$2 rest:$3");
 			#--- remove remaining blanks 
 			$name=trim($name);
 
@@ -1637,19 +1640,24 @@ sub parse_lines {
 
 		#--- proper header line with invalid keyword
 		} elsif ($line=~/^\s*(\w+)\s*\[\s*(\S[$opt{set}{valid_tag_chars}]*\S|\S{1})\s*\]\s*=\s*(.*)\s*/) {
+			DEBUG4("invalid keyword detected: $1");
 			add_error(0,"Invalid keyword \'$1\' specified, valid are \'$opt{cmdregex}\'");
 			return;
 
 		#--- continuation line for previous command
 		} else {
 			if (!defined($last_command)) {
+				DEBUG4("continuation line detected - no allowed header before: $line");
 				add_error(0,"parse_lines: invalid format in line $lineno: $line");
 				next LINE;
 			} elsif ($last_command=~/OK|UNKNOWN|WARNING|CRITICAL/i) {
+				DEBUG4("continuation line detected: state continuation for ".lc($last_command).": $line");
 				$cmds[0]{state}[$def{code}{lc($last_command)}].=$line;
 			} elsif ($last_command > 0) {
-				$cmds[$last_command]{command}.=$line;
+				DEBUG4("continuation line detected, appending \'$line\' to command \'$cmds[$last_command]{command}\'");
+				$cmds[$last_command]{command}.=' '.$line;
 			} else {
+				DEBUG4("continuation line detected: invalid format: $line");
 				add_error(0,"parse_lines: invalid format in line $lineno: $line");
 				next LINE;
 			}
