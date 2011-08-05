@@ -28,7 +28,7 @@ foreach my $plugin (@plugins) {
 	}
 }
 
-plan tests => 38;
+plan tests => 40;
 
 my $result;
 #my $testopts="-s dont_be_paranoid=1 -s tmp_dir=/tmp/check_multi";
@@ -197,6 +197,23 @@ like(
 	$result->output,
 	'/^OK - 1 plugins checked, 1 ok\n'.
 	'\[ 1\] eins eins \[eins perfdata discarded for eins: bad UOM \',\' in data \'1,1\' \]\|check_multi::check_multi::plugins=1 time=\d+\.\d+ $/',
+	"output correct"
+);
+#-------------------------------------------------------------------------------
+#--- discarding perfdata / duplicate pipe character ----------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -s report=1+4+8 -s loose_perfdata=0 -x 'command [ eins ] = echo \"eins|eins=1|zwei=2\"'",
+);
+is(
+	$result->return_code, 
+	0, 
+	"discards invalid perfdata with duplicate pipe character - RC0"
+);
+like(
+	$result->output,
+	'/^OK - 1 plugins checked, 1 ok\n'.
+	'\[ 1\] eins eins \[Invalid perfdata discarded - multiple pipe chars: \'eins=1\|zwei=2\'\]\|check_multi::check_multi::plugins=1 time=\d+\.\d+ $/',
 	"output correct"
 );
 #-------------------------------------------------------------------------------

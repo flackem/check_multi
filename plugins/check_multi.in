@@ -2238,6 +2238,7 @@ sub exec_command {
 			#--- split performance data from standard output
 			if ($cmds[$no]{output}=~/\|/ && ! $opt{set}{perfdata_pass_through}) {
 				DEBUG4("(1) - output contains \|");
+				#--- multiline perfdata
 				if ($cmds[$no]{output}=~/([^\n]*)\n(.*)/s) {
 					DEBUG4("(2) - output contains \\n");
 					my $rest=$2;
@@ -2253,6 +2254,12 @@ sub exec_command {
 						$cmds[$no]{output}.="\n$rest";
 					}
 					DEBUG4("(6) - output:$cmds[$no]{output} performance:$cmds[$no]{performance}");
+				#--- error: multiple '|' in performance data
+				} elsif ($cmds[$no]{output}=~/(.*)\|(.*\|.*)/) {
+						add_error($no,"Invalid perfdata discarded - multiple pipe chars: \'$2\'");
+						$cmds[$no]{output}=$1;
+						$cmds[$no]{performance}=undef;
+				#--- single line perfdata
 				} else {
 					($cmds[$no]{output},$cmds[$no]{performance})=split(/\|/,$cmds[$no]{output});
 					DEBUG4("performance string: $cmds[$no]{performance}");
