@@ -1615,7 +1615,6 @@ sub parse_lines {
 
 			#--- remove remaining blanks 
 			$name=trim($name);
-			$cmd=trim($cmd);
 
 			#--- macros?
 			$name=substitute_macros($name);
