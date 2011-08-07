@@ -1,6 +1,7 @@
 
 ===== Changelog =====
 
+	* contrib: notify_html_service.sh uses mime multipart elements
 	* fixed trimming blanks at line end with continuation lines
 	* cumulate perfdata handling fixed
 	* child timeout increased to 11s - no collision with 10s default

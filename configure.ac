@@ -44,6 +44,7 @@ AC_PATH_PROG(ETHTOOL,ethtool)
 AC_PATH_PROG(GUNZIP,gunzip)
 AC_PATH_PROG(ID,id)
 AC_PROG_INSTALL
+AC_PATH_PROG(MAILX,mailx)
 AC_PATH_PROG(PERL,perl)
 
 #---
@@ -84,6 +85,7 @@ AC_ARG_WITH(feed_passive_dir,		[  --with-feed_passive_dir=<path>           direc
 AC_ARG_WITH(feed_passive_dir_permissions,[  --with-feed_passive_dir_permissions=<octal perms> permissions for feed passive config dir (default:41777)],feed_passive_dir_permissions=$withval,feed_passive_dir_permissions="41777")
 AC_ARG_WITH(findbin,			[  --with-findbin=<0|1>                     use Perl module FindBin for addressing plugins (default:1)],findbin=$withval,findbin=1)
 AC_ARG_WITH(file_extension,		[  --with-file_extension=<ext>              default extension for check_multi command files (default:"cmd")],file_extension=$withval,file_extension="cmd")
+AC_ARG_WITH(hostname,			[  --with-hostname=<host>                   hostname of nagios server for mail / web purposes (default:"localhost")],hostname=$withval,hostname="localhost")
 AC_ARG_WITH(ignore_missing_cmd_file,	[  --with-ignore_missing_cmd_file=<0|1>     if missing cmd files should be ignored (default:0)],ignore_missing_cmd_file=$withval,ignore_missing_cmd_file="0")
 AC_ARG_WITH(illegal_chars,		[  --with-illegal_chars=<chars>             characters to be stripped from command files (default:"\r")],illegal_chars=$withval,illegal_chars="\r")
 AC_ARG_WITH(image_path,			[  --with-image_path=<URL>                  relative URL to nagios images (default:"/nagios/images")],image_path=$withval,image_path="/nagios/images")
@@ -158,6 +160,7 @@ AC_SUBST(feed_passive_dir_permissions)
 AC_SUBST(findbin)
 AC_SUBST(file_extension)
 AC_SUBST(gunzip)
+AC_SUBST(hostname)
 AC_SUBST(ignore_missing_cmd_file)
 AC_SUBST(illegal_chars)
 AC_SUBST(image_path)

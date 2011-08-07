@@ -591,6 +591,7 @@ indent_label
 image_path
 illegal_chars
 ignore_missing_cmd_file
+hostname
 gunzip
 file_extension
 findbin
@@ -620,6 +621,7 @@ INSTALL_OPTS
 INSTALL
 client_perl
 PERL
+MAILX
 INSTALL_DATA
 INSTALL_SCRIPT
 INSTALL_PROGRAM
@@ -698,6 +700,7 @@ with_feed_passive_dir
 with_feed_passive_dir_permissions
 with_findbin
 with_file_extension
+with_hostname
 with_ignore_missing_cmd_file
 with_illegal_chars
 with_image_path
@@ -1372,6 +1375,7 @@ detail settings:
   --with-feed_passive_dir_permissions=<octal perms> permissions for feed passive config dir (default:41777)
   --with-findbin=<0|1>                     use Perl module FindBin for addressing plugins (default:1)
   --with-file_extension=<ext>              default extension for check_multi command files (default:"cmd")
+  --with-hostname=<host>                   hostname of nagios server for mail / web purposes (default:"localhost")
   --with-ignore_missing_cmd_file=<0|1>     if missing cmd files should be ignored (default:0)
   --with-illegal_chars=<chars>             characters to be stripped from command files (default:"\r")
   --with-image_path=<URL>                  relative URL to nagios images (default:"/nagios/images")
@@ -2217,6 +2221,46 @@ test -z "$INSTALL_SCRIPT" && INSTALL_SCRIPT='${INSTALL}'
 
 test -z "$INSTALL_DATA" && INSTALL_DATA='${INSTALL} -m 644'
 
+# Extract the first word of "mailx", so it can be a program name with args.
+set dummy mailx; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if test "${ac_cv_path_MAILX+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+  case $MAILX in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_MAILX="$MAILX" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_test_x "$as_dir/$ac_word$ac_exec_ext"; }; then
+    ac_cv_path_MAILX="$as_dir/$ac_word$ac_exec_ext"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+MAILX=$ac_cv_path_MAILX
+if test -n "$MAILX"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $MAILX" >&5
+$as_echo "$MAILX" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
 # Extract the first word of "perl", so it can be a program name with args.
 set dummy perl; ac_word=$2
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
@@ -2477,6 +2521,14 @@ if test "${with_file_extension+set}" = set; then :
   withval=$with_file_extension; file_extension=$withval
 else
   file_extension="cmd"
+fi
+
+
+# Check whether --with-hostname was given.
+if test "${with_hostname+set}" = set; then :
+  withval=$with_hostname; hostname=$withval
+else
+  hostname="localhost"
 fi
 
 
@@ -2778,6 +2830,7 @@ fi
 
 
 #--- substitutions
+
 
 
 

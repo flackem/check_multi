@@ -19,6 +19,7 @@ if (-f "CM_VERSION") {
 	$CM_VERSION="undetermined";
 }
 my $INSTALL_OPTS="@INSTALL_OPTS@";
+my $MAILX="@MAILX@";
 my $PERL="@PERL@";
 my $action_mouseover="@action_mouseover@";
 my $add_tag_to_list_entries="@add_tag_to_list_entries@";
@@ -42,6 +43,7 @@ my $feed_passive_dir_permissions="@feed_passive_dir_permissions@";
 my $file_extension="@file_extension@";
 my $findbin=@findbin@;
 my $gunzip="@gunzip@";
+my $hostname="@hostname@";
 my $ignore_missing_cmd_file="@ignore_missing_cmd_file@";
 my $illegal_chars="@illegal_chars@";
 my $image_path="@image_path@";
@@ -109,6 +111,7 @@ while (my $f = shift @ARGV) {
 		s|\@CM_VERSION\@|$CM_VERSION|g;
 		s|\@INSTALL\@|$INSTALL|g;
 		s|\@INSTALL_OPTS\@|$INSTALL_OPTS|g;
+		s|\@MAILX\@|$MAILX|g;
 		s|\@PERL\@|$PERL|g;
 		s|\@action_mouseover\@|$action_mouseover|g;
 		s|\@add_tag_to_list_entries\@|$add_tag_to_list_entries|g;
@@ -134,6 +137,7 @@ while (my $f = shift @ARGV) {
 		s|\@file_extension\@|$file_extension|g;
 		s|\@findbin\@|$findbin|g;
 		s|\@gunzip\@|$gunzip|g;
+		s|\@hostname\@|$hostname|g;
 		s|\@ignore_missing_cmd_file\@|$ignore_missing_cmd_file|g;
 		s|\@illegal_chars\@|$illegal_chars|g;
 		s|\@indent_label\@|$indent_label|g;
