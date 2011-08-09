@@ -3387,19 +3387,19 @@ sub report_html {
 
 	#--- collapse of contents with javascript
 	if ($opt{set}{collapse} == 1) {
-		$output.="<SCRIPT LANGUAGE='JavaScript'> function Toggle(node) { if (node.nextSibling.style.display == 'none') { if (node.childNodes.length > 0) { node.childNodes.item(0).replaceData(0,1,String.fromCharCode(8211)) } node.nextSibling.style.display = 'block' } else { if (node.childNodes.length > 0) { node.childNodes.item(0).replaceData(0,1,'+') } node.nextSibling.style.display = 'none' } } </SCRIPT>";
+		$output.="<script language='JavaScript'> function Toggle(node) { if (node.nextSibling.style.display == 'none') { if (node.childNodes.length > 0) { node.childNodes.item(0).replaceData(0,1,String.fromCharCode(8211)) } node.nextSibling.style.display = 'block' } else { if (node.childNodes.length > 0) { node.childNodes.item(0).replaceData(0,1,'+') } node.nextSibling.style.display = 'none' } } </script>";
 		if (($cmds[0]{rc} == $OK && $ENV{"MULTI_PPID"} != $$) ||
 		    ($cmds[0]{rc} == $OK && $opt{set}{extinfo_in_status})) {
-			$output.="<A onClick='Toggle(this)' ".$opt{set}{style_plus_minus}.">+</A>";
-			$output.="<DIV style='display:none'>";
+			$output.="<a onclick='Toggle(this)' ".$opt{set}{style_plus_minus}.">+</a>";
+			$output.="<div style='display:none'>";
 		} else {
-			$output.="<A onClick='Toggle(this)' ".$opt{set}{style_plus_minus}.">&ndash;</A>";
-			$output.="<DIV style='display:block'>";
+			$output.="<a onclick='Toggle(this)' ".$opt{set}{style_plus_minus}.">&ndash;</a>";
+			$output.="<div style='display:block'>";
 		}
 	}
 
 	#--- loop over commands: report particular results for long plugin output
-	$output.="<div><table style='border-left-width:1px; border-right-width:0px; border-left-style:dotted' id=multi_table>";
+	$output.="<div><table style='border-left-width:1px; border-right-width:0px; border-left-style:dotted' id='multi_table'>";
 	for ($no=1;$no<=$#cmds;$no++) {
 		#--- skip eval
 		next if ($cmds[$no]{type} eq "eval");
@@ -3437,8 +3437,8 @@ sub report_html {
 			my $pnp_cgi=($opt{set}{pnp_version}=~/0.6/)?"graph":"index.php";
 			my $image_path=substitute_macros($opt{set}{image_path});
 			$output.=sprintf "<td nowrap>%s</td>",
-				"<A TARGET=\'$opt{set}{target}\' HREF=\'$pnp_url/$pnp_cgi?host=${hostname}&srv=$cmds[$no]{name}\'> " .
-				"<img src=\'$image_path/action.gif\' width=20 height=20 border=0 align=top alt='Show performance chart for $hostname / $cmds[$no]{plugin}'></A>";
+				"<a target=\'$opt{set}{target}\' href=\'$pnp_url/$pnp_cgi?host=${hostname}&srv=$cmds[$no]{name}\'> " .
+				"<img src=\'$image_path/action.gif\' width=20 height=20 border=0 align=top alt='Show performance chart for $hostname / $cmds[$no]{plugin}'></a>";
 		#--- Action url (mouseover version)
 		} elsif (($opt{set}{report} & ($DETAIL_PERFORMANCE | $DETAIL_PERFORMANCE_CLASSIC)) &&
 			($opt{set}{report} & $DETAIL_PERFORMANCE_LINK) &&
@@ -3470,8 +3470,8 @@ sub report_html {
 				$mouseover_url="$pnp_url/graph?host=${hostname}&srv=$cmds[$no]{name}$opt{set}{pnp_add2url}";
 			}
 			$output.=sprintf "<td nowrap>%s</td>",
-				"<A HREF=\'$mouseover_url\' TARGET=\'$opt{set}{target}\'>" .
-				"<img src=\'$image_path/action.gif\' width=20 height=20 border=0 align=top alt='Show performance chart for $hostname / $cmds[$no]{name}'></A>";
+				"<a href=\'$mouseover_url\' target=\'$opt{set}{target}\'>" .
+				"<img src=\'$image_path/action.gif\' width=20 height=20 border=0 align=top alt='Show performance chart for $hostname / $cmds[$no]{name}'></a>";
 		} else {
 			$output.="<td></td>";
 		}
@@ -3482,8 +3482,8 @@ sub report_html {
 			my $notes_url=substitute_macros($opt{set}{notes_url});
 			my $image_path=substitute_macros($opt{set}{image_path});
 			$output.=sprintf "<td nowrap>%s</td>",
-				"<A HREF=\'$notes_url\' TARGET=\'$opt{set}{target}\'>" .
-				"<img src=\'$image_path/notes.gif\' width=20 height=20 border=0 align=top alt='Show notes for $cmds[$no]{plugin}'></A>";
+				"<a href=\'$notes_url\' target=\'$opt{set}{target}\'>" .
+				"<img src=\'$image_path/notes.gif\' width=20 height=20 border=0 align=top alt='Show notes for $cmds[$no]{plugin}'></a>";
 		} else {
 			$output.="<td></td>";
 		}
@@ -3492,7 +3492,7 @@ sub report_html {
 			$output.=sprintf "<td>%s</td>", ($cmds[$no]{name}) ? $cmds[$no]{name} : "";
 		} else {
 			my $notes_url=substitute_macros($opt{set}{notes_url});
-			$output.=sprintf "<td><A HREF=\'$notes_url\' TARGET=\'$opt{set}{target}\'>%s</A></td>", ($cmds[$no]{name}) ? $cmds[$no]{name} : "";
+			$output.=sprintf "<td><a href=\'$notes_url\' target=\'$opt{set}{target}\'>%s</a></td>", ($cmds[$no]{name}) ? $cmds[$no]{name} : "";
 		}
 		DEBUG3("output:$cmds[$no]{output}");
 		DEBUG3("HTML check_multi recursive levels: " . scalar ($cmds[$no]{output}=~s/multi_table/multi_table/g));
@@ -3539,8 +3539,8 @@ sub report_html {
 	#--- print state evaluation if verbose flag set
 	if ($opt{set}{verbose} >= 2) {
 		if ($ENV{"MULTI_PPID"} != $$) {
-			$output.="<A onClick='Toggle(this)' style='".$opt{set}{style_plus_minus}."'>+</A>";
-			$output.="<DIV style='display:none'><h4>Child check overview</h4>";
+			$output.="<a onclick='Toggle(this)' style='".$opt{set}{style_plus_minus}."'>+</a>";
+			$output.="<div style='display:none'><h4>Child check overview</h4>";
 		}
 		my @colors=("silver","lightgrey");
 		my $flipflop=0;
@@ -3554,8 +3554,8 @@ sub report_html {
 
 		#--- print state settings and RC evaluation result
 		if ($ENV{"MULTI_PPID"} != $$) {
-			$output.="<A onClick='Toggle(this)' style='".$opt{set}{style_plus_minus}."'>+</A>";
-			$output.="<DIV style='display:none'><h4>State evaluation</h4>";
+			$output.="<a onclick='Toggle(this)' style='".$opt{set}{style_plus_minus}."'>+</a>";
+			$output.="<div style='display:none'><h4>State evaluation</h4>";
 		}
 		$flipflop=0;
 		$output.="<table><tr style='text-align:left' bgcolor='" . $colors[$flipflop] . "'><th>State</th><th>Expression</th><th>Evaluates to</th></tr>";
@@ -3572,8 +3572,8 @@ sub report_html {
 	if ($opt{set}{verbose} >=2) {
 
 		if ($ENV{"MULTI_PPID"} != $$) {
-			$output.="<A onClick='Toggle(this)' style='".$opt{set}{style_plus_minus}."'>+</A>";
-			$output.="<DIV style='display:none'><h4>Child check details</h4>";
+			$output.="<a onclick='Toggle(this)' style='".$opt{set}{style_plus_minus}."'>+</a>";
+			$output.="<div style='display:none'><h4>Child check details</h4>";
 		}
 		my @colors=("silver","lightgrey");
 		my $flipflop=0;
