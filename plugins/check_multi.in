@@ -3438,7 +3438,7 @@ sub report_html {
 			my $image_path=substitute_macros($opt{set}{image_path});
 			$output.=sprintf "<td nowrap>%s</td>",
 				"<a target=\'$opt{set}{target}\' href=\'$pnp_url/$pnp_cgi?host=${hostname}&srv=$cmds[$no]{name}\'> " .
-				"<img src=\'$image_path/action.gif\' width=20 height=20 border=0 align=top alt='Show performance chart for $hostname / $cmds[$no]{plugin}'></a>";
+				"<img src=\'$image_path/action.gif\' width=\'20\' height=\'20\' border=\'0\' align=top alt='Show performance chart for $hostname / $cmds[$no]{plugin}' /></a>";
 		#--- Action url (mouseover version)
 		} elsif (($opt{set}{report} & ($DETAIL_PERFORMANCE | $DETAIL_PERFORMANCE_CLASSIC)) &&
 			($opt{set}{report} & $DETAIL_PERFORMANCE_LINK) &&
@@ -3471,7 +3471,7 @@ sub report_html {
 			}
 			$output.=sprintf "<td nowrap>%s</td>",
 				"<a href=\'$mouseover_url\' target=\'$opt{set}{target}\'>" .
-				"<img src=\'$image_path/action.gif\' width=20 height=20 border=0 align=top alt='Show performance chart for $hostname / $cmds[$no]{name}'></a>";
+				"<img src=\'$image_path/action.gif\' width=\'20\' height=\'20\' border=\'0\' align=top alt='Show performance chart for $hostname / $cmds[$no]{name}' /></a>";
 		} else {
 			$output.="<td></td>";
 		}
@@ -3483,7 +3483,7 @@ sub report_html {
 			my $image_path=substitute_macros($opt{set}{image_path});
 			$output.=sprintf "<td nowrap>%s</td>",
 				"<a href=\'$notes_url\' target=\'$opt{set}{target}\'>" .
-				"<img src=\'$image_path/notes.gif\' width=20 height=20 border=0 align=top alt='Show notes for $cmds[$no]{plugin}'></a>";
+				"<img src=\'$image_path/notes.gif\' width=\'20\' height=\'20\' border=\'0\' align=top alt='Show notes for $cmds[$no]{plugin}' /></a>";
 		} else {
 			$output.="<td></td>";
 		}

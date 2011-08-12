@@ -298,7 +298,7 @@ is(
 like(
 	$result->output,
 	'/^OK - 1 plugins checked, 0 critical, 0 warning, 0 unknown, 1 ok\n'.
-	'<SCRIPT LANGUAGE=\'JavaScript\'> function Toggle.*PROCS OK: \d+ processes.*div>$/',
+	'<script language=\'JavaScript\'> function Toggle.*PROCS OK: \d+ processes.*div>$/',
 	"output correct"
 );
 #-------------------------------------------------------------------------------
