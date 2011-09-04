@@ -438,7 +438,7 @@ sub process_input {
 	foreach my $variable (sort keys(%{$opt{variable}})) {
 		#--- export MULTI_$variable
 		$ENV{"MULTI_".$variable}="$opt{variable}{$variable}";
-		#--- if existing, overwrite, otherwise set $opt}{set} variable
+		#--- if existing, overwrite, otherwise set $opt{set} variable
 		if (defined($opt{set}{$variable})) {
 			DEBUG3("overwriting \$opt{set}{$variable}:$opt{set}{$variable} with $opt{variable}{$variable}");
 		} else {
@@ -1162,14 +1162,18 @@ sub substitute_macros {
 		} elsif (defined($ENV{"${NAGIOS}_${var}"})) {
 			DEBUG3("2nd run - replacing env var \'${NAGIOS}_${var} with \'$ENV{\"${NAGIOS}_${var}\"}\'");
 			$input=~s/\$$var\$/$ENV{"${NAGIOS}_${var}"}/g;
-		#--- 3. objects.cache substitution
+		#--- 3. check for own variable $opt{set}{VAR}
+		} elsif (defined($opt{set}{"${var}"})) {
+			DEBUG3("2nd run - replacing var \'${var}\' with \'$opt{set}{${var}}\'");
+			$input=~s/\$$var\$/$opt{set}{var}/g;
+		#--- 4. objects.cache substitution
 		} elsif ($var=~/^[a-z_]+:[a-z_]+:[a-z_]+:/) {
 			DEBUG3("2nd run - checking objects_cache var \'$var\'");
 			my $query=objects_cache_query($var);
 			my $substitution=parse_objects_cache($opt{set}{objects_cache},$query);
 			DEBUG3("2nd run - replacing objects_cache var \'$var\' with \'$substitution\'");
 			$input=~s/\$$var\$/$substitution/g;
-		#--- 4. nothing to substitute
+		#--- 5. nothing to substitute
 		} elsif (! exists($ignored_expr{$var})) {
 			$ignored_expr{$var}++;
 			DEBUG3("2nd run - Neither \'${NAGIOS}_${var}\' nor \'MULTI_${var}\' are defined: \'$var\' will be ignored");
