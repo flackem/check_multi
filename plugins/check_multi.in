@@ -289,10 +289,9 @@ my %opt=(
 		# octal permissions of tmp_dir
 		tmp_dir_permissions => "@tmp_dir_permissions@",
 		# characters which are allowed in macros
-		#valid_macro_chars => '[A-Za-z0-9\s!#%&\(\)\\*+,-.:;<=>?@_{}~',
-		valid_macro_chars => 'A-Za-z0-9\s\.\@\-\_\:',
+		valid_macro_chars => 'A-Za-z0-9\.\@\-\_\:',
 		# characters which are allowed in tags
-		valid_tag_chars => 'A-Za-z0-9\s\-\.\@\_\:\$',
+		valid_tag_chars => 'A-Za-z0-9\-\.\@\_\:\$',
 		# verbosity, from 1 (less verbose) to 3 (much verbose)
 		verbose		=> @verbose@,
 		# elements to be added to XML structure
