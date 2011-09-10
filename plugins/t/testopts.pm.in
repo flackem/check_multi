@@ -29,8 +29,8 @@ sub get_testopts  {
 		feed_passive_dir_permissions	=> "1777",
 		feed_passive_dir		=> "'./tmp/feed_passive'",
 		file_extension			=> "cmd",
-		HOSTADDRESS			=> "127.0.0.1",
-		HOSTNAME			=> "localhost",
+		#HOSTADDRESS			=> "127.0.0.1",
+		#HOSTNAME			=> "localhost",
 		ignore_missing_cmd_file		=> 0,
 		illegal_chars			=> "",
 		image_path			=> "'/nagios/images'",

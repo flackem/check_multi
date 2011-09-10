@@ -99,7 +99,7 @@ is(
 like(
 	$result->output,
 	'/\d+ plugins checked.*\|check_multi\:\:check_multi\:\:plugins=\d+/s', 
-	"hosts output correct - passed"
+	"hosts all output correct - passed"
 );
 
 #-------------------------------------------------------------------------------
@@ -116,7 +116,7 @@ is(
 like(
 	$result->output,
 	'/OK - 1 plugins checked, 1 ok\n\[ 1\] host_localhost PING OK.*/s', 
-	"hosts output correct - passed"
+	"hosts localhost output correct - passed"
 );
 
 #-------------------------------------------------------------------------------
@@ -133,7 +133,7 @@ is(
 like(
 	$result->output,
 	'/OK - 1 plugins checked, 1 ok\n\[ 1\] localhost PING OK.*/s', 
-	"hosts output correct - passed"
+	"hosts localhost without prefix output correct - passed"
 );
 
 #-------------------------------------------------------------------------------
@@ -150,7 +150,7 @@ is(
 like(
 	$result->output,
 	'/CRITICAL - 1 plugins checked, 1 critical \(host_host.is.down\)\n\[ 1\] host_host.is.down CRITICAL.*/s', 
-	"hosts output correct - passed"
+	"hosts host.is.down output correct - passed"
 );
 
 #-------------------------------------------------------------------------------
@@ -167,14 +167,14 @@ is(
 like(
 	$result->output,
 	'/UNKNOWN - 1 plugins checked, 1 unknown \(host_host.is.unreachable\)\n\[ 1\] host_host.is.unreachable CRITICAL.*/s', 
-	"hosts output correct - passed"
+	"host host.is.unreachable output correct - passed"
 );
 
 #-------------------------------------------------------------------------------
 #--- host localhost with macro -------------------------------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi $testopts -x 'statusdat [ host ] = \$HOSTNAME\$'",
+	uc("@nagios_name@")."_HOSTNAME=localhost @PERL@ ../check_multi $testopts -x 'statusdat [ host ] = \$HOSTNAME\$'",
 );
 is(
 	$result->return_code, 
@@ -185,5 +185,5 @@ like(
 	$result->output,
 	#'/OK - 1 plugins checked, 1 ok\n\[ 1\] test_localhost.*PING OK.*\|check_multi\:\:check_multi\:\:plugins=1/s', 
 	'/OK - 1 plugins checked, 1 ok\n\[ 1\] host_localhost PING OK.*/s', 
-	"hosts output correct - passed"
+	"hosts localhost with macro output correct - passed"
 );

@@ -27,7 +27,7 @@ foreach my $plugin (@plugins) {
 	}
 }
 
-plan tests => 88;
+plan tests => 92;
 
 my $result;
 #my $testopts="-s dont_be_paranoid=1 -s tmp_dir=/tmp/check_multi";
@@ -390,6 +390,41 @@ like(
 	'/^OK - 2 plugins checked, 0 critical, 0 warning, 0 unknown, 2 ok\n'.
 	'\[ 1\] eins OK 1\n'.
 	'\[ 2\] zwei OK 2$/',
+	"output correct"
+);
+#-------------------------------------------------------------------------------
+#--- report option 128 with explicit host definition ---------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -s report=1+2+8+128 -s HOSTNAME=thishost -x 'command [ eins ] = echo \"1|eins=1\"'"
+);
+is(
+	$result->return_code, 
+	0, 
+	"report option 128 (pnp4nagios link) - RC0"
+);
+like(
+	$result->output,
+	'/^check_multi OK - 1 plugins checked, 1 ok\n'.
+	'.*pnp4nagios.*host=thishost/',
+	"output correct"
+);
+#-------------------------------------------------------------------------------
+#--- report option 128 with NAGIOS_HOSTNAME env variable -----------------------
+#-------------------------------------------------------------------------------
+$ENV{uc("@nagios_name@")."_HOSTNAME"}="thishost";
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -s report=1+2+8+128 -x 'command [ eins ] = echo \"1|eins=1\"'"
+);
+is(
+	$result->return_code, 
+	0, 
+	"report option 128 (pnp4nagios link) with env var NAGIOS_HOSTNAME - RC0"
+);
+like(
+	$result->output,
+	'/^check_multi OK - 1 plugins checked, 1 ok\n'.
+	'.*pnp4nagios.*host=thishost/',
 	"output correct"
 );
 #-------------------------------------------------------------------------------

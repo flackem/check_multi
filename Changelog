@@ -1,6 +1,7 @@
 
 ===== Changelog =====
 
+	* fixed hostname treatment for PNP urls
 	* spaces in tags and macros are not allowed any more
 	* contrib: notify_html_service.sh uses mime multipart elements
 	* fixed trimming blanks at line end with continuation lines

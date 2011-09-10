@@ -174,10 +174,6 @@ my %opt=(
 		# standard extension of check_multi command files,
 		# to be searched in directories
 		file_extension	=> "@file_extension@",
-		# hostaddress, either determined from Nagios environment, or specified
-		HOSTADDRESS	=> $ENV{"${NAGIOS}_HOSTADDRESS"},
-		# hostname, either determined from Nagios environment, or specified
-		HOSTNAME	=> $ENV{"${NAGIOS}_HOSTNAME"},
 		# if set, return UNKNOWN if command file is not found
 		ignore_missing_cmd_file => @ignore_missing_cmd_file@,
 		# characters to cleanup from command files
@@ -466,8 +462,10 @@ sub process_input {
 	} else {
 		$opt{set}{user}=getpwuid($<);
 		if (!$opt{set}{HOSTNAME}) {
-			$opt{set}{HOSTNAME}=`uname -n`;
-			chomp($opt{set}{HOSTNAME});
+			$opt{set}{HOSTNAME}=get_hostname("HOSTNAME");
+		}
+		if (!$opt{set}{HOSTADDRESS}) {
+			$opt{set}{HOSTADDRESS}=get_hostname("HOSTADDRESS");
 		}
 	}
 
@@ -659,11 +657,14 @@ sub process_input {
 
 	#--- report option - notes_url
 	if ($opt{set}{report} & $DETAIL_NOTES_LINK && !$opt{set}{notes_url}) {
-		if ($ENV{"${NAGIOS}_SERVICENOTESURL"}) {
+		if ($ENV{"MULTI_SERVICENOTESURL"}) {
+			$opt{set}{notes_url}=$ENV{"MULTI_SERVICENOTESURL"};
+			DEBUG3("notes report option set - taking SERVICENOTESURL ".$ENV{"MULTI_SERVICENOTESURL"});
+		} elsif ($ENV{"${NAGIOS}_SERVICENOTESURL"}) {
 			$opt{set}{notes_url}=$ENV{"${NAGIOS}_SERVICENOTESURL"};
 			DEBUG3("notes report option set - taking $Nagios SERVICENOTESURL ".$ENV{"${NAGIOS}_SERVICENOTESURL"});
 		} else {
-			add_error(0,"process_input: Notes link report option chosen, but no $Nagios environment variable SERVICENOTESURL found and no parameter notes_url specified");
+			add_error(0,"process_input: Notes link report option chosen, but no environment variable SERVICENOTESURL found and no parameter notes_url specified");
 		}
 	}
 
@@ -1175,7 +1176,7 @@ sub substitute_macros {
 		#--- 5. nothing to substitute
 		} elsif (! exists($ignored_expr{$var})) {
 			$ignored_expr{$var}++;
-			DEBUG3("2nd run - Neither \'${NAGIOS}_${var}\' nor \'MULTI_${var}\' are defined: \'$var\' will be ignored");
+			DEBUG3("2nd run - Neither \'${NAGIOS}_${var}\' nor \'MULTI_${var}\' nor \'-s ${var}=...\' are defined: \'$var\' will be ignored");
 		} else {
 			DEBUG1("2nd run - oops - something went wrong here: \'$var\' was not handled, but also not found in \%ignored_expr");
 		}
@@ -1376,6 +1377,37 @@ sub get_env_vars {
 		push @result, "$key=$ENV{$key}" if ($key=~/$pattern/);
 	}
 	@result;
+}
+
+#---
+#--- determines hostname from env vars or parameters
+#---
+sub get_hostname {
+	my ($trigger)=shift || "ALL";
+	my $hostname="";
+	my $origin="";
+	if ($trigger=~/HOSTNAME|ALL/ && $ENV{"MULTI_HOSTNAME"}) {
+		$hostname=$ENV{"MULTI_HOSTNAME"};
+		$origin="MULTI_HOSTNAME";
+	} elsif ($trigger=~/HOSTADDRESS|ALL/ && $ENV{"MULTI_HOSTADDRESS"}) {
+		$hostname=$ENV{"MULTI_HOSTADDRESS"};
+		$origin="MULTI_HOSTADDRESS";
+	} elsif ($trigger=~/HOSTNAME|ALL/ && $ENV{"${NAGIOS}_HOSTNAME"}) {
+		$hostname=$ENV{"${NAGIOS}_HOSTNAME"};
+		$origin="${NAGIOS}_HOSTNAME";
+	} elsif ($trigger=~/HOSTADDRESS|ALL/ && $ENV{"${NAGIOS}_HOSTADDRESS"}) {
+		$hostname=$ENV{"${NAGIOS}_HOSTADDRESS"};
+		$origin="${NAGIOS}_HOSTADDRESS";
+	} elsif ($trigger=~/HOSTNAME|ALL/) {
+		$hostname=`uname -n`;
+		$origin="uname -n";
+	} elsif ($trigger=~/HOSTADDRESS/) {
+		$hostname="127.0.0.1";
+		$origin="localhost";
+	}
+	chomp($hostname);
+	DEBUG3("Hostname is derived from $origin: $hostname");
+	return $hostname;
 }
 
 #---
@@ -3425,16 +3457,7 @@ sub report_html {
 			$cmds[$no]{process_perfdata} &&
 			!$opt{set}{action_mouseover}) {
 
-			#--- determine hostname
-			my $hostname="";
-			if ($ENV{MULTI_HOSTNAME}) {
-				$hostname=$ENV{MULTI_HOSTNAME};
-			} elsif ($ENV{MULTI_HOSTADDRESS}) {
-				$hostname=$ENV{MULTI_HOSTADDRESS};
-			} else {
-				$hostname=`uname -n`;
-			}
-			chomp($hostname);
+			my $hostname=get_hostname();
 			DEBUG3("hostname is $hostname");
 			my $pnp_url=substitute_macros($opt{set}{pnp_url});
 			my $pnp_cgi=($opt{set}{pnp_version}=~/0.6/)?"graph":"index.php";
@@ -3449,16 +3472,7 @@ sub report_html {
 			$cmds[$no]{process_perfdata} &&
 			$opt{set}{action_mouseover}) {
 
-			#--- determine hostname
-			my $hostname="";
-			if ($ENV{MULTI_HOSTNAME}) {
-				$hostname=$ENV{MULTI_HOSTNAME};
-			} elsif ($ENV{MULTI_HOSTADDRESS}) {
-				$hostname=$ENV{MULTI_HOSTADDRESS};
-			} else {
-				$hostname=`uname -n`;
-			}
-			chomp($hostname);
+			my $hostname=get_hostname();
 			DEBUG3("hostname is $hostname");
 			my $pnp_url=substitute_macros($opt{set}{pnp_url});
 			my $image_path=substitute_macros($opt{set}{image_path});
@@ -3996,16 +4010,7 @@ sub report_send_nsca {
 		add_error(0,"report_send_nsca: $opt{set}{send_nsca_cfg} not found or not readable for UID $>:$!");
 		return $sent;
 	}
-	#--- determine hostname
-	my $hostname="";
-	if ($ENV{MULTI_HOSTNAME}) {
-		$hostname=$ENV{MULTI_HOSTNAME};
-	} elsif ($ENV{MULTI_HOSTADDRESS}) {
-		$hostname=$ENV{MULTI_HOSTADDRESS};
-	} else {
-		$hostname=`uname -n`;
-	}
-	chomp($hostname);
+	my $hostname=get_hostname();
 	my $nsca_cmdline=
 		"$opt{set}{send_nsca} " .
 		"-H $opt{set}{send_nsca_srv} " .
@@ -4194,15 +4199,7 @@ sub report_send_gearman {
 	#return $sent;
 	#}
 	#--- determine hostname
-	my $hostname="";
-	if ($ENV{MULTI_HOSTNAME}) {
-		$hostname=$ENV{MULTI_HOSTNAME};
-	} elsif ($ENV{MULTI_HOSTADDRESS}) {
-		$hostname=$ENV{MULTI_HOSTADDRESS};
-	} else {
-		$hostname=`uname -n`;
-	}
-	chomp($hostname);
+	my $hostname=get_hostname();
 	my $keyoption=(-f $opt{set}{send_gearman_key}) ? "keyfile" : "key";
 	my $resultqueueoption=($opt{set}{send_gearman_resultqueue})? "--result_queue=" : "";
 	my $encryption=($opt{set}{send_gearman_encryption}) ? "yes" : "no";
