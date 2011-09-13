@@ -2339,6 +2339,7 @@ sub exec_command {
 			$cmds[$no]{rc}=$OK;
 		}
 		if ($@) {
+			chomp($@);
 			$cmds[$no]{output}.="[$@]";
 			$cmds[$no]{rc}=$WARNING;
 		} else {

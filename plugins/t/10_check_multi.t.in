@@ -302,20 +302,20 @@ like(
 	"output correct"
 );
 #-------------------------------------------------------------------------------
-#--- report option 4 -----------------------------------------------------------
+#--- report option 4 - eval error shown in [ brackets ] ------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi $testopts -s report=4 -x 'command [ procs ] = check_prox'"
+	"@PERL@ ../check_multi $testopts -s report=1+4 -x 'eeval [ error ] = \";'"
 );
 is(
 	$result->return_code, 
-	3, 
-	"report option 4 [error messages - stderr] - RC3"
+	1, 
+	"report option 4 [eval error message] - RC3"
 );
 like(
 	$result->output,
-	'/^UNKNOWN - 1 plugins checked, 0 critical, 0 warning, 1 unknown, 0 ok\n'.
-	'\[ 1\] procs  \[sh: check_prox: (command )?not found,RC was 127!\]$/',
+	'/^WARNING - 1 plugins checked, 1 warning \(error\)\n'.
+	'\[ 1\] error \[Can\'t find string terminator.*\]/',
 	"output correct"
 );
 #-------------------------------------------------------------------------------
