@@ -3951,6 +3951,13 @@ sub report_service_definition {
 		@tpl=<DEF>;
 		close DEF;
 	}
+	#--- bail out if HOSTNAME or SERVICEDESC are not set
+	if (! $opt{set}{HOSTNAME} || ! $opt{set}{SERVICEDESC}) {
+		print "#--- Error: need HOSTNAME and SERVICEDESC for service definition.\n";
+		print "#--- Please specify -s HOSTNAME=<hostname> -s SERVICEDESC=<service description>\n";
+		return 3;
+	}
+
 	my $output="";
 	for($no=1;$no<=$#cmds;$no++) {
 		next if ($cmds[$no]{type} eq "eval");
