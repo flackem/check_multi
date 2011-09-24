@@ -3952,10 +3952,12 @@ sub report_service_definition {
 		close DEF;
 	}
 	#--- bail out if HOSTNAME or SERVICEDESC are not set
-	if (! $opt{set}{HOSTNAME} || ! $opt{set}{SERVICEDESC}) {
-		print "#--- Error: need HOSTNAME and SERVICEDESC for service definition.\n";
-		print "#--- Please specify -s HOSTNAME=<hostname> -s SERVICEDESC=<service description>\n";
+	if (! $opt{set}{HOSTNAME} && ! $ENV{"${NAGIOS}_HOSTNAME"}) {
+		print "#--- Error: need HOSTNAME for service definition.\n";
+		print "#--- Please specify -s HOSTNAME=<hostname> or provide environment variable HOSTNAME\n";
 		return 3;
+	} else {
+		DEBUG4(sprintf "HOSTNANE specified: \'%s\'", ($opt{set}{HOSTNAME}) ? $opt{set}{HOSTNAME} : $ENV{"${NAGIOS}_HOSTNAME"});
 	}
 
 	my $output="";
