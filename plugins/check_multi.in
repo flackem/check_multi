@@ -3682,7 +3682,7 @@ sub report_xml {
 	 	$output.="," . join(",",@{$cmds[0]{parms}}) if (defined($cmds[0]{parms}));
 		$output=substitute_macros($output);
 		DEBUG4("output [ head ] = \'$output\'");
-		$xmlstr.=encode_xml(eval($output));
+		$xmlstr.=xml_encode(eval($output));
 	} else {
 		#--- print header line (2): summary for particular states
 		if ($opt{set}{report} & $DETAIL_LIST_FULL) {
