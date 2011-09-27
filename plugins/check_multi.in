@@ -1165,7 +1165,7 @@ sub substitute_macros {
 		#--- 3. check for own variable $opt{set}{VAR}
 		} elsif (defined($opt{set}{"${var}"})) {
 			DEBUG3("2nd run - replacing var \'${var}\' with \'$opt{set}{${var}}\'");
-			$input=~s/\$$var\$/$opt{set}{var}/g;
+			$input=~s/\$$var\$/$opt{set}{"${var}"}/g;
 		#--- 4. objects.cache substitution
 		} elsif ($var=~/^[a-z_]+:[a-z_]+:[a-z_]+:/) {
 			DEBUG3("2nd run - checking objects_cache var \'$var\'");
