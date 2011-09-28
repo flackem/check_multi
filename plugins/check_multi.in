@@ -3790,6 +3790,10 @@ sub report_perfdata {
 			next if (! $cmds[$no]{process_perfdata});
 
 			if (defined($cmds[$no]{performance})) {
+
+				#--- macros found? substitute
+				$cmds[$no]{performance}=substitute_macros($cmds[$no]{performance});
+
 				#--- prevent concatenation of multi-labels if called recursively
 				if ($cmds[$no]{performance}=~/check_multi::check_multi::(.*)/) {
 					$perftmp="${name}::check_multi::$1 ";
@@ -3849,6 +3853,9 @@ sub report_perfdata {
 
 			#--- suppress_perfdata set? ignore perfdata
 			next if (! $cmds[$no]{process_perfdata});
+
+			#--- macros found? substitute
+			$cmds[$no]{performance}=substitute_macros($cmds[$no]{performance});
 
 			if (defined($cmds[$no]{performance})) {
 				if (my $errstr=parse_perfdata($cmds[$no]{performance})) {
