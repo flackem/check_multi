@@ -1,8 +1,9 @@
 
 ===== Changelog =====
 
-	* provide error message if no HOSTNAME / SERVICEDESC are 
-	  specified for generation of passive service definitions
+	* inventory parameter: reduced XML for feed_passive
+	* provide error message if no HOSTNAME is specified 
+	  for generation of passive service definitions
 	* fixed hostname treatment for PNP urls
 	* spaces in tags and macros are not allowed any more
 	* contrib: notify_html_service.sh uses mime multipart elements

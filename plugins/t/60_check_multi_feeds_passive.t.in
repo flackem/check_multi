@@ -31,12 +31,45 @@ unless (eval "require XML::Simple;1") {
 }
 
 
-plan tests => 2;
+plan tests => 6;
 
 my $result;
 #my $testopts="-s dont_be_paranoid=1";
 my $testopts=testopts::get_testopts;
 
+#-------------------------------------------------------------------------------
+#--- check_multi with inventory ------------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+        "/usr/bin/perl ../check_multi $testopts -x 'command [ eins ] = echo eins' --inventory",
+);
+is(
+	$result->return_code,
+	0,
+	"inventory output - RC0"
+);
+like(
+	$result->output,
+	'/<check_multi>\n\t<CHILD>\n\t\t<no>0<\/no>\n\t\t<name><\/name>\n\t\t<rc>0<\/rc>\n\t\t<type>head<\/type>\n\t<\/CHILD>\n\t<CHILD>\n\t\t<no>1<\/no>\n\t\t<name>eins<\/name>\n\t\t<rc>0<\/rc>\n\t\t<type>command<\/type>\n\t<\/CHILD>\n<\/check_multi>/',
+	"output correct"
+);
+
+#-------------------------------------------------------------------------------
+#--- check_multi with inventory creates config ---------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -x 'command [ eins ] = echo eins' --inventory | @PERL@ ../check_multi -f - $testopts -s report=2048",
+);
+is(
+	$result->return_code, 
+	3, 
+	"inventory creates config - RC0 - passed"
+);
+like(
+	$result->output,
+	'/define service.*service_description eins.*host_name localhost/s',
+	"output correct - passed"
+);
 #-------------------------------------------------------------------------------
 #--- check_multi feeds check_multi ---------------------------------------------
 #-------------------------------------------------------------------------------

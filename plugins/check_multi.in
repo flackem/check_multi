@@ -243,19 +243,16 @@ my %opt=(
 		# name of the file which contains template for '-r 2048'
 		service_definition_template => "@service_definition_template@",
 		# service definition template default
-		#service_definition_template_default => "@service_definition_template_default@",
 		service_definition_template_default => 
-			"# service \'\$SERVICEDESC\$\' for host \'\$HOSTNAME\$\'\n#\n".
-			"# This definition was automatically created by check_multi,\n".
-			"# so please don't edit manually.\n\n".
+			"# service \'\$THIS_NAME\$\' for host \'\$HOSTNAME\$\'\n".
 			"define service {\n".
-			" service_description \$SERVICEDESC\$\n".
+			" service_description \$THIS_NAME\$\n".
 			" host_name \$HOSTNAME\$\n".
 			" passive_checks_enabled 1\n".
 			" active_checks_enabled 0\n".
 			" check_command check_dummy!3 'Error: passive check has been called actively - check your config'\n".
 			" use local-service\n".
-			"}\n",
+			"}\n\n",
 		# signals to cover
 		signals		=> ["DUMMY","INT","TERM","QUIT","HUP","__WARN__"],
 		# which RC if caught signal
@@ -386,6 +383,7 @@ sub process_input {
 		"v|verbose:+"	=> \$opt{set}{verbose},
 		"V|version"	=> \$opt{version},
 		"x|execute=s"	=> \@{$opt{execute}},
+		"y|inventory:+"	=> \$opt{set}{inventory},
 		"o|O|ok=s"	=> \$cmds[0]{state}[0],
 		"w|W|warning=s"	=> \$cmds[0]{state}[1],
 		"c|C|critical=s"=> \$cmds[0]{state}[2],
@@ -820,6 +818,7 @@ Common options:
 Extended command line - command file options also available on command line:
 -x, --execute "command [ tag ] = check_xyz"
 -i, --instant "tag"
+-y, --inventory
 -w, --warning  <expression>
 -c, --critical <expression>
 -u, --unknown  <expression>
@@ -3731,6 +3730,49 @@ sub report_xml {
 }
 
 #---
+#--- inventory report in XML
+#---
+sub report_inventory {
+
+	#--- xml header
+	my $xmlstr="<?xml version=\"1.0\"?>\n";
+	$xmlstr.="<?xml-stylesheet type=\"text/xsl\" href=\"extinfo.xsl\"?>\n";
+	$xmlstr.="<div id=\"check_multi_xml\" style='display:none'>\n";
+
+	#--- begin with cmds[0] - parent
+	my $no=0;
+	$xmlstr.="<$MYSELF>\n";
+	$xmlstr.="\t<CHILD>\n";
+	$xmlstr.="\t\t<no>$no</no>\n";
+	foreach my $token (sort keys %{$cmds[$no]}) {
+		next if ($token!~/^name$|^rc$|^type$/);
+		if (defined($cmds[$no]{$token})) {
+			$xmlstr.=sprintf "\t\t<%s>%s</%s>\n",$token,xml_encode($cmds[$no]{$token}),$token;
+		}
+	}
+	$xmlstr.="\t</CHILD>\n";
+
+	#--- loop over child checks
+	for ($no=1;$no<=$#cmds;$no++) {
+		$cmds[$no]{rc}=$OK;
+		next if (!$cmds[$no]{displayed});
+		$xmlstr.="\t<CHILD>\n";
+		$xmlstr.="\t\t<no>$no</no>\n";
+		foreach my $token (sort keys %{$cmds[$no]}) {
+			next if ($token!~/^name$|^rc$|^type$/);
+			if (defined($cmds[$no]{$token})) {
+				$xmlstr.=sprintf "\t\t<%s>%s</%s>\n",$token,xml_encode($cmds[$no]{$token}),$token;
+			} else {
+				add_error($no,"report_xml: XML element $token not found");
+			}
+		}
+		$xmlstr.="\t</CHILD>\n";
+	}
+	$xmlstr.="</$MYSELF>\n</div>\n";
+	print $xmlstr;
+}
+
+#---
 #--- helper routine which encodes several XML specific characters
 #---
 sub xml_encode {
@@ -3947,24 +3989,35 @@ sub parse_perfdata {
 #---    mostly needed for 'check_multi_feeds_passive'
 sub report_service_definition {
 	my @tpl="";
-	#--- use template for service definition
-	if (! -f "$opt{set}{service_definition_template}") {
-		print "#--- Error: service definition template file \'$opt{set}{service_definition_template}\' not found\n";
-		return 1;
-	} elsif (!open(DEF, $opt{set}{service_definition_template})) {
-		print "#--- Error: cannot open $opt{set}{service_definition_template}:$?\n";
-		return 2;
+	#--- search for template file and read contents
+	if (defined($opt{set}{service_definition_template}) && $opt{set}{service_definition_template}) {
+		if (-f "$opt{set}{service_definition_template}") {
+			if (open(DEF, $opt{set}{service_definition_template})) {
+				@tpl=<DEF>;
+				close DEF;
+			} else {
+				print "#--- Error: cannot open $opt{set}{service_definition_template}:$?\n";
+				return 2;
+			}
+		} else {
+			print "#--- Error: service definition template file \'$opt{set}{service_definition_template}\' not found\n";
+			return 1;
+		}
+	#--- check_for default template variable
+	} elsif (defined($opt{set}{service_definition_template_default})) {
+		@tpl=$opt{set}{service_definition_template_default};
+	#--- bail out with error message
 	} else {
-		@tpl=<DEF>;
-		close DEF;
+		print "#--- Error: variable \'service_definition_template_default\' not defined\n";
+		return 1;
 	}
-	#--- bail out if HOSTNAME or SERVICEDESC are not set
+	#--- bail out if HOSTNAME are not set
 	if (! $opt{set}{HOSTNAME} && ! $ENV{"${NAGIOS}_HOSTNAME"}) {
 		print "#--- Error: need HOSTNAME for service definition.\n";
 		print "#--- Please specify -s HOSTNAME=<hostname> or provide environment variable HOSTNAME\n";
 		return 3;
 	} else {
-		DEBUG4(sprintf "HOSTNANE specified: \'%s\'", ($opt{set}{HOSTNAME}) ? $opt{set}{HOSTNAME} : $ENV{"${NAGIOS}_HOSTNAME"});
+		DEBUG4(sprintf "HOSTNAME specified: \'%s\'", ($opt{set}{HOSTNAME}) ? $opt{set}{HOSTNAME} : $ENV{"${NAGIOS}_HOSTNAME"});
 	}
 
 	my $output="";
@@ -4347,6 +4400,12 @@ if ($opt{set}{instant}) {
 	#--- instant tag not found: bail out with error
 	print "UNKNOWN - tag \'$opt{set}{instant}\' not found for instant execution\n";
 	exit $UNKNOWN;
+}
+
+#--- inventory defined? then do it right now
+if ($opt{set}{inventory}) {
+	report_inventory();
+	exit $OK;
 }
 
 #--- loop over commands in order of config file
