@@ -1,4 +1,4 @@
-#!@client_perl@ -w
+#!@client_perl@
 # nagios: -epn
 # icinga: -epn
 #
@@ -21,6 +21,7 @@
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #
 use strict;
+use warnings;
 use Getopt::Long qw(:config no_ignore_case bundling);
 use vars qw(
 $MYSELF @cmds %opt $returncode %def %rc $no $VERSION $tmp_stdout $tmp_stderr $xml $check_multi
