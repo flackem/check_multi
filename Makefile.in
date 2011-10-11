@@ -85,6 +85,10 @@ contrib:
 config:
 	@ cd $(SRC_CONFIG)  && $(MAKE) -e $@
 
+plugins:
+	@ cd $(SRC_PLUGINS) && $(MAKE) -e $@
+
+
 test-all:
 	@ cd $(SRC_PL_TEST)  && $(MAKE) -e $@
 test:
@@ -124,7 +128,11 @@ install-contrib:
 install-config:
 	@ cd $(SRC_CONFIG) && $(MAKE) -e $@
 
-fullinstall: install install-contrib install-config
+install-plugins:
+	@ cd $(SRC_PLUGINS) && $(MAKE) -e $@
+
+
+fullinstall: install-plugins install-contrib install-config
 
 #---
 #--- cleanup sections

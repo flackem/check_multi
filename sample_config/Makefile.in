@@ -10,6 +10,7 @@ INSTALL=@INSTALL@
 INSTALL_OPTS=@INSTALL_OPTS@
 
 all: 
+config:
 	echo "make install-config clean distclean"
 
 clean:
