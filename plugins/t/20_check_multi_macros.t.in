@@ -28,7 +28,7 @@ foreach my $plugin (@plugins) {
 	}
 }
 
-plan tests => 16;
+plan tests => 20;
 
 my $result;
 my $testopts=testopts::get_testopts;
@@ -99,6 +99,40 @@ like(
 	$result->output,
 	'/^OK - 1 plugins checked, 1 ok\n'.
 	'\[ 1\] test_var has a test value$/',
+	"output correct"
+);
+#-------------------------------------------------------------------------------
+#--- macro which does not exist (complain_unknown_macros = 1) ------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -s report=1+4 -x 'command [ test_var ] = echo not there \$does_not_exist\$'",
+);
+is(
+	$result->return_code, 
+	0, 
+	"non existing macro - complaining - RC0"
+);
+like(
+	$result->output,
+	'/^OK - 1 plugins checked, 1 ok\n'.
+	'\[ 1\] test_var not there \[Macro \$does_not_exist\$ not found\]$/',
+	"output correct"
+);
+#-------------------------------------------------------------------------------
+#--- macro which does not exist (complain_unknown_macros = 0) ------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -s report=1+4 -x 'command [ test_var ] = echo not there \$does_not_exist\$' -s complain_unknown_macros=0",
+);
+is(
+	$result->return_code, 
+	0, 
+	"non existing macro - complaining - RC0"
+);
+like(
+	$result->output,
+	'/^OK - 1 plugins checked, 1 ok\n'.
+	'\[ 1\] test_var not there$/',
 	"output correct"
 );
 #-------------------------------------------------------------------------------

@@ -30,6 +30,7 @@ my $nagios_name="@nagios_name@";
 my $cancel_before_global_timeout="@cancel_before_global_timeout@";
 my $child_timeout="@child_timeout@";
 my $collapse=@collapse@;
+my $complain_unknown_macros="@complain_unknown_macros@";
 my $cmdfile_update_interval="@cmdfile_update_interval@";
 my $configure_args="@ac_configure_args@";
 my $cumulate_ignore_zero=@cumulate_ignore_zero@;
@@ -155,6 +156,7 @@ while (my $f = shift @ARGV) {
 		s|\@pnp_url\@|$pnp_url|g;
 		s|\@pnp_add2url\@|$pnp_add2url|g;
 		s|\@pnp_version\@|$pnp_version|g;
+		s|\@complain_unknown_macros\@|$complain_unknown_macros|g;
 		s|\@report\@|$report|g;
 		s|\@report_inherit_mask\@|$report_inherit_mask|g;
 		s|\@loose_perfdata\@|$loose_perfdata|g;

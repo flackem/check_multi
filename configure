@@ -606,6 +606,7 @@ empty_output_is_unknown
 cumulate_ignore_zero
 config_dir
 contrib_dir
+complain_unknown_macros
 collapse
 cmdfile_update_interval
 child_timeout
@@ -686,6 +687,7 @@ with_cancel_before_global_timeout
 with_client_perl
 with_cmdfile_update_interval
 with_collapse
+with_complain_unknown_macros
 with_checkresults_dir
 with_child_interval
 with_config_dir
@@ -1361,6 +1363,7 @@ detail settings:
   --with-client_perl=<perl path>           sets perl cmdline / path (e.g. #!/usr/bin/perl)
   --with-cmdfile_update_interval=<seconds> interval to update command file(s) (default:86400, one day)
   --with-collapse=<0|1>                    HTML javascript tree collapse option (default:1)
+  --with-complain_unknown_macros=<0|1>       remove unknown macros silently, otherwise complain (default:1)
   --with-checkresults_dir=<path>           directory for Nagios checkresults (default:${localstatedir}/spool/checkresults)
   --with-child_interval=<time>             time between child checks, fractions of seconds allowed (default:0.0)
   --with-config_dir=<path>                 directory for check_multi configuration files (default:${sysconfdir}/check_multi)
@@ -2410,6 +2413,14 @@ else
 fi
 
 
+# Check whether --with-complain_unknown_macros was given.
+if test "${with_complain_unknown_macros+set}" = set; then :
+  withval=$with_complain_unknown_macros; complain_unknown_macros=$withval
+else
+  complain_unknown_macros=1
+fi
+
+
 # Check whether --with-checkresults_dir was given.
 if test "${with_checkresults_dir+set}" = set; then :
   withval=$with_checkresults_dir; checkresults_dir=$withval
@@ -2830,6 +2841,7 @@ fi
 
 
 #--- substitutions
+
 
 
 

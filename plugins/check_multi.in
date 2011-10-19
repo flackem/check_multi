@@ -147,6 +147,8 @@ my %opt=(
 		cmdfile_update_interval	=> @cmdfile_update_interval@,
 		# should check_multi collapse child check_multi checks per default?
 		collapse	=> @collapse@,
+		# complain about undefined macros instead of only silently removing
+		complain_unknown_macros => @complain_unknown_macros@,
 		# path to check_multi config directory
 		config_dir	=> "@config_dir@",
 		# how many rows should be displayed for cumulate statement?
@@ -873,6 +875,7 @@ Set options:
    child_interval=<time> - time in seconds to sleep between child_checks, may be fraction of seconds (default:$opt{set}{child_interval})
    cmdfile_update_interval=<seconds> - update config file (if HTTP/FTP/...), default:$opt{set}{cmdfile_update_interval}
    collapse=<0|1> - should check_multi collapse child check_multi checks? default:$opt{set}{collapse}
+   complain_unknown_macros=<0|1> - flag defines if check_multi shall complain about undefined macros, default:$opt{set}{complain_unknown_macros}
    config_dir=</path/to/config_dir> - path to check_multi config directory, default:$opt{set}{config_dir}
    cumulate_max_rows=<N> - number of rows which cumulate [ TAG ] should display
    cumulate_ignore_zero=<0|1> - should cumulate ignore zero values? default:$opt{set}{cumulate_ignore_zero}
@@ -1149,7 +1152,6 @@ sub substitute_macros {
 	#--- eval statements with '$' are interpreted as variables. To include
 	#--- the last '$' as potential character of the new macro, the backtrack
 	#--- operator ?= is used.
-	my %ignored_expr=();
 	while ($input=~/\$([$opt{set}{valid_macro_chars}]+)(?=\$)/g) {
 		my $var=$1;
 
@@ -1173,12 +1175,10 @@ sub substitute_macros {
 			my $substitution=parse_objects_cache($opt{set}{objects_cache},$query);
 			DEBUG3("2nd run - replacing objects_cache var \'$var\' with \'$substitution\'");
 			$input=~s/\$$var\$/$substitution/g;
-		#--- 5. nothing to substitute
-		} elsif (! exists($ignored_expr{$var})) {
-			$ignored_expr{$var}++;
-			DEBUG3("2nd run - Neither \'${NAGIOS}_${var}\' nor \'MULTI_${var}\' nor \'-s ${var}=...\' are defined: \'$var\' will be ignored");
 		} else {
-			DEBUG1("2nd run - oops - something went wrong here: \'$var\' was not handled, but also not found in \%ignored_expr");
+			DEBUG1("2nd run - \'$var\' was not handled - remove var");
+			add_error($no, "Macro \$$var\$ not found") if ($opt{set}{complain_unknown_macros});
+			$input=~s/\$$var\$//g;
 		}
 	}
 	DEBUG3("expression \'$input\' after 2nd run: MULTI/NAGIOS/objects.cache substitution");
@@ -1656,7 +1656,6 @@ sub parse_lines {
 
 			#--- macros?
 			$name=substitute_macros($name);
-			$cmd=substitute_macros($cmd);
 
 			#--- still macro '$' in name? then macro was not substituted
 			if ($name=~/\$([^\$]+)\$/) {
@@ -2035,6 +2034,8 @@ sub parse_header {
 	#--- format: 'statusdat [ tag[::plugin] ] = host'
 	#--- format: 'statusdat [ tag[::plugin] ] = host, service'
 	} elsif ($type eq "statusdat") {
+
+		$cmd=substitute_macros($cmd);
 
 		#--- statusdat: split host and service from command, format: host:service
 		if ($cmd=~/\s*([^:]*)\s*\:\s*(.*)\s*/) {

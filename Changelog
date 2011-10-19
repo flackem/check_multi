@@ -1,6 +1,7 @@
 
 ===== Changelog =====
 
+	* fixed macro handling: complain about non-existing macros and remove
 	* inventory parameter: reduced XML for feed_passive
 	* provide error message if no HOSTNAME is specified 
 	  for generation of passive service definitions
