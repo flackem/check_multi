@@ -2054,7 +2054,7 @@ sub parse_header {
 
 		$cmd=substitute_macros($cmd);
 
-		#--- statusdat: split host and service from command, format: host:service
+		#--- statusdat service: split host and service from command, format: host:service
 		if ($cmd=~/\s*([^:]*)\s*\:\s*(.*)\s*/) {
 			DEBUG4("host:service format - expanding $1:$2");
 			my @result=expand_status_dat_service($opt{set}{status_dat}, $1, $2);
@@ -2078,23 +2078,36 @@ sub parse_header {
 				$cmds[$i]{warning}="";
 				$cmds[$i]{critical}="";
 				$cmds[$i]{unknown}="";
-				$cmds[$i]{rc}=$OK;
 				$cmds[$i]{displayed}=1;
 				$cmds[$i]{output}="";
 				$cmds[$i]{error}=[];
 				$cmds[$i]{runtime}=0;
+				$cmds[$i]{rc}=$OK;
 				$cmds[$i]{host}=shift(@result);
 				$cmds[$i]{service}=shift(@result);
+				$cmds[$i]{performance}="";
+				$cmds[$i]{pplugin}="";
+				$cmds[$i]{plugin}="statusdat";
 				if ($cmds[$i]{host} eq "-1") {
 					$cmds[$i]{host}="UNKNOWN";
 					$cmds[$i]{service}="UNKNOWN";
 				}
 				$cmds[$i]{name}=($opt{set}{add_tag_to_list_entries})?"${name}_":"";
 				$cmds[$i]{name}.="$cmds[$i]{host}_$cmds[$i]{service}";
+				if ($opt{set}{suppress_perfdata} &&
+					$opt{set}{suppress_perfdata}=~/\b$name\b/i) {
+					$cmds[$i]{process_perfdata}=0;
+					DEBUG2("perfdata of [ $name ] will be suppressed");
+				} else {
+					$cmds[$i]{process_perfdata}=1;
+				}
 				DEBUG4("added host:$cmds[$i]{host} / service:$cmds[$i]{service}");
+				if (module("Data::Dumper")) {
+					DEBUG4(Dumper($cmds[$i]));
+				}
 				$i++;
 			}
-		#--- statusdat: split host from command, format: host
+		#--- statusdat host: split host from command, format: host
 		} elsif ($cmd=~/\s*([^:]*)\s*/) {
 			DEBUG4("host format - expanding $1");
 			my @result=expand_status_dat_host($opt{set}{status_dat}, $1);
@@ -2124,11 +2137,21 @@ sub parse_header {
 				$cmds[$i]{error}=[];
 				$cmds[$i]{runtime}=0;
 				$cmds[$i]{host}=shift(@result);
+				$cmds[$i]{performance}="";
+				$cmds[$i]{pplugin}="";
+				$cmds[$i]{plugin}="statusdat";
 				if ($cmds[$i]{host} eq "-1") {
 					$cmds[$i]{host}="UNKNOWN";
 				}
 				$cmds[$i]{name}=($opt{set}{add_tag_to_list_entries})?"${name}_":"";
 				$cmds[$i]{name}.="$cmds[$i]{host}";
+				if ($opt{set}{suppress_perfdata} &&
+					$opt{set}{suppress_perfdata}=~/\b$name\b/i) {
+					$cmds[$i]{process_perfdata}=0;
+					DEBUG2("perfdata of [ $name ] will be suppressed");
+				} else {
+					$cmds[$i]{process_perfdata}=1;
+				}
 				DEBUG4("added host:$cmds[$i]{host}");
 				$i++;
 			}
@@ -2405,14 +2428,16 @@ sub exec_command {
 		set_alarm($no,$opt{set}{timeout});
 		#--- service check
 		if (defined($cmds[$no]{service})) {
-			($cmds[$no]{rc},$cmds[$no]{output})=get_status_dat_service($opt{set}{status_dat},$cmds[$no]{host},$cmds[$no]{service});
+			($cmds[$no]{rc}, $cmds[$no]{output}, $cmds[$no]{plugin}, $cmds[$no]{performance})=
+				get_status_dat_service($opt{set}{status_dat},$cmds[$no]{host},$cmds[$no]{service});
 			if ($cmds[$no]{rc} == -1) {
 				add_error($no,"statusdat $cmds[$no]{name}: cannot find service \'$cmds[$no]{service}\' on host \'$cmds[$no]{host}\' in \'$opt{set}{status_dat}\'");
 				$cmds[$no]{rc}=$UNKNOWN;
 			}
 		#--- host check
 		} else {
-			($cmds[$no]{rc},$cmds[$no]{output})=get_status_dat_host($opt{set}{status_dat},$cmds[$no]{host});
+			($cmds[$no]{rc}, $cmds[$no]{output}, $cmds[$no]{plugin}, $cmds[$no]{performance})=
+				get_status_dat_host($opt{set}{status_dat},$cmds[$no]{host});
 			if ($cmds[$no]{rc} == -1) {
 				add_error($no,"statusdat $cmds[$no]{name}: cannot find host \'$cmds[$no]{host}\' in \'$opt{set}{status_dat}\'");
 				$cmds[$no]{rc}=$UNKNOWN;
@@ -2574,7 +2599,9 @@ sub get_status_dat_host {
 		return (
 			$status_dat->{hoststatus}->{$host_name}->{last_hard_state},
 			$status_dat->{hoststatus}->{$host_name}->{plugin_output}."\n".
-			$status_dat->{hoststatus}->{$host_name}->{long_plugin_output}
+			$status_dat->{hoststatus}->{$host_name}->{long_plugin_output},
+			$status_dat->{hoststatus}->{$host_name}->{check_command},
+			$status_dat->{hoststatus}->{$host_name}->{performance_data},
 		);
 	}
 }
@@ -2653,7 +2680,9 @@ sub get_status_dat_service {
 			($status_dat->{servicestatus}->{$host_name}->{$service_description}->{long_plugin_output})
 				? $status_dat->{servicestatus}->{$host_name}->{$service_description}->{plugin_output}."\n".
 				  $status_dat->{servicestatus}->{$host_name}->{$service_description}->{long_plugin_output}
-				: $status_dat->{servicestatus}->{$host_name}->{$service_description}->{plugin_output}
+				: $status_dat->{servicestatus}->{$host_name}->{$service_description}->{plugin_output},
+			$status_dat->{servicestatus}->{$host_name}->{$service_description}->{check_command},
+			$status_dat->{servicestatus}->{$host_name}->{$service_description}->{performance_data},
 		);
 	}
 }
@@ -2721,75 +2750,83 @@ sub read_status_dat {
 	while (<DAT>) {
 		#--- read hosts
 		if (/^hoststatus\s+\{/) {
-			my $plugin_output="";
-			my $long_plugin_output="";
-			my $last_hard_state=0;
-			my $host_name="";
-
+			my %r=();
 			while (<DAT>) {
-				NEXT: if (/\thost_name=(.+)$/) {
-					$host_name=$1;
-				} elsif (/\tlast_hard_state=(.*)/) {
-					$last_hard_state=$1;
-				} elsif (/\tplugin_output=(.*)/) {
-					$plugin_output=$1;
-				} elsif (/\tlong_plugin_output=(.*)/) {
-					chomp($long_plugin_output=$1);
+				NEXT: if (/^\thost_name=(.+)$/) {
+					$r{host_name}=$1;
+				} elsif (/^\tcheck_command=([^!]+)/) {
+					$r{check_command}=$1;
+					chomp($r{check_command});
+				} elsif (/^\tlast_hard_state=(.*)/) {
+					$r{last_hard_state}=$1;
+				} elsif (/^\tplugin_output=(.*)/) {
+					$r{plugin_output}=$1;
+				} elsif (/^\tlong_plugin_output=(.*)/) {
+					chomp($r{long_plugin_output}=$1);
 					while (<DAT>) {
 						if (/^\t/) {
 							goto NEXT;
 						} else {
 							chomp;
-							$long_plugin_output.="\n$_";
+							$r{long_plugin_output}.="\n$_";
 						}
 					}
+				} elsif (/^\tperformance_data=(.*)/) {
+					$r{performance_data}=$1;
 				} elsif (/^\t\}$/) {
-					$status_dat->{hoststatus}->{$host_name}->{last_hard_state}=$last_hard_state;
-					$status_dat->{hoststatus}->{$host_name}->{plugin_output}=$plugin_output;
-					$status_dat->{hoststatus}->{$host_name}->{long_plugin_output}=$long_plugin_output;
+					$status_dat->{hoststatus}->{"$r{host_name}"}->{check_command}=$r{check_command};
+					$status_dat->{hoststatus}->{"$r{host_name}"}->{last_hard_state}=$r{last_hard_state};
+					$status_dat->{hoststatus}->{"$r{host_name}"}->{long_plugin_output}=$r{long_plugin_output};
+					$status_dat->{hoststatus}->{"$r{host_name}"}->{performance_data}=$r{performance_data};
+					$status_dat->{hoststatus}->{"$r{host_name}"}->{plugin_output}=$r{plugin_output};
 					last;
 				}
 			}
-		#--- read only services
+		#--- read services
 		} elsif (/^servicestatus\s+\{/) {
-			my $plugin_output="";
-			my $long_plugin_output="";
-			my $last_hard_state=0;
-			my $host_name="";
-			my $service_description="";
-
+			my %r=();
 			while (<DAT>) {
-				NEXT: if (/\thost_name=(.+)$/) {
-					$host_name=$1;
-				} elsif (/\tservice_description=(.+)$/) {
-					$service_description=$1;
-				} elsif (/\tlast_hard_state=(.*)/) {
-					$last_hard_state=$1;
-				} elsif (/\tplugin_output=(.*)/) {
-					$plugin_output=$1;
-				} elsif (/\tlong_plugin_output=(.*)/) {
-					chomp($long_plugin_output=$1);
+				NEXT: if (/^\thost_name=(.+)$/) {
+					$r{host_name}=$1;
+				} elsif (/^\tservice_description=(.+)$/) {
+					$r{service_description}=$1;
+				} elsif (/^\tcheck_command=([^!]+)/) {
+					$r{check_command}=$1;
+					chomp($r{check_command});
+				} elsif (/^\tlast_hard_state=(.*)/) {
+					$r{last_hard_state}=$1;
+				} elsif (/^\tplugin_output=(.*)/) {
+					$r{plugin_output}=$1;
+				} elsif (/^\tlong_plugin_output=(.*)/) {
+					chomp($r{long_plugin_output}=$1);
 					while (<DAT>) {
 						if (/^\t/) {
 							goto NEXT;
 						} else {
 							chomp;
-							$long_plugin_output.="\n$_";
+							$r{long_plugin_output}.="\n$_";
 						}
 					}
+				} elsif (/^\tperformance_data=(.*)/) {
+					$r{performance_data}=$1;
 				} elsif (/^\t\}$/) {
-					$status_dat->{servicestatus}->{$host_name}->{$service_description}->{last_hard_state}=$last_hard_state;
-					$status_dat->{servicestatus}->{$host_name}->{$service_description}->{plugin_output}=$plugin_output;
-					$status_dat->{servicestatus}->{$host_name}->{$service_description}->{long_plugin_output}=$long_plugin_output;
+					$status_dat->{servicestatus}->{"$r{host_name}"}->{"$r{service_description}"}->{check_command}=$r{check_command};
+					$status_dat->{servicestatus}->{"$r{host_name}"}->{"$r{service_description}"}->{last_hard_state}=$r{last_hard_state};
+					$status_dat->{servicestatus}->{"$r{host_name}"}->{"$r{service_description}"}->{performance_data}=$r{performance_data};
+					$status_dat->{servicestatus}->{"$r{host_name}"}->{"$r{service_description}"}->{plugin_output}=$r{plugin_output};
+					$status_dat->{servicestatus}->{"$r{host_name}"}->{"$r{service_description}"}->{long_plugin_output}=$r{long_plugin_output};
 					last;
 				}
 			}
 		#--- skip other records
-		} else {
-			next;
+		} elsif (/^(\S+)/) {
+			DEBUG4("skipping $1");
 		}
 	}
 	close DAT;
+	if (module("Data::Dumper")) {
+		DEBUG4(Dumper($status_dat));
+	}
 	return $status_dat;
 }
 
