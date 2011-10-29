@@ -1,12 +1,12 @@
 
 ===== Changelog =====
 
+	* fixed perfdata column for livestatus command
 	* fixed proper encoding of XML state elements
 	* numerical tags are not allowed
 	* fixed macro handling: complain about non-existing macros and remove
 	* inventory parameter: reduced XML for feed_passive
-	* provide error message if no HOSTNAME is specified 
-	  for generation of passive service definitions
+	* provide error message if no HOSTNAME is specified for passive service definitions
 	* fixed hostname treatment for PNP urls
 	* spaces in tags and macros are not allowed any more
 	* contrib: notify_html_service.sh uses mime multipart elements

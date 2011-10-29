@@ -1921,8 +1921,6 @@ sub parse_header {
 
 				$cmds[$i]{type}=$type;
 				$cmds[$i]{command}=$cmd;
-				$cmds[$i]{plugin}=undef;
-				$cmds[$i]{pplugin}=undef;
 				$cmds[$i]{ok}="";
 				$cmds[$i]{warning}="";
 				$cmds[$i]{critical}="";
@@ -1935,6 +1933,8 @@ sub parse_header {
 				$cmds[$i]{rc}=shift(@result);
 				$cmds[$i]{output}=shift(@result);
 				$cmds[$i]{performance}=shift(@result);
+				$cmds[$i]{plugin}="lifestatus";
+				$cmds[$i]{pplugin}=shift(@result);
 				if ($cmds[$i]{host} eq "-1") {
 					$cmds[$i]{host}="UNKNOWN";
 					$cmds[$i]{service}="UNKNOWN";
@@ -1942,6 +1942,13 @@ sub parse_header {
 				$cmds[$i]{name}=($opt{set}{add_tag_to_list_entries})?"${name}_":"";
 				$cmds[$i]{name}.="$cmds[$i]{host}_$cmds[$i]{service}";
 				$cmds[$i]{name}=~s/[^A-Z0-9_-]+/_/gi;
+				if ($opt{set}{suppress_perfdata} &&
+					$opt{set}{suppress_perfdata}=~/\b$name\b/i) {
+					$cmds[$i]{process_perfdata}=0;
+					DEBUG2("perfdata of [ $name ] will be suppressed");
+				} else {
+					$cmds[$i]{process_perfdata}=1;
+				}
 				DEBUG4("added host:$cmds[$i]{host} / service:$cmds[$i]{service} / output:$cmds[$i]{output}");
 				$i++;
 			}
@@ -1963,8 +1970,6 @@ sub parse_header {
 
 				$cmds[$i]{type}=$type;
 				$cmds[$i]{command}=$cmd;
-				$cmds[$i]{plugin}=undef;
-				$cmds[$i]{pplugin}=undef;
 				$cmds[$i]{ok}="";
 				$cmds[$i]{warning}="";
 				$cmds[$i]{critical}="";
@@ -1976,12 +1981,21 @@ sub parse_header {
 				$cmds[$i]{rc}=shift(@result);
 				$cmds[$i]{output}=shift(@result);
 				$cmds[$i]{performance}=shift(@result);
+				$cmds[$i]{plugin}="lifestatus";
+				$cmds[$i]{pplugin}=shift(@result);
 				if ($cmds[$i]{host} eq "-1") {
 					$cmds[$i]{host}="UNKNOWN";
 				}
 				$cmds[$i]{name}=($opt{set}{add_tag_to_list_entries})?"${name}_":"";
 				$cmds[$i]{name}.="$cmds[$i]{host}";
 				$cmds[$i]{name}=~s/[^A-Z0-9_-]+/_/gi;
+				if ($opt{set}{suppress_perfdata} &&
+					$opt{set}{suppress_perfdata}=~/\b$name\b/i) {
+					$cmds[$i]{process_perfdata}=0;
+					DEBUG2("perfdata of [ $name ] will be suppressed");
+				} else {
+					$cmds[$i]{process_perfdata}=1;
+				}
 				DEBUG4("added host:$cmds[$i]{host} / output:$cmds[$i]{output}");
 				$i++;
 			}
@@ -2793,7 +2807,7 @@ sub expand_livestatus_service {
 	if (!$livestatus_service) {
 		DEBUG4("1st read, creating service tree");
 
-		$livestatus_service=read_livestatus($livestatus_path,"GET services\nColumns: host_name description last_hard_state plugin_output long_plugin_output perf_data\n");
+		$livestatus_service=read_livestatus($livestatus_path,"GET services\nColumns: host_name description last_hard_state plugin_output long_plugin_output perf_data check_command\n");
 		if (!$livestatus_service) {
 			add_error(0,"expand_livestatus_service: could not read $livestatus_path");
 			return (undef,undef);
@@ -2821,12 +2835,17 @@ sub expand_livestatus_service {
 			chomp($output);
 			push @result,$output;
 			push @result,defined($service->{perf_data})?$service->{perf_data}:"";
+			if ($service->{check_command}=~/([^!]+)!/) {
+				push @result, $1;
+			} else {
+				push @result, $service->{check_command};
+			}
 			DEBUG4("$service->{host_name}:$service->{description} matched $host_name:$service_description:$service->{last_hard_state}");
 		} else {
 			DEBUG4("$service->{host_name}:$service->{description} did not match $host_name:$service_description");
 		}
 	}
-	DEBUG4("returns " . ($#result+1)/5 . " results");
+	DEBUG4("returns " . ($#result+1)/5 . " results:" . join('|',@result) );
 	return @result;
 }
 
@@ -2844,7 +2863,7 @@ sub expand_livestatus_host {
 	if (!$livestatus_host) {
 		DEBUG4("1st read, creating host tree");
 
-		$livestatus_host=read_livestatus($livestatus_path,"GET hosts\nColumns: host_name last_hard_state plugin_output long_plugin_output perf_data\n");
+		$livestatus_host=read_livestatus($livestatus_path,"GET hosts\nColumns: host_name last_hard_state plugin_output long_plugin_output perf_data check_command\n");
 		if (!$livestatus_host) {
 			add_error(0,"expand_livestatus_host: could not read $livestatus_path");
 			return (undef,undef);
@@ -2870,6 +2889,11 @@ sub expand_livestatus_host {
 			chomp($output);
 			push @result,$output;
 			push @result,defined($host->{perf_data})?$host->{perf_data}:"";
+			if ($host->{check_command}=~/([^!]+)!/) {
+				push @result, $1;
+			} else {
+				push @result, $host->{check_command};
+			}
 			DEBUG4("$host->{host_name} matched $host_name, state $host->{last_hard_state}");
 		} else {
 			DEBUG4("$host->{host_name} did not match $host_name");
@@ -3853,7 +3877,9 @@ sub report_perfdata {
 					$perftmp="$cmds[$no]{performance} ";
 				} else {
 					#--- do we have an explicit plugin specification? take it
-					my $plugin=($cmds[$no]{pplugin} ne "") ? $cmds[$no]{pplugin} : $cmds[$no]{plugin};
+					my $plugin=(defined($cmds[$no]{pplugin}) && $cmds[$no]{pplugin} ne "") 
+						? $cmds[$no]{pplugin} 
+						: $cmds[$no]{plugin};
 					DEBUG4("plugin is $plugin");
 
 					#--- perflabel already with single quotes? then keep it
