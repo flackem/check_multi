@@ -1659,13 +1659,16 @@ sub parse_lines {
 
 			#--- still macro '$' in name? then macro was not substituted
 			if ($name=~/\$([^\$]+)\$/) {
-				add_error(0,"parse_lines: tag \'$name\' invalid - macro \$$1\$ not found");
+				add_error(0,"parse_lines: tag \'$name\' is invalid - macro \$$1\$ not found");
 				next LINE;
 			} elsif ($name eq "") {
-				add_error(0,"parse_lines: empty tag \'\' invalid");
+				add_error(0,"parse_lines: empty tag \'\' is invalid");
+				next LINE;
+			} elsif ($name=~/^[0-9]+$/) {
+				add_error(0,"parse_lines: pure numerical tag \'$name\' is invalid");
 				next LINE;
 			} elsif ($name=~/[\[\]]+/) {
-				add_error(0,"parse_lines: tag \'$name\' invalid - [ brackets ] are not allowed");
+				add_error(0,"parse_lines: tag \'$name\' is invalid - [ brackets ] are not allowed");
 				next LINE;
 			}
 

@@ -27,7 +27,7 @@ foreach my $plugin (@plugins) {
 	}
 }
 
-plan tests => 92;
+plan tests => 94;
 
 my $result;
 #my $testopts="-s dont_be_paranoid=1 -s tmp_dir=/tmp/check_multi";
@@ -900,4 +900,20 @@ like(
 	'\[ 1\] one  \[timeout encountered after 1s\]\n'.
 	'\[ 2\] two UNKNOWN - execution cancelled due to global timeout \(2s\)/',
 	"output correct"
+);
+#-------------------------------------------------------------------------------
+#--- check_multi with invalid numerical tag ------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+        "@PERL@ ../check_multi $testopts -r 1 -x 'command [ 123 ] = echo 123'",
+);
+is(
+	$result->return_code,
+	3,
+	"numerical tags are invalid - RC3",
+);
+like(
+	$result->output,
+	'/UNKNOWN - 0 plugins checked,  \[parse_lines: pure numerical tag \'123\' is invalid,no checks defined\]/',
+	"output correct",
 );
