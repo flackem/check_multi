@@ -1,6 +1,8 @@
 
 ===== Changelog =====
 
+	* fixed proper encoding of XML state elements
+	* numerical tags are not allowed
 	* fixed macro handling: complain about non-existing macros and remove
 	* inventory parameter: reduced XML for feed_passive
 	* provide error message if no HOSTNAME is specified 

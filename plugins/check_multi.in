@@ -3673,7 +3673,9 @@ sub report_xml {
 		next if ($token=~/output|error/);
 		if (defined($cmds[$no]{$token})) {
 			if (ref($cmds[$no]{$token}) eq "ARRAY") {
-				$xmlstr.="\t\t<$token>" . join("</$token>\n\t\t<$token>",@{$cmds[$no]{$token}}) . "</$token>\n";
+				foreach my $subtoken (@{$cmds[$no]{$token}}) {
+					$xmlstr.=sprintf "\t\t<%s>%s</%s>\n",$token,xml_encode($subtoken),$token;
+				}
 			} else {
 				$xmlstr.=sprintf "\t\t<%s>%s</%s>\n",$token,xml_encode($cmds[$no]{$token}),$token;
 			}
