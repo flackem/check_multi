@@ -1,6 +1,7 @@
 
 ===== Changelog =====
 
+	* fixed macro handling for livestatus command
 	* added perfdata for statusdat command
 	* fixed perfdata column for livestatus command
 	* fixed proper encoding of XML state elements

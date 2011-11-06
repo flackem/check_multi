@@ -74,7 +74,7 @@ is(
 );
 like(
 	$result->output,
-	'/UNKNOWN - 0 plugins checked,  \[Could not expand host host_not_existing/',
+	'/UNKNOWN - 0 plugins checked,  \[Could not expand host \'host_not_existing\'/',
 	"output correct - passed"
 );
 #-------------------------------------------------------------------------------
@@ -90,6 +90,6 @@ is(
 );
 like(
 	$result->output,
-	'/UNKNOWN - 0 plugins checked,  \[Could not expand host:service host_not_existing:service_not_existing/',
+	'/UNKNOWN - 0 plugins checked,  \[Could not expand host:service \'host_not_existing:service_not_existing\'/',
 	"output correct - passed"
 );
