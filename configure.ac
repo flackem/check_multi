@@ -9,7 +9,7 @@
 #---
 #--- prerequisites, credits and Nagios defaults
 AC_PREREQ(2.59)
-AC_INIT(check_multi, (author: matthias.flacke@gmx.de))
+AC_INIT([check_multi], [0.25],[matthias.flacke@gmx.de])
 
 AC_DEFINE([DEFAULT_NAGIOS_USER], [nagios], [Default Nagios User])
 AC_DEFINE([DEFAULT_NAGIOS_GROUP], [nagios], [Default Nagios Group])

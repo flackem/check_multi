@@ -21,6 +21,7 @@ DATADIR=@datarootdir@
 CGIDIR=@sbindir@
 
 INSTALL=@INSTALL@
+VERSION=$(shell cut -d'_' -f 3 CM_VERSION | tr -d v)
 
 @SET_MAKE@
 
@@ -56,6 +57,7 @@ all:
 	@ cd $(SRC_PL_TEST) && $(MAKE) -s -e $@
 	@ cd $(SRC_CONTRIB) && $(MAKE) -s -e $@
 	@ cd $(SRC_CONFIG)  && $(MAKE) -s -e $@
+	$(MAKE) hook
 
 	@echo ""
 	@echo " Make process finished"
@@ -111,6 +113,8 @@ test-timeout:
 	@ cd $(SRC_PL_TEST)  && $(MAKE) -e $@
 test-test:
 	@ cd $(SRC_PL_TEST)  && $(MAKE) -e $@
+hook:
+	@ test -d .git && test -h .git/hooks/pre-commit || ( cd .git/hooks; rm -f pre-commit; ln -s ../../mk_VERSION pre-commit )
 
 #---
 #--- install sections
@@ -155,6 +159,13 @@ distclean:
 
 devclean: distclean
 
-#--- !!!TODO!!!
-#--- uninstall sections
-#uninstall:
+version:
+	NEWVERSION=$$(dialog --stdout --inputbox "New Version:" 0 0 "$(VERSION)"); \
+	if [ -n "$$NEWVERSION" ] && [ "$$NEWVERSION" != "$(VERSION)" ]; then \
+		sed -i "s/===== Changelog =====[\n\t]*/===== Changelog =====\n\n**$$NEWVERSION**\t$(shell date)/m" Changelog; \
+		sed -i "s/$(VERSION)/$$NEWVERSION/" CM_VERSION configure.ac ;\
+	fi
+#$(MAKE) docs
+
+
+

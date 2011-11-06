@@ -7,23 +7,31 @@
 #    - create version file CM_VERSION
 #    - create flag file 
 #    - exit with RC1 (error) -> return to command line
+#
 # 2. call:
 #    - remove flag file
 #    - exit with RC0 (OK) -> commit
 #
 if [ ! -f CM_VERSION.version_is_updated ]; then
-	OLD_VERSION=`awk -F\_ '{print $3}' CM_VERSION | tr -d v`
-	NEW_VERSION=`expr $OLD_VERSION + 1`
+
+	# the major version will be changed by 'make version'
+	MAJOR_VERSION=`awk -F\_ '{print $3}' CM_VERSION`
+
+	# the minor version is just to be increased by one
+	OLD_MINOR_VERSION=`awk -F\_ '{print $4}' CM_VERSION`
+	NEW_MINOR_VERSION=`expr $OLD_MINOR_VERSION + 1`
+
+	# output
 	DATESTRING=`date +%Y-%m-%d-%H:%M`
-	echo "check_multi_v${NEW_VERSION}_${DATESTRING}" > CM_VERSION
-	echo "Created new version file CM_VERSION with check_multi_v${NEW_VERSION}_${DATESTRING}"
+	echo "check_multi_${MAJOR_VERSION}_${NEW_MINOR_VERSION}_${DATESTRING}" > CM_VERSION
+	echo "Created new version file CM_VERSION with check_multi_${MAJOR_VERSION}_${NEW_MINOR_VERSION}_${DATESTRING}"
 	echo "-> Now run commit again to check it in..."
 	touch CM_VERSION.version_is_updated
 
-	#--- exit with error first time
+	#--- exit with error first time (no commit is actually done)
 	exit 1
 else 
 	rm CM_VERSION.version_is_updated
-	#--- exit with OK the second time
+	#--- exit with OK the second time -> git commit is done now
 	exit 0
 fi
