@@ -48,7 +48,7 @@ is(
 );
 like(
 	$result->output,
-	'/^Version: check_multi_v\d{3}_\d{4}-\d{2}-\d{2}-\d{2}:\d{2}\n'.
+	'/^Version: check_multi_\d{1}\.\d{2}_\d{3}_\d{4}-\d{2}-\d{2}-\d{2}:\d{2}\n'.
 	'configure.*$/',
 	"output correct"
 );
