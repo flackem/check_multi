@@ -4,7 +4,7 @@
 #
 # check_multi - nagios plugin
 #
-# Copyright (c) 2007-2009 Matthias Flacke (matthias.flacke at gmx.de)
+# Copyright (c) 2007-2011 Matthias Flacke (matthias.flacke at gmx.de)
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -2602,10 +2602,12 @@ sub get_status_dat_host {
 		return (-1,"");
 	} else {
 		DEBUG4("found data for $host_name: RC $status_dat->{hoststatus}->{$host_name}->{last_hard_state} and output \'$status_dat->{hoststatus}->{$host_name}->{plugin_output}\', long_output \'$status_dat->{hoststatus}->{$host_name}->{long_plugin_output}\'");
+		my $output=$status_dat->{hoststatus}->{$host_name}->{plugin_output}."\n".
+         $status_dat->{hoststatus}->{$host_name}->{long_plugin_output};
+		chomp $output;
 		return (
 			$status_dat->{hoststatus}->{$host_name}->{last_hard_state},
-			$status_dat->{hoststatus}->{$host_name}->{plugin_output}."\n".
-			$status_dat->{hoststatus}->{$host_name}->{long_plugin_output},
+			$output,
 			$status_dat->{hoststatus}->{$host_name}->{check_command},
 			$status_dat->{hoststatus}->{$host_name}->{performance_data},
 		);
@@ -2681,12 +2683,13 @@ sub get_status_dat_service {
 		return (-1,"");
 	} else {
 		DEBUG4("found data for $host_name:$service_description: RC $status_dat->{servicestatus}->{$host_name}->{$service_description}->{last_hard_state} and output \'$status_dat->{servicestatus}->{$host_name}->{$service_description}->{plugin_output}\', long_output \'$status_dat->{servicestatus}->{$host_name}->{$service_description}->{long_plugin_output}\'");
+		my $output=
+			$status_dat->{servicestatus}->{$host_name}->{$service_description}->{plugin_output}."\n".
+        	$status_dat->{servicestatus}->{$host_name}->{$service_description}->{long_plugin_output};
+		chomp $output;
 		return (
 			$status_dat->{servicestatus}->{$host_name}->{$service_description}->{last_hard_state},
-			($status_dat->{servicestatus}->{$host_name}->{$service_description}->{long_plugin_output})
-				? $status_dat->{servicestatus}->{$host_name}->{$service_description}->{plugin_output}."\n".
-				  $status_dat->{servicestatus}->{$host_name}->{$service_description}->{long_plugin_output}
-				: $status_dat->{servicestatus}->{$host_name}->{$service_description}->{plugin_output},
+			$output,
 			$status_dat->{servicestatus}->{$host_name}->{$service_description}->{check_command},
 			$status_dat->{servicestatus}->{$host_name}->{$service_description}->{performance_data},
 		);
