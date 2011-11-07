@@ -64,7 +64,7 @@ is(
 );
 like(
 	$result->output,
-	'/OK - 1 plugins checked, 1 ok\n\[ 1\] svc_localhost_Total Processes PROCS OK.*/s', 
+	'/OK - 1 plugins checked, 1 ok\n\[ 1\] svc_localhost_Total_Processes PROCS OK.*/s', 
 	"service output correct - passed"
 );
 
@@ -81,7 +81,7 @@ is(
 );
 like(
 	$result->output,
-	'/OK - 1 plugins checked, 1 ok\n\[ 1\] svc_localhost_Total Processes PROCS OK.*/s', 
+	'/OK - 1 plugins checked, 1 ok\n\[ 1\] svc_localhost_Total_Processes PROCS OK.*/s', 
 	"service output correct - passed"
 );
 
