@@ -3017,7 +3017,7 @@ sub eval_result {
 	#--- empty input?
 	if (! $input) {
 		DEBUG3("empty input - nothing to do");
-		return ($UNKNOWN, "eval_result: invalid empty input");
+		return ($UNKNOWN, "eval_result: invalid empty input", "");
 	}
 
 	#--- at runtime: substitute $MACRO$ macros and $STATES$
@@ -3034,13 +3034,13 @@ sub eval_result {
 		$message="Evaluation error in \'$input_org\': $@\n";
 		$message=~s/\n/ /g;
 		DEBUG4("eval error $message");
-		return (-1,$message);
+		return (-1,$message,$input);
 	#--- return result
 	} else {
 		$message="eval_result: input:>$input_org< parsed:>$input< result:>$result<\n";
 		$message=~s/\n/ /g;
 		DEBUG4($message);
-		return ($result,$message);
+		return ($result,$message,$input);
 	}
 }
 
@@ -3194,8 +3194,8 @@ sub single_result_rating {
 		}
 
 		#my ($result,$message)=eval_result("\'$cmds[$no]{output}\'$cmds[$no]{$def{llabel}{$state}}");
-		my ($result,$message)=eval_result("$cmds[$no]{$def{llabel}{$state}}");
-		DEBUG4("evaluating expression \"$cmds[$no]{$def{llabel}{$state}}\", result is $result");
+		my ($result,$message,$input)=eval_result("$cmds[$no]{$def{llabel}{$state}}");
+		DEBUG4("evaluating expression \"$cmds[$no]{$def{llabel}{$state}}\", substituted: $input, result is $result");
 
 		if (! defined($result) || $result eq "") {
 			; # do nothing
@@ -3204,7 +3204,7 @@ sub single_result_rating {
 			DEBUG4("parsing error expresstion ($cmds[$no]{output}$cmds[$no]{$state})->($message)");
 		} else {
 			$cmds[$no]{rc}=$state;
-			add_error($no,"$def{label}{$state}: output matched rule \'$cmds[$no]{$def{llabel}{$state}}\'");
+			add_error($no,"$def{label}{$state}: output matched rule \'$input\'");
 			DEBUG4("setting RC of cmds[$no] to $state");
 		}
 	}
@@ -4456,6 +4456,9 @@ if ($#cmds<1) {
 	$cmds[0]{state}[$OK]="0==1" if ($opt{set}{no_checks_rc} != $OK);
 } else {
 	DEBUG4("running " . ($#cmds - 1) . " child checks");
+	if (module("Data::Dumper")) {
+		DEBUG4(Dumper(@cmds));
+	}
 }
 
 #--- create unique hash for check
