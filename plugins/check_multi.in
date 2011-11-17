@@ -4455,7 +4455,11 @@ if ($#cmds<1) {
 	$cmds[0]{rc}=$opt{set}{no_checks_rc};
 	$cmds[0]{state}[$OK]="0==1" if ($opt{set}{no_checks_rc} != $OK);
 } else {
-	DEBUG4("running " . ($#cmds - 1) . " child checks");
+	DEBUG4(($#cmds - 1) . " child checks running");
+	if (module("Data::Dumper")) {
+		DEBUG4(Dumper(@cmds));
+	}
+
 }
 
 #--- create unique hash for check
