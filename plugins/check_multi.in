@@ -1176,7 +1176,7 @@ sub substitute_macros {
 			DEBUG3("2nd run - replacing objects_cache var \'$var\' with \'$substitution\'");
 			$input=~s/\$$var\$/$substitution/g;
 		} else {
-			DEBUG1("2nd run - \'$var\' was not handled - remove var");
+			DEBUG3("2nd run - \'$var\' was not handled - remove var");
 			add_error($no, "Macro \$$var\$ not found") if ($opt{set}{complain_unknown_macros});
 			$input=~s/\$$var\$//g;
 		}
