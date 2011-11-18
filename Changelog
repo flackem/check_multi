@@ -1,6 +1,8 @@
 
 ===== Changelog =====
 
+**0.26**	Fri Nov 18 20:27:28 CET 2011
+
 	* fixed macro handling for livestatus command
 	* added perfdata for statusdat command
 	* fixed perfdata column for livestatus command
