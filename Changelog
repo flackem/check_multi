@@ -1,6 +1,7 @@
 
 ===== Changelog =====
 
+	* info [ tag::pre_<status> ] adds info texts depending on status
 	* info [ tag::{pre,post} ] provides info texts for child checks
 
 **0.26**	Fri Nov 18 20:27:28 CET 2011

@@ -1891,20 +1891,32 @@ sub parse_header {
 
 	#--- format: 'info   [ tag[::{pre|post} ] = string'
 	} elsif ($type eq "info") {
+		my $subkey="";
 		#--- 1. invalid key
-		if ($key!~/pre|post/i) {
-			add_error(0,"parse_header: info [ ${name}::${key} ]: invalid info type \"$key\", must be pre or post.");
+		if ($key!~/^pre|^post/) {
+			add_error($no,"parse_header: info [ ${name}::${key} ]: invalid info type \"$key\", must begin with pre or post.");
 			return undef;
 		#--- 2. tag not found
 		} elsif (! defined($cmds[$i]) || !defined($cmds[$i]{name})) {
-			add_error(0,"parse_header: info [ ${name}::${key} ] can not be set: child check with name \"$name\" not found");
+			add_error($no,"parse_header: info [ ${name}::${key} ] can not be set: child check with name \"$name\" not found");
 			return undef;
-		#--- 3. 'info [ tag::{pre|post} ] = value' - update attribute
+		#--- 3. keys like pre_warning, pre_critical...
+		} elsif ($key=~/^pre_[a-z]*|^post_[a-z]*/) {
+			($key,$subkey)=split(/_/,$key);
+			if ($key!~/^pre$|^post$/ || $subkey!~/ok|warning|critical|unknown/) {
+				add_error($no,"parse_header: info [ ${name}::${key} ]: key must be pre or post, subkey must be one of ok,warning,critical,unknown");
+				return undef;
+			}
+		#--- 4. keys are pre or post (without state)
+		} elsif ($key=~/^pre$|^post$/) {
+			$subkey="all";
 		} else {
-			chomp($cmd);
-			$cmd=~s/\\n/\n/g;
-			$cmds[$i]{lc($key)}=$cmd;
+			add_error($no,"parse_header: format error in info [ ${name}::${key} ]");
+			return undef;
 		}
+		chomp($cmd);
+		$cmd=~s/\\n/\n/g;
+		$cmds[$i]{$key}{$subkey}=$cmd;
 
 	#--- format: 'livestatus [ tag[::plugin] ] = host'
 	#--- format: 'livestatus [ tag[::plugin] ] = host:service'
@@ -3399,17 +3411,34 @@ sub report_ascii {
 			#--- hide all OK results if there is any check not OK
 			next if ($opt{set}{report} & $DETAIL_HIDEIFOK && $cmds[$no]{rc} == $OK);
 
+			#--- info [ tag::pre ]
 			my $pre="";
-			if (defined($cmds[$no]{pre}) && $cmds[$no]{pre}) {
-				$pre="$cmds[$no]{pre}\n";
+			if (defined($cmds[$no]{pre})) {
+				foreach my $s (keys %{$def{code}}) {
+					if (defined($cmds[$no]{pre}{$s}) && $def{code}{$s} == $cmds[$no]{rc}) {
+						$pre="$cmds[$no]{pre}{$s}\n";
+					}
+				}
+				if (defined($cmds[$no]{pre}{all})) {
+					$pre.="$cmds[$no]{pre}{all}\n";
+				}
 				$pre=~s/\n/\n$opt{set}{indent}/g;
 			}
+			DEBUG4("pre: $pre");
+			#--- info [ tag::post ]
 			my $post="";
-			if (defined($cmds[$no]{post}) && $cmds[$no]{post}) {
-				$post="\n$cmds[$no]{post}";
+			if (defined($cmds[$no]{post})) {
+				foreach my $s (keys %{$def{code}}) {
+					if (defined($cmds[$no]{post}{$s}) && $def{code}{$s} == $cmds[$no]{rc}) {
+						$post="\n$cmds[$no]{post}{$s}";
+					}
+				}
+				if (defined($cmds[$no]{post}{all})) {
+					$post.="\n$cmds[$no]{post}{all}";
+				}
 				$post=~s/\n/\n$opt{set}{indent}/g;
-				#$post="\n$opt{set}{indent}$post";
 			}
+			DEBUG4("post: $post");
 			printf "%s[%2.d] %s%s %s%s%s%s",
 				($opt{set}{report} & $DETAIL_NAGIOS2) ? ", " : "\n",
 				$cmds[$no]{number},
@@ -3619,16 +3648,34 @@ sub report_html {
 		}
 		DEBUG3("output:$cmds[$no]{output}");
 		DEBUG3("HTML check_multi recursive levels: " . scalar ($cmds[$no]{output}=~s/multi_table/multi_table/g));
+		#--- info [ tag::pre ]
 		my $pre="";
-		if (defined($cmds[$no]{pre}) && $cmds[$no]{pre}) {
-			$pre="$cmds[$no]{pre}<br />";
+		if (defined($cmds[$no]{pre})) {
+			foreach my $s (keys %{$def{code}}) {
+				if (defined($cmds[$no]{pre}{$s}) && $def{code}{$s} == $cmds[$no]{rc}) {
+					$pre="$cmds[$no]{pre}{$s}\n";
+				}
+			}
+			if (defined($cmds[$no]{pre}{all})) {
+				$pre.="$cmds[$no]{pre}{all}\n";
+			}
 			$pre=~s/\n/<br \/>/g;
 		}
+		DEBUG4("pre: $pre");
+		#--- info [ tag::post ]
 		my $post="";
-		if (defined($cmds[$no]{post}) && $cmds[$no]{post}) {
-			$post="<br />$cmds[$no]{post}";
+		if (defined($cmds[$no]{post})) {
+			foreach my $s (keys %{$def{code}}) {
+				if (defined($cmds[$no]{post}{$s}) && $def{code}{$s} == $cmds[$no]{rc}) {
+					$post="\n$cmds[$no]{post}{$s}";
+				}
+			}
+			if (defined($cmds[$no]{post}{all})) {
+				$post.="\n$cmds[$no]{post}{all}";
+			}
 			$post=~s/\n/<br \/>/g;
 		}
+		DEBUG4("post: $post");
 		if (defined($cmds[$no]{fmtstr})) {
 			my $tmp="sprintf " . $cmds[$no]{fmtstr};
 	 		$tmp.="," . join(",",@{$cmds[$no]{parms}}) if (defined($cmds[$no]{parms}));

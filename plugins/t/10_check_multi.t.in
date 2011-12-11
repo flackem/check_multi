@@ -27,7 +27,7 @@ foreach my $plugin (@plugins) {
 	}
 }
 
-plan tests => 100;
+plan tests => 104;
 
 my $result;
 #my $testopts="-s dont_be_paranoid=1 -s tmp_dir=/tmp/check_multi";
@@ -962,6 +962,38 @@ is(
 );
 like(
 	$result->output,
-	'/OK - 1 plugins checked, 1 ok \[parse_header: info \[ eins::prost \]: invalid info type \"prost\", must be pre or post.\]\n\[ 1\] eins eins/',
+	'/OK - 1 plugins checked, 1 ok \[parse_header: info \[ eins::prost \]: invalid info type \"prost\", must begin with pre or post.\]\n\[ 1\] eins eins/',
+	"output correct",
+);
+#-------------------------------------------------------------------------------
+#--- check_multi info::pre_warning ---------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+        "@PERL@ ../check_multi $testopts -r 1 -x 'command [ eins ] = (echo eins; exit 1)' -x 'info [ eins::pre_warning ] = pre_warning' -x 'info [ eins::post_warning ] = post_warning'",
+);
+is(
+	$result->return_code,
+	1,
+	"info::pre_warning and info::post_warning commands - RC0",
+);
+like(
+	$result->output,
+	'/WARNING - 1 plugins checked, 1 warning \(eins\)\n\[ 1\] eins pre_warning\n eins\n post_warning/',
+	"output correct",
+);
+#-------------------------------------------------------------------------------
+#--- check_multi info::pre_warning and pre -------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+        "@PERL@ ../check_multi $testopts -r 1 -x 'command [ eins ] = (echo eins; exit 1)' -x 'info [ eins::pre_warning ] = pre_warning' -x 'info [ eins::pre ] = pre'",
+);
+is(
+	$result->return_code,
+	1,
+	"info::pre_warning and info::pre commands - RC0",
+);
+like(
+	$result->output,
+	'/WARNING - 1 plugins checked, 1 warning \(eins\)\n\[ 1\] eins pre_warning\n pre\n eins/',
 	"output correct",
 );
