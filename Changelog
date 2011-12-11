@@ -1,6 +1,8 @@
 
 ===== Changelog =====
 
+	* info [ tag::{pre,post} ] provides info texts for child checks
+
 **0.26**	Fri Nov 18 20:27:28 CET 2011
 
 	* fixed macro handling for livestatus command

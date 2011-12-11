@@ -47,7 +47,7 @@ sub get_testopts  {
 		persistent			=> 0,
 		plugin_path			=> "'@libexecdir@'",
 		pnp_url				=> "'/pnp4nagios'",
-		report				=> 13,
+		report				=> "1+4+8",
 		send_nsca			=> "'@sbindir@/send_nsca'",
 		send_nsca_cfg			=> "'@sysconfdir@/send_nsca.cfg'",
 		send_nsca_srv			=> "localhost",

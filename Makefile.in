@@ -95,6 +95,8 @@ test-all:
 	@ cd $(SRC_PL_TEST)  && $(MAKE) -e $@
 test:
 	@ cd $(SRC_PL_TEST)  && $(MAKE) -e $@
+test-standard:
+	@ cd $(SRC_PL_TEST)  && $(MAKE) -e $@
 test-macros:
 	@ cd $(SRC_PL_TEST)  && $(MAKE) -e $@
 test-perfdata:

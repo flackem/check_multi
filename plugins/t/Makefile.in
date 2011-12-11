@@ -34,6 +34,8 @@ test:
 		10_check_multi.t \
 		20_check_multi_macros.t \
 		30_check_multi_perfdata.t
+test-standard:
+	@PERL@ $(PERLOPTS) 10_check_multi.t
 test-macros:
 	@PERL@ $(PERLOPTS) 20_check_multi_macros.t
 test-perfdata:

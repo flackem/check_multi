@@ -27,7 +27,7 @@ foreach my $plugin (@plugins) {
 	}
 }
 
-plan tests => 94;
+plan tests => 100;
 
 my $result;
 #my $testopts="-s dont_be_paranoid=1 -s tmp_dir=/tmp/check_multi";
@@ -915,5 +915,53 @@ is(
 like(
 	$result->output,
 	'/UNKNOWN - 0 plugins checked,  \[parse_lines: pure numerical tag \'123\' is invalid,no checks defined\]/',
+	"output correct",
+);
+#-------------------------------------------------------------------------------
+#--- check_multi info::pre and info::post commands -----------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+        "@PERL@ ../check_multi $testopts -r 1 -x 'command [ eins ] = echo eins' -x 'info [ eins::pre ] = null' -x 'info [ eins::post ] = zwei'",
+);
+is(
+	$result->return_code,
+	0,
+	"info::pre and info::post commands - RC0",
+);
+like(
+	$result->output,
+	'/OK - 1 plugins checked, 1 ok\n\[ 1\] eins null\n eins\n zwei/',
+	"output correct",
+);
+#-------------------------------------------------------------------------------
+#--- check_multi info::pre for a non existing tag ------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+        "@PERL@ ../check_multi $testopts -r 1 -x 'command [ eins ] = echo eins' -x 'info [ zwei::pre ] = null'",
+);
+is(
+	$result->return_code,
+	0,
+	"info [ tag::pre ] for a non existing tag - RC0",
+);
+like(
+	$result->output,
+	'/OK - 1 plugins checked, 1 ok \[parse_header: info \[ zwei::pre \] can not be set: child check with name \"zwei\" not found\]\n\[ 1\] eins eins/',
+	"output correct",
+);
+#-------------------------------------------------------------------------------
+#--- check_multi info::prost with invalid info part description, pre or post ---
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+        "@PERL@ ../check_multi $testopts -r 1 -x 'command [ eins ] = echo eins' -x 'info [ eins::prost ] = null'",
+);
+is(
+	$result->return_code,
+	0,
+	"info [ tag::prost ] instead of info::post - RC0",
+);
+like(
+	$result->output,
+	'/OK - 1 plugins checked, 1 ok \[parse_header: info \[ eins::prost \]: invalid info type \"prost\", must be pre or post.\]\n\[ 1\] eins eins/',
 	"output correct",
 );
