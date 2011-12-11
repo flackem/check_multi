@@ -1903,8 +1903,8 @@ sub parse_header {
 		#--- 3. keys like pre_warning, pre_critical...
 		} elsif ($key=~/^pre_[a-z]*|^post_[a-z]*/) {
 			($key,$subkey)=split(/_/,$key);
-			if ($key!~/^pre$|^post$/ || $subkey!~/ok|warning|critical|unknown/) {
-				add_error($no,"parse_header: info [ ${name}::${key} ]: key must be pre or post, subkey must be one of ok,warning,critical,unknown");
+			if ($key!~/^pre$|^post$/ || $subkey!~/ok|warning|critical|unknown|nok/) {
+				add_error($no,"parse_header: info [ ${name}::${key} ]: key must be pre or post, subkey must be one of ok,warning,critical,unknown,nok");
 				return undef;
 			}
 		#--- 4. keys are pre or post (without state)
@@ -3419,6 +3419,9 @@ sub report_ascii {
 						$pre="$cmds[$no]{pre}{$s}\n";
 					}
 				}
+				if (defined($cmds[$no]{pre}{nok}) && $cmds[$no]{rc} != $OK) {
+					$pre.="$cmds[$no]{pre}{nok}\n";
+				}
 				if (defined($cmds[$no]{pre}{all})) {
 					$pre.="$cmds[$no]{pre}{all}\n";
 				}
@@ -3432,6 +3435,9 @@ sub report_ascii {
 					if (defined($cmds[$no]{post}{$s}) && $def{code}{$s} == $cmds[$no]{rc}) {
 						$post="\n$cmds[$no]{post}{$s}";
 					}
+				}
+				if (defined($cmds[$no]{post}{nok}) && $cmds[$no]{rc} != $OK) {
+					$post.="$cmds[$no]{post}{nok}\n";
 				}
 				if (defined($cmds[$no]{post}{all})) {
 					$post.="\n$cmds[$no]{post}{all}";
@@ -3656,6 +3662,9 @@ sub report_html {
 					$pre="$cmds[$no]{pre}{$s}\n";
 				}
 			}
+			if (defined($cmds[$no]{pre}{nok}) && $cmds[$no]{rc} != $OK) {
+				$pre.="$cmds[$no]{pre}{nok}\n";
+			}
 			if (defined($cmds[$no]{pre}{all})) {
 				$pre.="$cmds[$no]{pre}{all}\n";
 			}
@@ -3669,6 +3678,9 @@ sub report_html {
 				if (defined($cmds[$no]{post}{$s}) && $def{code}{$s} == $cmds[$no]{rc}) {
 					$post="\n$cmds[$no]{post}{$s}";
 				}
+			}
+			if (defined($cmds[$no]{post}{nok}) && $cmds[$no]{rc} != $OK) {
+				$post.="$cmds[$no]{post}{nok}\n";
 			}
 			if (defined($cmds[$no]{post}{all})) {
 				$post.="\n$cmds[$no]{post}{all}";

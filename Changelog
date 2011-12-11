@@ -1,6 +1,7 @@
 
 ===== Changelog =====
 
+	* info [ tag::pre_nok ] - info text for non OK states
 	* info [ tag::pre_<status> ] adds info texts depending on status
 	* info [ tag::{pre,post} ] provides info texts for child checks
 

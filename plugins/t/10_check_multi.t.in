@@ -27,7 +27,7 @@ foreach my $plugin (@plugins) {
 	}
 }
 
-plan tests => 104;
+plan tests => 106;
 
 my $result;
 #my $testopts="-s dont_be_paranoid=1 -s tmp_dir=/tmp/check_multi";
@@ -995,5 +995,21 @@ is(
 like(
 	$result->output,
 	'/WARNING - 1 plugins checked, 1 warning \(eins\)\n\[ 1\] eins pre_warning\n pre\n eins/',
+	"output correct",
+);
+#-------------------------------------------------------------------------------
+#--- check_multi info::pre_nok and pre -------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+        "@PERL@ ../check_multi $testopts -r 1 -x 'command [ eins ] = (echo eins; exit 1)' -x 'info [ eins::pre_nok ] = pre_nok' -x 'info [ eins::pre ] = pre'",
+);
+is(
+	$result->return_code,
+	1,
+	"info::pre_nok and info::pre commands - RC0",
+);
+like(
+	$result->output,
+	'/WARNING - 1 plugins checked, 1 warning \(eins\)\n\[ 1\] eins pre_nok\n pre\n eins/',
 	"output correct",
 );
