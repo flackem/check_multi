@@ -3437,7 +3437,7 @@ sub report_ascii {
 					}
 				}
 				if (defined($cmds[$no]{post}{nok}) && $cmds[$no]{rc} != $OK) {
-					$post.="$cmds[$no]{post}{nok}\n";
+					$post.="\n$cmds[$no]{post}{nok}";
 				}
 				if (defined($cmds[$no]{post}{all})) {
 					$post.="\n$cmds[$no]{post}{all}";
