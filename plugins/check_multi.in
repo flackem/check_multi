@@ -2753,7 +2753,11 @@ sub expand_status_dat_service {
 	}
 
 	#--- expand simple tokens to REGEX, if necessary
+	$host_name=~s/^[\"\']+//;
+	$host_name=~s/[\"\']+$//;
 	$host_name=($host_name=~/\/(.*)\//)?$1:'^'.$host_name.'$';
+	$service_description=~s/^[\"\']+//;
+	$service_description=~s/[\"\']+$//;
 	$service_description=($service_description=~/\/(.*)\//)?$1:'^'.$service_description.'$';
 	DEBUG4("$host_name:$service_description after REGEX preparation");
 
