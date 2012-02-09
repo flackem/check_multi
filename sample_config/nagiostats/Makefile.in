@@ -12,7 +12,7 @@ INSTALL_OPTS=@INSTALL_OPTS@
 
 clean:
 	-rm -f nagiostats.cmd
-	-rm -f nagiostats.php
+	-rm -f check_multi_nagiostats.php
 
 distclean: clean
 	-rm -f Makefile
@@ -22,3 +22,4 @@ devclean: distclean
 install-config: 
 	$(INSTALL) -m 755 $(INSTALL_OPTS) -d $(DESTDIR)${CFGDIR}
 	$(INSTALL) -m 644 $(INSTALL_OPTS) nagiostats.cmd $(DESTDIR)${CFGDIR}
+	@echo "Copy check_multi_nagiostats.php to PNP4NAGIOS share/templates directory"
