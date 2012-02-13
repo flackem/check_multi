@@ -246,7 +246,7 @@ $PERL subst sample_config/nagiostats/Makefile
 $PERL subst sample_config/nagiostats/nagiostats.cmd
 $PERL subst sample_config/nagios_version/Makefile
 $PERL subst sample_config/nagios_version/nagios_update.cmd
-$PERL subst sample_config/nagiostats/nagiostats.php
+$PERL subst sample_config/nagiostats/check_multi_nagiostats.php
 $PERL subst sample_config/start_process/Makefile
 $PERL subst sample_config/start_process/start_process.cmd
 $PERL subst sample_config/network_interface/Makefile
