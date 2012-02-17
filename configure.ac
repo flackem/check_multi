@@ -130,7 +130,7 @@ AC_ARG_WITH(nagios_user,		[  --with-nagios-user=USER                  installs e
 AC_ARG_WITH(nagios_group,		[  --with-nagios-group=GROUP                installs executables with this group. Defaults to install user], INSTALL_OPTS="$INSTALL_OPTS -g $withval")
 AC_ARG_WITH(nagios_name,		[  --with-nagios-name=<nagios|icinga>       set nagios name (there might be some clones ;)) (default:nagios)],nagios_name=$withval,nagios_name=nagios)
 AC_ARG_WITH(verbose,			[  --with-verbose=<N>                       verbosity of check_multi (default:0)],verbose=$withval,verbose="0")
-
+AC_ARG_WITH(verbose_fields,		[  --with-verbose_fields=<fieldlist>        comma separated list of attribute fields], verbose_fields=$withval, verbose_fields=[command,runtime])
 
 #--- substitutions
 AC_SUBST(INSTALL)
@@ -198,6 +198,7 @@ AC_SUBST(tmp_dir)
 AC_SUBST(tmp_dir_permissions)
 AC_SUBST(tmp_etc)
 AC_SUBST(verbose)
+AC_SUBST(verbose_fields)
 
 AC_CONFIG_FILES(
 	subst
@@ -302,6 +303,7 @@ AC_MSG_RESULT([ Collapse tree?            $collapse])
 AC_MSG_RESULT([ Collapse plus style       $style_plus_minus])
 AC_MSG_RESULT([ Extinfo in status.cgi?    $extinfo_in_status])
 AC_MSG_RESULT([ Verbosity level default   $verbose])
+AC_MSG_RESULT([ Verbosity fields          $verbose_fields])
 AC_MSG_RESULT([ pnp version               $pnp_version])
 AC_MSG_RESULT([ PNP URL                   $pnp_url])
 AC_MSG_RESULT([ PNP chart with mouseover  $action_mouseover])

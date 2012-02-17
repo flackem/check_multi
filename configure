@@ -559,6 +559,7 @@ PACKAGE_URL=''
 ac_default_prefix=/usr/local/nagios
 ac_subst_vars='LTLIBOBJS
 LIBOBJS
+verbose_fields
 verbose
 tmp_etc
 tmp_dir_permissions
@@ -743,6 +744,7 @@ with_nagios_user
 with_nagios_group
 with_nagios_name
 with_verbose
+with_verbose_fields
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1421,6 +1423,7 @@ major settings:
   --with-nagios-group=GROUP                installs executables with this group. Defaults to install user
   --with-nagios-name=<nagios|icinga>       set nagios name (there might be some clones ;)) (default:nagios)
   --with-verbose=<N>                       verbosity of check_multi (default:0)
+  --with-verbose_fields=<fieldlist>        comma separated list of attribute fields
 
 Report bugs to <matthias.flacke@gmx.de>.
 _ACEOF
@@ -2842,8 +2845,16 @@ else
 fi
 
 
+# Check whether --with-verbose_fields was given.
+if test "${with_verbose_fields+set}" = set; then :
+  withval=$with_verbose_fields; verbose_fields=$withval
+else
+  verbose_fields=command,runtime
+fi
+
 
 #--- substitutions
+
 
 
 
@@ -4184,6 +4195,8 @@ $as_echo " Collapse plus style       $style_plus_minus" >&6; }
 $as_echo " Extinfo in status.cgi?    $extinfo_in_status" >&6; }
 { $as_echo "$as_me:${as_lineno-$LINENO}: result:  Verbosity level default   $verbose" >&5
 $as_echo " Verbosity level default   $verbose" >&6; }
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result:  Verbosity fields          $verbose_fields" >&5
+$as_echo " Verbosity fields          $verbose_fields" >&6; }
 { $as_echo "$as_me:${as_lineno-$LINENO}: result:  pnp version               $pnp_version" >&5
 $as_echo " pnp version               $pnp_version" >&6; }
 { $as_echo "$as_me:${as_lineno-$LINENO}: result:  PNP URL                   $pnp_url" >&5

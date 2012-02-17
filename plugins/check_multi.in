@@ -292,6 +292,8 @@ my %opt=(
 		# verbosity, from 1 (less verbose) to 3 (much verbose)
 		verbose		=> @verbose@,
 		# elements to be added to XML structure
+		verbose_fields	=> "@verbose_fields@",
+		# elements to be added to XML structure
 		eml_elements	=> "name,rc,output,error,plugin,command,performance,starttime,endtime,runtime,type",
 	},
 	"variable" 	=> {
@@ -3389,6 +3391,12 @@ sub report_ascii {
 	#--- print general errors if any occured
 	print error(0);
 
+	#--- determine maximum length of name
+	my $maxlen=0;
+	for ($no=1;$no<=$#cmds;$no++) {
+		$maxlen=length($cmds[$no]{name}) if length($cmds[$no]{name}) > $maxlen;
+	}
+
 	#--- loop over commands: report particular results for long plugin output
 	for ($no=1;$no<=$#cmds;$no++) {
 
@@ -3453,53 +3461,84 @@ sub report_ascii {
 				$post=~s/\n/\n$opt{set}{indent}/g;
 			}
 			DEBUG4("post: $post");
-			printf "%s[%2.d] %s%s %s%s%s%s",
-				($opt{set}{report} & $DETAIL_NAGIOS2) ? ", " : "\n",
-				$cmds[$no]{number},
-				$cmds[$no]{name},
-				($opt{set}{report} & $DETAIL_STATUS &&
-				$cmds[$no]{output}!~/\b$def{label}{$cmds[$no]{rc}}\b/)
-					? " $def{label}{$cmds[$no]{rc}}"
-					: "",
-				$pre,
-				($cmds[$no]{output}=~/\<!--(.*?)--\>/sg) ? $1 : $cmds[$no]{output},
-				($opt{set}{report} & $DETAIL_STDERR) ? error($no) : "",
-				$post;
+			if ($opt{set}{verbose}) {
+				#--- prepare fields
+				my $details="";
+				my $verbose_field_len=0;
+				if ($opt{set}{verbose_fields}=~/all/i) {
+					for (sort keys %{$cmds[$no]}) {
+						$verbose_field_len=(length($_) > $verbose_field_len)? length($_) : $verbose_field_len;
+					}
+				} else {
+					for (split(/,/,$opt{set}{verbose_fields})) {
+						$verbose_field_len=(length($_) > $verbose_field_len)? length($_) : $verbose_field_len;
+					}
+				}
+				foreach my $field (sort split(/,/,$opt{set}{verbose_fields})) {
+					if ($field=~/all/i) {
+						foreach $field (sort keys %{$cmds[$no]}) {
+							$details.=sprintf "\n%10s%-${maxlen}s %-${verbose_field_len}s: %s", 
+								' ',
+								' ',
+								$field . '.' x ($verbose_field_len - length($field)),
+								format_fields($field, $cmds[$no]{$field});
+						}
+					} else {
+						if (defined($cmds[$no]{$field})) {
+							$details.=sprintf "\n%10s%-${maxlen}s %-${verbose_field_len}s: %s", 
+								' ',
+								' ',
+								$field . '.' x ($verbose_field_len - length($field)),
+								format_fields($field, $cmds[$no]{$field});
+						}
+					}
+
+				}
+				
+				printf "%s[%2.d] %-4.4s %-${maxlen}s%s %s%s%s%s%s",
+					($opt{set}{report} & $DETAIL_NAGIOS2) ? ", " : "\n",
+					$cmds[$no]{number},
+					$def{label}{$cmds[$no]{rc}},
+					$cmds[$no]{name},
+					($opt{set}{report} & $DETAIL_STATUS &&
+					$cmds[$no]{output}!~/\b$def{label}{$cmds[$no]{rc}}\b/)
+						? " $def{label}{$cmds[$no]{rc}}"
+						: "",
+					$pre,
+					($cmds[$no]{output}=~/\<!--(.*?)--\>/sg) ? $1 : $cmds[$no]{output},
+					($opt{set}{report} & $DETAIL_STDERR) ? error($no) : "",
+					$details,
+					$post;
+			} else {
+				printf "%s[%2.d] %s%s %s%s%s%s",
+					($opt{set}{report} & $DETAIL_NAGIOS2) ? ", " : "\n",
+					$cmds[$no]{number},
+					$cmds[$no]{name},
+					($opt{set}{report} & $DETAIL_STATUS &&
+					$cmds[$no]{output}!~/\b$def{label}{$cmds[$no]{rc}}\b/)
+						? " $def{label}{$cmds[$no]{rc}}"
+						: "",
+					$pre,
+					($cmds[$no]{output}=~/\<!--(.*?)--\>/sg) ? $1 : $cmds[$no]{output},
+					($opt{set}{report} & $DETAIL_STDERR) ? error($no) : "",
+					$post;
+			}
 		}
 	}
 
-	my $maxcmdlen=0;
-	for ($no=1;$no<=$#cmds;$no++) {
-		$maxcmdlen=length($cmds[$no]{name}) if (length($cmds[$no]{name})>$maxcmdlen);
-	}
-
-	#--- print results
-	DEBUG1("\n","-" x 80);
-	DEBUG1(sprintf("No   Name%sRuntime  RC Output", ' ' x ($maxcmdlen-3)));
-	DEBUG1("-" x 80);
-	for ($no=1;$no<=$#cmds;$no++) {
-		DEBUG1(sprintf "[%2.d] %-${maxcmdlen}s %6.4fs %3d %s", $no, $cmds[$no]{name}, $cmds[$no]{runtime}, $cmds[$no]{rc}, $cmds[$no]{output});
-		DEBUG1(sprintf "%s%-12s%s", ' ' x ($maxcmdlen+6), $cmds[$no]{type}, $cmds[$no]{command});
-	}
-
 	#--- print state settings and RC evaluation result
-	DEBUG1("\n","-" x 80);
-	DEBUG1(sprintf "%-8s %-55s %s", "State","Expression","Evaluates to");
-	DEBUG1("-" x 80);
 	foreach my $s (sort numerically keys %{$def{s2r}}) {
-		DEBUG1(sprintf "%-8s %-55s %s", $def{label}{$def{s2r}{$s}}, $cmds[0]{state}[$def{s2r}{$s}], ($rc{match}[$def{s2r}{$s}]) ? "TRUE" : "FALSE");
+		printf "\n[%-8.8s] %-${maxlen}s%s", $def{label}{$def{s2r}{$s}}, ($rc{match}[$def{s2r}{$s}]) ? "TRUE" : "FALSE", $cmds[0]{state}[$def{s2r}{$s}] if ($opt{set}{verbose});
 		DEBUG2(state_string_ascii($cmds[0]{state}[$def{s2r}{$s}]));
-		#--- if state matches
+		#--- print if some state matches
 		if (($cmds[0]{state}[$def{s2r}{$s}] ne $cmds[0]{state_default}[$def{s2r}{$s}] && $rc{match}[$def{s2r}{$s}]) ||
-		     $opt{set}{report} & $DETAIL_LIST_FULL ) {
+	     		$opt{set}{report} & $DETAIL_LIST_FULL ) {
 			printf "\n[%2.2s] %-5s - %s", $def{label}{$def{s2r}{$s}}, $rc{match}[$def{s2r}{$s}]?"TRUE":"FALSE", $cmds[0]{state}[$def{s2r}{$s}];
 		} else {
 			DEBUG3("No match ($def{s2r}{$s} - $def{s2r}{$def{s2r}{$s}}): $rc{match}[$def{s2r}{$def{s2r}{$s}}]");
 		}
 	}
-	DEBUG1("-" x 80);
-	DEBUG1(sprintf "%8s %55s %s", "", "Overall state =>", $def{label}{$cmds[0]{rc}});
-	DEBUG1("-" x 80);
+	printf "\n[%-8.8s] %-${maxlen}s\n", "OVERALL", $def{label}{$cmds[0]{rc}} if ($opt{set}{verbose});
 }
 
 #---
@@ -3518,6 +3557,19 @@ sub state_string_ascii {
 	$output;
 }
 
+#---
+#--- helper routine which formats fields
+#---
+sub format_fields {
+	my ($field, $content)=@_;
+	if ($field =~ /endtime|starttime/) {
+		return readable_sortable_timestamp($content);
+	} elsif ($field =~ /runtime/) {
+		return sprintf "%.6f", $content;
+	} else {
+		return $content;
+	}
+}
 #---
 #--- report results stored in %cmds (HTML report)
 #---
