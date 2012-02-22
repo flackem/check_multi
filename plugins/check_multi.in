@@ -2202,7 +2202,7 @@ sub parse_header {
 	} elsif ($type eq "state") {
 		#DEBUG1("def{code}{$name}:$def{code}{$name}");
 		if (!defined($def{code}{$name})) {
-			add_error(0,"parse_header: invalid state code specified in line $lineno: $cmd");
+			add_error(0,"parse_header: invalid state code specified in line $lineno: state [ $name ] = $cmd");
 			return -1;
 		}
 		#--- store state expression only if NOT set via commandline
