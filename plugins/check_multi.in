@@ -152,7 +152,7 @@ my %opt=(
 		complain_unknown_macros => @complain_unknown_macros@,
 		# path to check_multi config directory
 		config_dir	=> "@config_dir@",
-		# how many rows should be displayed for cumulate statement?
+		# how many rows should be visible for cumulate statement?
 		cumulate_max_rows => 5,
 		# should cumulate ignore zero values?
 		cumulate_ignore_zero => @cumulate_ignore_zero@,
@@ -322,9 +322,9 @@ my @cmds = (
 					"COUNT(UNKNOWN) > 0"	# UNKNOWN
 				],
 		hash		=> "",		# hash for all child checks
-		nallchecks	=> 0,		# number of all child checks (with non-displayed checks)
+		nallchecks	=> 0,		# number of all child checks (with non-visible checks)
 		name		=> "",		# no predefined name for parent (-n option)
-		nchecks		=> 0,		# number of child checks (displayed)
+		nchecks		=> 0,		# number of child checks (visible)
 		number		=> 0,		# current number of check (0 for head)
 		ok		=> "",		# state definition: OK
 		output		=> "",		# output
@@ -340,9 +340,9 @@ my @cmds = (
 	#--- elements 1..x will be added by parse_lines / parse_header
 );
 my %rc = (
-	count		=> [ 0, 0, 0, 0,  ],	# count displayed RCs
+	count		=> [ 0, 0, 0, 0,  ],	# count visible RCs
 	count_all	=> [ 0, 0, 0, 0,  ],	# cound all RCs
-	list		=> [ [],[],[],[], ],	# list of displayed child checks
+	list		=> [ [],[],[],[], ],	# list of visible child checks
 	list_all	=> [ [],[],[],[], ],	# list of all child checks
 	match		=> [ 0, 0, 0, 0,  ],	#
 );
@@ -1790,7 +1790,7 @@ sub parse_header {
 		$cmds[$i]{critical}="";
 		$cmds[$i]{unknown}="";
 		$cmds[$i]{rc}=$OK;
-		$cmds[$i]{displayed}=1;
+		$cmds[$i]{visible}=1;
 		$cmds[$i]{output}="";
 		$cmds[$i]{error}=[];
 		$cmds[$i]{runtime}=0;
@@ -1822,7 +1822,7 @@ sub parse_header {
 		$cmds[$i]{critical}="";
 		$cmds[$i]{unknown}="";
 		$cmds[$i]{rc}=$OK;
-		$cmds[$i]{displayed}=1;
+		$cmds[$i]{visible}=1;
 		$cmds[$i]{output}="";
 		$cmds[$i]{error}=[];
 		$cmds[$i]{runtime}=0;
@@ -1848,7 +1848,7 @@ sub parse_header {
 		$cmds[$i]{unknown}="";
 		$cmds[$i]{rc}=$OK;
 		$cmds[0]{nallchecks}++;
-		$cmds[$i]{displayed}=0;
+		$cmds[$i]{visible}=0;
 		$cmds[$i]{output}="";
 		$cmds[$i]{error}=[];
 		$cmds[$i]{runtime}=0;
@@ -1879,7 +1879,7 @@ sub parse_header {
 		$cmds[$i]{critical}="";
 		$cmds[$i]{unknown}="";
 		$cmds[$i]{rc}=$OK;
-		$cmds[$i]{displayed}=1;
+		$cmds[$i]{visible}=1;
 		$cmds[$i]{output}="";
 		$cmds[$i]{error}=[];
 		$cmds[$i]{runtime}=0;
@@ -1960,7 +1960,7 @@ sub parse_header {
 				$cmds[$i]{warning}="";
 				$cmds[$i]{critical}="";
 				$cmds[$i]{unknown}="";
-				$cmds[$i]{displayed}=1;
+				$cmds[$i]{visible}=1;
 				$cmds[$i]{runtime}=0;
 				$cmds[$i]{error}=[];
 				$cmds[$i]{host}=shift(@result);
@@ -2010,7 +2010,7 @@ sub parse_header {
 				$cmds[$i]{warning}="";
 				$cmds[$i]{critical}="";
 				$cmds[$i]{unknown}="";
-				$cmds[$i]{displayed}=1;
+				$cmds[$i]{visible}=1;
 				$cmds[$i]{runtime}=0;
 				$cmds[$i]{error}=[];
 				$cmds[$i]{host}=shift(@result);
@@ -2072,7 +2072,7 @@ sub parse_header {
 		$cmds[$i]{warning}="";
 		$cmds[$i]{critical}="";
 		$cmds[$i]{unknown}="";
-		$cmds[$i]{displayed}=1;
+		$cmds[$i]{visible}=1;
 		$cmds[$i]{output}="";
 		$cmds[$i]{error}=[];
 		$cmds[$i]{runtime}=0;
@@ -2114,7 +2114,7 @@ sub parse_header {
 				$cmds[$i]{warning}="";
 				$cmds[$i]{critical}="";
 				$cmds[$i]{unknown}="";
-				$cmds[$i]{displayed}=1;
+				$cmds[$i]{visible}=1;
 				$cmds[$i]{output}="";
 				$cmds[$i]{error}=[];
 				$cmds[$i]{runtime}=0;
@@ -2169,7 +2169,7 @@ sub parse_header {
 				$cmds[$i]{critical}="";
 				$cmds[$i]{unknown}="";
 				$cmds[$i]{rc}=$OK;
-				$cmds[$i]{displayed}=1;
+				$cmds[$i]{visible}=1;
 				$cmds[$i]{output}="";
 				$cmds[$i]{error}=[];
 				$cmds[$i]{runtime}=0;
@@ -2545,7 +2545,7 @@ sub exec_command {
 					$top[$i]{unknown}="";
 					$top[$i]{rc}=$OK;
 					$top[$i]{number}=$no+$i;
-					$top[$i]{displayed}=1;
+					$top[$i]{visible}=1;
 					$top[$i]{error}=[];
 					$top[$i]{feeded}=1;
 					$top[$i]{runtime}=0;
@@ -2802,8 +2802,12 @@ sub read_status_dat {
 				} elsif (/^\tcheck_command=([^!]+)/) {
 					$r{check_command}=$1;
 					chomp($r{check_command});
+				} elsif (/^\tlast_check=(.*)/) {
+					$r{last_check}=$1;
 				} elsif (/^\tlast_hard_state=(.*)/) {
 					$r{last_hard_state}=$1;
+				} elsif (/^\tlast_hard_state_change=(.*)/) {
+					$r{last_hard_state_change}=$1;
 				} elsif (/^\tplugin_output=(.*)/) {
 					$r{plugin_output}=$1;
 				} elsif (/^\tlong_plugin_output=(.*)/) {
@@ -2821,6 +2825,8 @@ sub read_status_dat {
 				} elsif (/^\t\}$/) {
 					$status_dat->{hoststatus}->{"$r{host_name}"}->{check_command}=$r{check_command};
 					$status_dat->{hoststatus}->{"$r{host_name}"}->{last_hard_state}=$r{last_hard_state};
+					$status_dat->{hoststatus}->{"$r{host_name}"}->{last_hard_state_change}=$r{last_hard_state_change};
+					$status_dat->{hoststatus}->{"$r{host_name}"}->{last_check}=$r{last_check};
 					$status_dat->{hoststatus}->{"$r{host_name}"}->{long_plugin_output}=$r{long_plugin_output};
 					$status_dat->{hoststatus}->{"$r{host_name}"}->{performance_data}=$r{performance_data};
 					$status_dat->{hoststatus}->{"$r{host_name}"}->{plugin_output}=$r{plugin_output};
@@ -2838,8 +2844,12 @@ sub read_status_dat {
 				} elsif (/^\tcheck_command=([^!]+)/) {
 					$r{check_command}=$1;
 					chomp($r{check_command});
+				} elsif (/^\tlast_check=(.*)/) {
+					$r{last_check}=$1;
 				} elsif (/^\tlast_hard_state=(.*)/) {
 					$r{last_hard_state}=$1;
+				} elsif (/^\tlast_hard_state_change=(.*)/) {
+					$r{last_hard_state_change}=$1;
 				} elsif (/^\tplugin_output=(.*)/) {
 					$r{plugin_output}=$1;
 				} elsif (/^\tlong_plugin_output=(.*)/) {
@@ -2856,7 +2866,9 @@ sub read_status_dat {
 					$r{performance_data}=$1;
 				} elsif (/^\t\}$/) {
 					$status_dat->{servicestatus}->{"$r{host_name}"}->{"$r{service_description}"}->{check_command}=$r{check_command};
+					$status_dat->{servicestatus}->{"$r{host_name}"}->{"$r{service_description}"}->{last_check}=$r{last_check};
 					$status_dat->{servicestatus}->{"$r{host_name}"}->{"$r{service_description}"}->{last_hard_state}=$r{last_hard_state};
+					$status_dat->{servicestatus}->{"$r{host_name}"}->{"$r{service_description}"}->{last_hard_state_change}=$r{last_hard_state_change};
 					$status_dat->{servicestatus}->{"$r{host_name}"}->{"$r{service_description}"}->{performance_data}=$r{performance_data};
 					$status_dat->{servicestatus}->{"$r{host_name}"}->{"$r{service_description}"}->{plugin_output}=$r{plugin_output};
 					$status_dat->{servicestatus}->{"$r{host_name}"}->{"$r{service_description}"}->{long_plugin_output}=$r{long_plugin_output};
@@ -3171,10 +3183,10 @@ sub global_result_rating {
 
 	#--- count return codes
 	for ($no=1;$no<=$#cmds;$no++) {
-		#--- count only displayed (without eval)
-		if ($cmds[$no]{displayed}) {
-			$rc{count}[$cmds[$no]{rc}]++; # count displayed return codes
-			push @{$rc{list}[$cmds[$no]{rc}]},$cmds[$no]{name}; # add plugin to displayed list
+		#--- count only visible (without eval)
+		if ($cmds[$no]{visible}) {
+			$rc{count}[$cmds[$no]{rc}]++; # count visible return codes
+			push @{$rc{list}[$cmds[$no]{rc}]},$cmds[$no]{name}; # add plugin to visible list
 		}
 		#--- count all child checks
 		$rc{count_all}[$cmds[$no]{rc}]++;	# count all return codes
@@ -3950,7 +3962,7 @@ sub report_xml {
 
 	#--- loop over child checks
 	for ($no=1;$no<=$#cmds;$no++) {
-		next if (!$cmds[$no]{displayed});
+		next if (!$cmds[$no]{visible});
 		$xmlstr.="\t<CHILD>\n";
 		$xmlstr.="\t\t<no>$cmds[$no]{number}</no>\n";
 		foreach my $token (sort keys %{$cmds[$no]}) {
@@ -3996,7 +4008,7 @@ sub report_inventory {
 	#--- loop over child checks
 	for ($no=1;$no<=$#cmds;$no++) {
 		$cmds[$no]{rc}=$OK;
-		next if (!$cmds[$no]{displayed});
+		next if (!$cmds[$no]{visible});
 		$xmlstr.="\t<CHILD>\n";
 		$xmlstr.="\t\t<no>$no</no>\n";
 		foreach my $token (sort keys %{$cmds[$no]}) {
