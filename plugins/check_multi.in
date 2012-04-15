@@ -2538,7 +2538,7 @@ sub exec_command {
 			my @top=get_cumulated_top($cmds[$no]{output},$opt{set}{cumulate_max_rows});
 			if ($#top<0) {
 				$cmds[$no]{output}="No output.";
-				$cmds[$no]{rc}=$UNKNOWN;
+				$cmds[$no]{rc}=($opt{set}{empty_output_is_unknown}) ? $UNKNOWN : $OK;
 			} else {
 				#--- fill new array members hashes
 				for (my $i=0;$i<=$#top;$i++) {
