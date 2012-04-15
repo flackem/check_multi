@@ -1693,6 +1693,9 @@ sub parse_lines {
 			} elsif ($last_command=~/OK|UNKNOWN|WARNING|CRITICAL/i) {
 				DEBUG4("continuation line detected: state continuation for ".lc($last_command).": $line");
 				$cmds[0]{state}[$def{code}{lc($last_command)}].=$line;
+			} elsif ($last_command=~/head/i) {
+				DEBUG4("continuation line detected, appending \'$line\' to command \'$cmds[0]{command}\'");
+				$cmds[0]{command}.=' '.$line;
 			} elsif ($last_command > 0) {
 				DEBUG4("continuation line detected, appending \'$line\' to command \'$cmds[$last_command]{command}\'");
 				$cmds[$last_command]{command}.=' '.$line;
@@ -2235,6 +2238,10 @@ sub parse_header {
 			add_error("parse_header: invalid tag output [ $name ] specified in line $lineno, " .
 				"possible reason: defined output statement before command / eval statement");
 			return -1;
+		} else {
+			# normally the index of the child will be returned, but output also can cover 0 (head).
+			# since 0 would indicate no command, we force a returncode of "head" here
+			return "head";	
 		}
 
 	#--- no type found? then its invalid
