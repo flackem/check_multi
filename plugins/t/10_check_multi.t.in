@@ -331,7 +331,7 @@ is(
 );
 like(
 	$result->output,
-	'/^OK - 1 plugins checked, 0 critical, 0 warning, 0 unknown, 1 ok \[OK - TRUE - 1\] \[UNKNOWN - FALSE - COUNT\(UNKNOWN\) > 0\] \[WARNING - FALSE - COUNT\(WARNING\) > 0\] \[CRITICAL - FALSE - COUNT\(CRITICAL\) > 0\]\n'.
+	'/^OK - 1 plugins checked, 0 critical, 0 warning, 0 unknown, 1 ok\n'.
 	'\[ 1\] eins 1\n'.
 	'\[OK\] TRUE  - 1\n'.
 	'\[UN\] FALSE - COUNT\(UNKNOWN\) > 0\n'.
@@ -352,7 +352,7 @@ is(
 );
 like(
 	$result->output,
-	'/^OK - 1 plugins checked, 0 critical, 0 warning, 0 unknown, 1 ok \[OK - TRUE - 1\] \[UNKNOWN - FALSE - COUNT\(UNKNOWN\) > 0\] \[WARNING - FALSE - COUNT\(WARNING\) > 0\] \[CRITICAL - FALSE - COUNT\(CRITICAL\) > 0\]\n'.
+	'/^OK - 1 plugins checked, 0 critical, 0 warning, 0 unknown, 1 ok\n'.
 	'.*OK.*UNKN.*WARN.*CRIT.*/',
 	"output correct"
 );
@@ -369,7 +369,7 @@ is(
 );
 like(
 	$result->output,
-	'/^WARNING - 1 plugins checked, 1 warning \(eins\) \[WARNING - TRUE - count\(WARNING\)==1\]\n'.
+	'/^WARNING - 1 plugins checked, 1 warning \(eins\) \[WARNING]\n'.
 	'\[ 1\] eins 1\n'.
 	'\[WA\] TRUE  - count\(WARNING\)==1$/',
 	"output correct"

@@ -1296,7 +1296,9 @@ sub substitute_states {
 		return $input;
 	}
 
-	#--- 1. replace COUNT(WARNING)
+	DEBUG3("input before substitution: $input");
+
+	#--- 1. replace COUNT(NOK)
 	$input=~s/\bCOUNT\s*\(\s*(OK)\s*\)/$rc{count}[$OK]/ig;
 	$input=~s/\bCOUNT\s*\(\s*(WARNING)\s*\)/$rc{count}[$WARNING]/ig;
 	$input=~s/\bCOUNT\s*\(\s*(CRITICAL)\s*\)/$rc{count}[$CRITICAL]/ig;
@@ -1315,6 +1317,8 @@ sub substitute_states {
 	}
 	#--- 4. replace IGNORE
 	$input=~s/\b(IGNORE)\b/(0==1)/ig;
+
+	DEBUG3("input after substitution: $input");
 	return $input;
 }
 
@@ -1894,9 +1898,10 @@ sub parse_header {
 			$cmds[$i]{process_perfdata}=1;
 		}
 
-	#--- format: 'info   [ tag[::{pre|post} ] = string'
+	#--- format: 'info   [ tag[::{pre|post}[_{severity}] ] = string'
 	} elsif ($type eq "info") {
 		my $subkey="";
+		#--- errors
 		#--- 1. invalid key
 		if ($key!~/^pre|^post/) {
 			add_error($no,"parse_header: info [ ${name}::${key} ]: invalid info type \"$key\", must begin with pre or post.");
@@ -3398,13 +3403,18 @@ sub report_ascii {
 				"$rc{count}[$OK] ok";
 		}
 		foreach my $s (sort numerically keys %{$def{s2r}}) {
-			#--- if state matches
-			if (($cmds[0]{state}[$def{s2r}{$s}] ne $cmds[0]{state_default}[$def{s2r}{$s}] && $rc{match}[$def{s2r}{$s}]) ||
+			#--- if state matches and DETAIL_LIST
+			if (($cmds[0]{state}[$def{s2r}{$s}] ne $cmds[0]{state_default}[$def{s2r}{$s}] && $rc{match}[$def{s2r}{$s}]) &&
+			      $opt{set}{report} & $DETAIL_LIST ) {
+				printf " [%s]", $def{label}{$def{s2r}{$s}};
+			#--- if state matches and DETAIL_LIST_FULL
+			} elsif (($cmds[0]{state}[$def{s2r}{$s}] ne $cmds[0]{state_default}[$def{s2r}{$s}] && $rc{match}[$def{s2r}{$s}]) &&
 			     $opt{set}{report} & $DETAIL_LIST_FULL ) {
-				printf " [%s - %s - %s]", $def{label}{$def{s2r}{$s}}, $rc{match}[$def{s2r}{$s}]?"TRUE":"FALSE", $cmds[0]{state}[$def{s2r}{$s}];
+				printf " [%s - %s]", $def{label}{$def{s2r}{$s}}, $cmds[0]{state}[$def{s2r}{$s}];
 			} else {
 				DEBUG3("No match ($def{s2r}{$s} - $def{s2r}{$def{s2r}{$s}}): $rc{match}[$def{s2r}{$def{s2r}{$s}}]");
 			}
+			DEBUG3("DEBUG  ($def{s2r}{$s} - $def{s2r}{$def{s2r}{$s}}): $rc{match}[$def{s2r}{$def{s2r}{$s}}]");
 		}
 	}
 	#--- print general errors if any occured
@@ -3626,13 +3636,18 @@ sub report_html {
 				"$rc{count}[$OK] ok";
 		}
 		foreach my $s (sort numerically keys %{$def{s2r}}) {
-			#--- if state matches
-			if (($cmds[0]{state}[$def{s2r}{$s}] ne $cmds[0]{state_default}[$def{s2r}{$s}] && $rc{match}[$def{s2r}{$s}]) ||
+			#--- if state matches and DETAIL_LIST
+			if (($cmds[0]{state}[$def{s2r}{$s}] ne $cmds[0]{state_default}[$def{s2r}{$s}] && $rc{match}[$def{s2r}{$s}]) &&
+			      $opt{set}{report} & $DETAIL_LIST ) {
+				printf " [%s]", $def{label}{$def{s2r}{$s}};
+			#--- if state matches and DETAIL_LIST_FULL
+			} elsif (($cmds[0]{state}[$def{s2r}{$s}] ne $cmds[0]{state_default}[$def{s2r}{$s}] && $rc{match}[$def{s2r}{$s}]) &&
 			     $opt{set}{report} & $DETAIL_LIST_FULL ) {
-				$output.=sprintf " [%s - %s - %s]", $def{label}{$def{s2r}{$s}}, $rc{match}[$def{s2r}{$s}]?"TRUE":"FALSE", $cmds[0]{state}[$def{s2r}{$s}];
+				printf " [%s - %s]", $def{label}{$def{s2r}{$s}}, $cmds[0]{state}[$def{s2r}{$s}];
 			} else {
 				DEBUG3("No match ($def{s2r}{$s} - $def{s2r}{$def{s2r}{$s}}): $rc{match}[$def{s2r}{$def{s2r}{$s}}]");
 			}
+			DEBUG3("DEBUG  ($def{s2r}{$s} - $def{s2r}{$def{s2r}{$s}}): $rc{match}[$def{s2r}{$def{s2r}{$s}}]");
 		}
 	}
 
