@@ -131,9 +131,9 @@ Mail address           $NAGIOS_CONTACTEMAIL
 Notification type      $NAGIOS_NOTIFICATIONTYPE
 --boundary-line
 EOF2
-f
+
 #--- 2. LONGSERVICEOUTPUT available? put it into HTML MIME attachment and send it
-#cat "$MAIL_ATTACHMENT_TXT" | $MAILBIN 
+cat "$MAIL_ATTACHMENT_TXT" | $MAILBIN 
 
 RC=$?	# catch RC
 #
