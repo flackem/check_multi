@@ -2208,7 +2208,8 @@ sub parse_header {
 
 	#--- format: state [ {UNKNOWN,WARNING,CRITICAL,OK} ] = <perl expression>
 	} elsif ($type eq "state") {
-		#DEBUG1("def{code}{$name}:$def{code}{$name}");
+		# be sure that there is no case typo in the name
+		$name=uc($name);
 		if (!defined($def{code}{$name})) {
 			add_error(0,"parse_header: invalid state code specified in line $lineno: state [ $name ] = $cmd");
 			return -1;
