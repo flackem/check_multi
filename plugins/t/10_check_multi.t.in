@@ -27,10 +27,9 @@ foreach my $plugin (@plugins) {
 	}
 }
 
-plan tests => 106;
+plan tests => 110;
 
 my $result;
-#my $testopts="-s dont_be_paranoid=1 -s tmp_dir=/tmp/check_multi";
 my $testopts=testopts::get_testopts;
 #-------------------------------------------------------------------------------
 #--- check_multi version -------------------------------------------------------
@@ -555,6 +554,40 @@ like(
 	$result->output,
 	'/OK - 1 plugins checked, 1 ok\n'. 
 	'\[ 1\] encode encode\|check_multi::check_multi::plugins=1 time=\d+\.\d+/',
+	"output correct"
+);
+#-------------------------------------------------------------------------------
+#--- check_multi corrects 0 permissions at tmp_dir -----------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"rmdir ./tmpdir 2>/dev/null; mkdir ./tmpdir; chmod 000 ./tmpdir; @PERL@ ../check_multi -r 1 -s dont_be_paranoid=1 -s tmp_dir=\"./tmpdir\" -x \'command [ tmpdir ] = ls -ld ./tmpdir'"
+);
+is(
+	$result->return_code, 
+	0, 
+	"tmp_dir creation with correcting wrong permissions - RC0",
+);
+like(
+	$result->output,
+	'/^OK - 1 plugins checked, 1 ok\n'.
+	'\[ 1\] tmpdir drwxrwxrwt.*/',
+	"output correct"
+);
+#-------------------------------------------------------------------------------
+#--- check_multi does nothing with correct permissions on tmp_dir --------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"rmdir ./tmpdir 2>/dev/null; mkdir ./tmpdir; chmod 1777 ./tmpdir; @PERL@ ../check_multi -r 1 -s dont_be_paranoid=1 -s tmp_dir=\"./tmpdir\" -x \'command [ tmpdir ] = ls -ld ./tmpdir'"
+);
+is(
+	$result->return_code, 
+	0, 
+	"tmp_dir creation with correct permissions - RC0",
+);
+like(
+	$result->output,
+	'/^OK - 1 plugins checked, 1 ok\n'.
+	'\[ 1\] tmpdir drwxrwxrwt.*/',
 	"output correct"
 );
 #-------------------------------------------------------------------------------
