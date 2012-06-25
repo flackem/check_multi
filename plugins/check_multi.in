@@ -480,7 +480,7 @@ sub process_input {
 		return $UNKNOWN;
 	}
 	#--- 2. check if tmp_dir has correct permissions
-	if  ((stat("$opt{set}{tmp_dir}"))[2] != oct("$opt{set}{tmp_dir_permissions}") &&
+	if  (((stat("$opt{set}{tmp_dir}"))[2] & 07777) != oct("$opt{set}{tmp_dir_permissions}") &&
 		! chmod(oct("$opt{set}{tmp_dir_permissions}"), "$opt{set}{tmp_dir}") ) {
 		print "Error: could not set tmp directory $opt{set}{tmp_dir} permissions to $opt{set}{tmp_dir_permissions} as user $opt{set}{user}\n";
 		return $UNKNOWN;
