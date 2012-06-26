@@ -3654,7 +3654,7 @@ sub report_html {
 
 	#--- print general errors if any occured
 	$output.=error(0);
-	$output.=($opt{set}{extinfo_in_status})?"<br />":"\n";
+	$output.=($opt{set}{extinfo_in_status})?"<br />": (($opt{set}{report} & $DETAIL_NAGIOS2) ? ". " : "\n");
 
 	#--- collapse of contents with javascript
 	if ($opt{set}{collapse} == 1) {
