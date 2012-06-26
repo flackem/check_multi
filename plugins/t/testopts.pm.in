@@ -31,6 +31,7 @@ sub get_testopts  {
 		file_extension			=> "cmd",
 		#HOSTADDRESS			=> "127.0.0.1",
 		#HOSTNAME			=> "localhost",
+		html_ascii_notification		=> 0,
 		ignore_missing_cmd_file		=> 0,
 		illegal_chars			=> "",
 		image_path			=> "'/nagios/images'",

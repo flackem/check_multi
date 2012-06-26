@@ -44,6 +44,7 @@ my $feed_passive_dir_permissions="@feed_passive_dir_permissions@";
 my $file_extension="@file_extension@";
 my $findbin=@findbin@;
 my $gunzip="@gunzip@";
+my $html_ascii_notification="@html_ascii_notification@";
 my $hostname="@hostname@";
 my $ignore_missing_cmd_file="@ignore_missing_cmd_file@";
 my $illegal_chars="@illegal_chars@";
@@ -139,6 +140,7 @@ while (my $f = shift @ARGV) {
 		s|\@file_extension\@|$file_extension|g;
 		s|\@findbin\@|$findbin|g;
 		s|\@gunzip\@|$gunzip|g;
+		s|\@html_ascii_notification\@|$html_ascii_notification|g;
 		s|\@hostname\@|$hostname|g;
 		s|\@ignore_missing_cmd_file\@|$ignore_missing_cmd_file|g;
 		s|\@illegal_chars\@|$illegal_chars|g;

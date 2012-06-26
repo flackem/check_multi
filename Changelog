@@ -1,6 +1,7 @@
 
 ===== Changelog =====
 
+	* new switch html_ascii_notification allows ASCII part in HTML output
 	* reorganized ascii verbose mode, prints selectable fields
 	* info [ tag::pre_nok ] - info text for non OK states
 	* info [ tag::pre_<status> ] adds info texts depending on status

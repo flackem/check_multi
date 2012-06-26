@@ -178,6 +178,8 @@ my %opt=(
 		# standard extension of check_multi command files,
 		# to be searched in directories
 		file_extension	=> "@file_extension@",
+		# if ASCII output should be embedded into HTML output as a comment
+		html_ascii_notification => @html_ascii_notification@,
 		# if set, return UNKNOWN if command file is not found
 		ignore_missing_cmd_file => @ignore_missing_cmd_file@,
 		# characters to cleanup from command files
@@ -3331,7 +3333,14 @@ sub report_all {
 	if (($opt{set}{report} & $DETAIL_HTML) &&
 	   !($opt{set}{report} & $DETAIL_XML)) {
 		&report_html;
+		#--- add ASCII comment into HTML for notifications
+		if ($opt{set}{html_ascii_notification}) {
+			print "<!---\nASCII_NOTIFICATION_START\n";
+			&report_ascii;
+			print "\nASCII_NOTIFICATION_END\n---!>\n";
+		}
 	}
+
 	#--- report XML output (and not HTML)
 	if (($opt{set}{report} & $DETAIL_XML) &&
 	   !($opt{set}{report} & $DETAIL_HTML)) {
@@ -3669,8 +3678,11 @@ sub report_html {
 		}
 	}
 
+	#--- output is enclosed into div sections
+	$output.="<div>";
+
 	#--- loop over commands: report particular results for long plugin output
-	$output.="<div><table style='border-left-width:1px; border-right-width:0px; border-left-style:dotted' id='multi_table'>";
+	$output.="<table style='border-left-width:1px; border-right-width:0px; border-left-style:dotted' id='multi_table'>";
 	for ($no=1;$no<=$#cmds;$no++) {
 		#--- skip eval
 		next if ($cmds[$no]{type} eq "eval");

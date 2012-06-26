@@ -301,6 +301,23 @@ like(
 	"output correct"
 );
 #-------------------------------------------------------------------------------
+#--- report option 2 -----------------------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -s report=2 -s html_ascii_notification=1 -x 'command [ procs ] = echo \"PROCS OK: 99 processes\"'"
+);
+is(
+	$result->return_code, 
+	0, 
+	"report option 2 (HTML) - RC0"
+);
+like(
+	$result->output,
+	'/^OK - 1 plugins checked, 0 critical, 0 warning, 0 unknown, 1 ok\n'.
+	'<script language=\'JavaScript\'> function Toggle.*PROCS OK: \d+ processes.*div><!---\nASCII_NOTIFICATION_START\n.*\nASCII_NOTIFICATION_END\n---!>/s',
+	"output correct"
+);
+#-------------------------------------------------------------------------------
 #--- report option 4 - eval error shown in [ brackets ] ------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(

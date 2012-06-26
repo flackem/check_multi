@@ -274,7 +274,7 @@ PACKAGE_STRING='check_multi 0.26'
 PACKAGE_BUGREPORT='matthias.flacke@gmx.de'
 
 ac_default_prefix=/usr/local/nagios
-ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS PKG_NAME PKG_VERSION PKG_AUTHOR PKG_HOME_URL PKG_REL_DATE PKG_ID COMMA SET_MAKE CHMOD CP ETHTOOL GUNZIP ID INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA MAILX PERL client_perl INSTALL INSTALL_OPTS LIBEXECDIR ac_configure_args action_mouseover action_url add_tag_to_list_entries cancel_before_global_timeout child_interval checkresults_dir child_timeout cmdfile_update_interval collapse complain_unknown_macros contrib_dir config_dir datarootdir cumulate_ignore_zero empty_output_is_unknown ethtool exec_open3 extinfo_in_status extended_perfdata feed_passive_autocreate feed_passive_dir feed_passive_dir_permissions findbin file_extension gunzip hostname ignore_missing_cmd_file illegal_chars image_path indent_label indent livestatus loose_perfdata name no_checks_rc objects_cache objects_cache_delimiter omd_environment nagios_name notes_url parent_timeout perfdata_pass_through persistent plugin_path pnp_version pnp_add2url pnp_url report report_inherit_mask service_definition_template signal_rc snmp_community snmp_port status_dat style_plus_minus tag_notes_link target tmp_dir tmp_dir_permissions tmp_etc verbose verbose_fields LIBOBJS LTLIBOBJS'
+ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS PKG_NAME PKG_VERSION PKG_AUTHOR PKG_HOME_URL PKG_REL_DATE PKG_ID COMMA SET_MAKE CHMOD CP ETHTOOL GUNZIP ID INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA MAILX PERL client_perl INSTALL INSTALL_OPTS LIBEXECDIR ac_configure_args action_mouseover action_url add_tag_to_list_entries cancel_before_global_timeout child_interval checkresults_dir child_timeout cmdfile_update_interval collapse complain_unknown_macros contrib_dir config_dir datarootdir cumulate_ignore_zero empty_output_is_unknown ethtool exec_open3 extinfo_in_status extended_perfdata feed_passive_autocreate feed_passive_dir feed_passive_dir_permissions findbin file_extension gunzip html_ascii_notification hostname ignore_missing_cmd_file illegal_chars image_path indent_label indent livestatus loose_perfdata name no_checks_rc objects_cache objects_cache_delimiter omd_environment nagios_name notes_url parent_timeout perfdata_pass_through persistent plugin_path pnp_version pnp_add2url pnp_url report report_inherit_mask service_definition_template signal_rc snmp_community snmp_port status_dat style_plus_minus tag_notes_link target tmp_dir tmp_dir_permissions tmp_etc verbose verbose_fields LIBOBJS LTLIBOBJS'
 ac_subst_files=''
 
 # Initialize some variables set by options.
@@ -812,7 +812,7 @@ detail settings:
   --with-feed_passive_dir_permissions=<octal perms> permissions for feed passive config dir (default:01777)
   --with-findbin=<0|1>                     use Perl module FindBin for addressing plugins (default:1)
   --with-file_extension=<ext>              default extension for check_multi command files (default:"cmd")
-  --with-hostname=<host>                   hostname of nagios server for mail / web purposes (default:"localhost")
+  --with-html_ascii_notification=<0|1>     HTML output contains comment with ASCII output for notifications (default:1)
   --with-ignore_missing_cmd_file=<0|1>     if missing cmd files should be ignored (default:0)
   --with-illegal_chars=<chars>             characters to be stripped from command files (default:"\r")
   --with-image_path=<URL>                  relative URL to nagios images (default:"/nagios/images")
@@ -1971,12 +1971,20 @@ else
   file_extension="cmd"
 fi;
 
-# Check whether --with-hostname or --without-hostname was given.
-if test "${with_hostname+set}" = set; then
-  withval="$with_hostname"
-  hostname=$withval
+# Check whether --with-file_extension or --without-file_extension was given.
+if test "${with_file_extension+set}" = set; then
+  withval="$with_file_extension"
+  file_extension=$withval
 else
-  hostname="localhost"
+  file_extension="cmd"
+fi;
+
+# Check whether --with-html_ascii_notification or --without-html_ascii_notification was given.
+if test "${with_html_ascii_notification+set}" = set; then
+  withval="$with_html_ascii_notification"
+  html_ascii_notification=$withval
+else
+  html_ascii_notification=1
 fi;
 
 # Check whether --with-ignore_missing_cmd_file or --without-ignore_missing_cmd_file was given.
@@ -2284,6 +2292,7 @@ else
 fi;
 
 #--- substitutions
+
 
 
 
@@ -3042,6 +3051,7 @@ s,@feed_passive_dir_permissions@,$feed_passive_dir_permissions,;t t
 s,@findbin@,$findbin,;t t
 s,@file_extension@,$file_extension,;t t
 s,@gunzip@,$gunzip,;t t
+s,@html_ascii_notification@,$html_ascii_notification,;t t
 s,@hostname@,$hostname,;t t
 s,@ignore_missing_cmd_file@,$ignore_missing_cmd_file,;t t
 s,@illegal_chars@,$illegal_chars,;t t
