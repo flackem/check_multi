@@ -8,6 +8,8 @@
 # Call: check_multi -f nagiostats.cmd -s NSTATS=/path/to/nagiostats
 #
 
+eval [ NSTATS ] = ("$NSTATS$" eq "") ? "@sbindir@/nagiostats" : "$NSTATS$"
+
 # 1. check correct parameter passing for NSTAT binary
 eval    [ NSTATS_defined                ] =
 	if (! "$NSTATS$") {
