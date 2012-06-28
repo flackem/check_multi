@@ -21,7 +21,6 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #
 use strict;
-use warnings;
 use Getopt::Long;
 use vars qw(
 $MYSELF @cmds %opt $returncode %def %rc $no $VERSION $tmp_stdout $tmp_stderr $xml $check_multi
@@ -407,7 +406,7 @@ sub process_input {
 
 	#--- redefine debug typeglobs, if verbose flag has been changed on cmdline
 	{ 
-	no warnings 'redefine';
+	$^W=0;
 	*DEBUG1=($opt{set}{verbose}>=1) ? \&debug_message : sub {};
 	*DEBUG2=($opt{set}{verbose}>=2) ? \&debug_message : sub {};
 	*DEBUG3=($opt{set}{verbose}>=3) ? \&debug_message : sub {};
