@@ -5,8 +5,10 @@
 #
 # Copyright (c) 2008-2009 Matthias Flacke (matthias.flacke at gmx.de)
 #
-# Call: check_multi -f nagiostats.cmd -s NSTATS=/path/to/nagiostats
+# Call: check_multi -f nagiostats.cmd [-s NSTATS=/path/to/nagiostats]
 #
+
+eval [ NSTATS ] = (! "$NSTATS$") ? "@sbindir@/nagiostats" : "$NSTATS$"
 
 # 1. check correct parameter passing for NSTAT binary
 eval    [ NSTATS_defined                ] =

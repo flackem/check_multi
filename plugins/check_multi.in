@@ -1063,22 +1063,6 @@ sub my_hash {
 	return $hash;
 }
 
-#--- 
-#--- detection of numbers / strings in input
-#--- gracefully taken from perlmonks (no 408607)
-#---
-sub seems_like_number {
-	my $thing = shift;
-	use warnings qw/FATAL all/;	# Promote warnings to fatal, so
-					# they can be trapped. The effect is
-					# lexically scoped.
-	eval {
-		$thing += 0;
-	};
-	DEBUG4(sprintf "input >$thing< has %sbeen identified as a number", $@ ? "not " : "");
-	return $@ ? 0 : 1;
-}
-
 #---
 #--- directories should not have separator characters
 #---
