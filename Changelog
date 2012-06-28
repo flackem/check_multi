@@ -1,6 +1,7 @@
 
 ===== Changelog =====
 
+	* changed Getopt::Long handling to allow old Perl versions
 	* new switch html_ascii_notification allows ASCII part in HTML output
 	* reorganized ascii verbose mode, prints selectable fields
 	* info [ tag::pre_nok ] - info text for non OK states

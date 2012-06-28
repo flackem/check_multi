@@ -22,7 +22,7 @@
 #
 use strict;
 use warnings;
-use Getopt::Long qw(:config no_ignore_case bundling);
+use Getopt::Long;
 use vars qw(
 $MYSELF @cmds %opt $returncode %def %rc $no $VERSION $tmp_stdout $tmp_stderr $xml $check_multi
 $NAGIOS $nagios $Nagios $status_dat $livestatus_service $livestatus_host $timezero
@@ -372,26 +372,30 @@ sub process_input {
 	my @SAVEARGV=@ARGV;
 	my $stdin="";
 
-	#--- check version of modules
-	if ($Getopt::Long::VERSION < 2.27) {
-		print "Error: module Getopt::Long version $Getopt::Long::VERSION is too old, minimum version is 2.27\n";
-		return $UNKNOWN;
-	}
-
 	if (! GetOptions(
 		"f|filename=s"	=> \@{$opt{filename}},
-		"h|help:+"	=> \$opt{help},
+		"help"		=> \&myopt,
+		"h"		=> \&myopt,
+		"hh"		=> \&myopt,
+		"hhh"		=> \&myopt,
 		"i|instant=s"	=> \$opt{set}{instant},
+		"inventory"	=> \&myopt,
 		"l|libexec=s"	=> \$opt{set}{libexec},
 		"n|name=s"	=> \$opt{set}{name},
 		"r|report=s"	=> \$opt{set}{report},
-		"s|set=s"	=> \%{$opt{variable}},
+		"s=s"		=> \%{$opt{variable}},
+		"set=s"		=> \%{$opt{variable}},
 		"t|timeout=i"	=> \$opt{set}{timeout},
 		"T|TIMEOUT=i"	=> \$opt{set}{TIMEOUT},
-		"v|verbose:+"	=> \$opt{set}{verbose},
+		"verbose"	=> \&myopt,
+		"v"		=> \&myopt,
+		"vv"		=> \&myopt,
+		"vvv"		=> \&myopt,
+		"vvvv"		=> \&myopt,
+		"vvvvv"		=> \&myopt,
 		"V|version"	=> \$opt{version},
 		"x|execute=s"	=> \@{$opt{execute}},
-		"y|inventory:+"	=> \$opt{set}{inventory},
+		"y"		=> \&myopt,
 		"o|O|ok=s"	=> \$cmds[0]{state}[0],
 		"w|W|warning=s"	=> \$cmds[0]{state}[1],
 		"c|C|critical=s"=> \$cmds[0]{state}[2],
@@ -437,6 +441,10 @@ sub process_input {
 
 	#--- check command line vars (--set KEY=VAL) and transfer it to $opt{set}
 	foreach my $variable (sort keys(%{$opt{variable}})) {
+		if ($variable eq "" && $opt{variable}{$variable} =~ /(.*)=(.*)/) {
+			$variable = $1;
+			$opt{variable}{$variable} = $2;
+		}	
 		#--- export MULTI_$variable
 		$ENV{"MULTI_".$variable}="$opt{variable}{$variable}";
 		#--- if existing, overwrite, otherwise set $opt{set} variable
@@ -930,6 +938,30 @@ Set options:
    verbose=<0|1|2> - level of verbosity, from 1 (less verbose) to 3 (much verbose), default:$opt{set}{verbose}
 
 DETAILED_EOF
+}
+
+#---
+#--- Getopt::Long helper module
+#--- and yes: Getopt::Long normally can do :+ etc., but not some
+#--- jurassic versions hanging around in old Solaris releases
+#---
+sub myopt {
+	my $key = shift;
+	my $val = shift;
+	DEBUG3("key:$key val:$val");
+	if ($key eq "help") {
+		$opt{help} = 1;
+	} elsif ($key =~/^([h]{1,3})$/) {
+		$opt{help} = length($1);
+	} elsif ($key eq "inventory") {
+		$opt{set}{inventory} = 1;
+	} elsif ($key eq "verbose") {
+		$opt{set}{verbose} = 1;
+	} elsif ($key =~ /^([v]{1,5})$/) {
+		$opt{set}{verbose} = length($1);
+	} elsif ($key eq "y") {
+		$opt{set}{inventory} = 1;
+	}
 }
 
 #---

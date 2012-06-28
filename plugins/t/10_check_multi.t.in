@@ -27,7 +27,7 @@ foreach my $plugin (@plugins) {
 	}
 }
 
-plan tests => 110;
+plan tests => 112;
 
 my $result;
 my $testopts=testopts::get_testopts;
