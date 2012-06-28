@@ -62,7 +62,7 @@ $result = NPTest->testCmd(
 );
 is(
 	$result->return_code, 
-	3, 
+	0, 
 	"inventory creates config - RC0 - passed"
 );
 like(
