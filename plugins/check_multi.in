@@ -3342,7 +3342,7 @@ sub report_all {
 	#--- classical report
 	if (!($opt{set}{report} & $DETAIL_HTML) &&
 	    !($opt{set}{report} & $DETAIL_XML)) {
-		&report_ascii;
+		print &report_ascii(1);
 	}
 	#--- report HTML output (and not XML)
 	if (($opt{set}{report} & $DETAIL_HTML) &&
@@ -3351,7 +3351,7 @@ sub report_all {
 		#--- add ASCII comment into HTML for notifications
 		if ($opt{set}{html_ascii_notification}) {
 			print "<!---\nASCII_NOTIFICATION_START\n";
-			&report_ascii;
+			print &report_ascii(0);
 			print "\nASCII_NOTIFICATION_END\n---!>\n";
 		}
 	}
@@ -3389,28 +3389,34 @@ sub report_all {
 #--- report results stored in %cmds (ASCII report)
 #---
 sub report_ascii {
+	my $print_header_line = shift;
+	my $output="";
 
 	DEBUG1("\n","-" x 80);
 	DEBUG1("Plugin output");
 	DEBUG1("-" x 80);
 
-	if (defined($cmds[0]{fmtstr})) {
-		my $output="printf " . $cmds[0]{fmtstr};
-	 	$output.="," . join(",",@{$cmds[0]{parms}}) if (defined($cmds[0]{parms}));
-		$output=substitute_macros($output);
-		DEBUG4("output [ head ] = \'$output\'");
-		eval($output);
+	#--- PLUGIN_OUTPUT: ASCII
+	if (! $print_header_line) {
+		#--- do nothing, print no PLUGIN_OUTPUT
+		#--- it was already printed during report_html
+	} elsif (defined($cmds[0]{fmtstr})) {
+		my $evalstr="sprintf " . $cmds[0]{fmtstr};
+	 	$evalstr.="," . join(",",@{$cmds[0]{parms}}) if (defined($cmds[0]{parms}));
+		$evalstr=substitute_macros($evalstr);
+		DEBUG4("output [ head ] = \'$evalstr\'");
+		$output.=eval($evalstr);
 	} elsif ($opt{set}{report} & $DETAIL_NAGIOS2) {
-		print "$opt{set}{name} " if $opt{set}{name};
-		print "$def{label}{$cmds[0]{rc}}";
+		$output.="$opt{set}{name} " if $opt{set}{name};
+		$output.="$def{label}{$cmds[0]{rc}}";
 	} else {
-		#--- print header line (1): name, state, number of plugins
-		print "$opt{set}{name} " if $opt{set}{name};
-		print "$def{label}{$cmds[0]{rc}} - $cmds[0]{nchecks} plugins checked, ";
+		#--- header line (1): name, state, number of plugins
+		$output.="$opt{set}{name} " if $opt{set}{name};
+		$output.="$def{label}{$cmds[0]{rc}} - $cmds[0]{nchecks} plugins checked, ";
 
-		#--- print header line (2): summary for particular states
+		#--- header line (2): summary for particular states
 		if ($opt{set}{report} & $DETAIL_LIST_FULL) {
-			print	"$rc{count}[$CRITICAL] critical" . ((@{$rc{list}[$CRITICAL]}) ? " (" . join(', ',@{$rc{list}[$CRITICAL]}) . ')' : "") . ", " .
+			$output.="$rc{count}[$CRITICAL] critical" . ((@{$rc{list}[$CRITICAL]}) ? " (" . join(', ',@{$rc{list}[$CRITICAL]}) . ')' : "") . ", " .
 				"$rc{count}[$WARNING] warning"   . ((@{$rc{list}[$WARNING]})  ? " (" . join(', ',@{$rc{list}[$WARNING]})  . ')' : "") . ", " .
 				"$rc{count}[$UNKNOWN] unknown"   . ((@{$rc{list}[$UNKNOWN]})  ? " (" . join(', ',@{$rc{list}[$UNKNOWN]})  . ')' : "") . ", " .
 				"$rc{count}[$OK] ok";
@@ -3420,9 +3426,9 @@ sub report_ascii {
 			push @r, "$rc{count}[$WARNING] warning ("   . join(', ',@{$rc{list}[$WARNING]})  . ")" if (@{$rc{list}[$WARNING]});
 			push @r, "$rc{count}[$UNKNOWN] unknown ("   . join(', ',@{$rc{list}[$UNKNOWN]})  . ")" if (@{$rc{list}[$UNKNOWN]});
 			push @r, "$rc{count}[$OK] ok" if (@{$rc{list}[$OK]});
-			print join(", ", @r);
+			$output.=join(", ", @r);
 		} else {
-			print	"$rc{count}[$CRITICAL] critical, " .
+			$output.="$rc{count}[$CRITICAL] critical, " .
 				"$rc{count}[$WARNING] warning, " .
 				"$rc{count}[$UNKNOWN] unknown, " .
 				"$rc{count}[$OK] ok";
@@ -3431,11 +3437,11 @@ sub report_ascii {
 			#--- if state matches and DETAIL_LIST
 			if (($cmds[0]{state}[$def{s2r}{$s}] ne $cmds[0]{state_default}[$def{s2r}{$s}] && $rc{match}[$def{s2r}{$s}]) &&
 			      $opt{set}{report} & $DETAIL_LIST ) {
-				printf " [%s]", $def{label}{$def{s2r}{$s}};
+				$output.=sprintf " [%s]", $def{label}{$def{s2r}{$s}};
 			#--- if state matches and DETAIL_LIST_FULL
 			} elsif (($cmds[0]{state}[$def{s2r}{$s}] ne $cmds[0]{state_default}[$def{s2r}{$s}] && $rc{match}[$def{s2r}{$s}]) &&
 			     $opt{set}{report} & $DETAIL_LIST_FULL ) {
-				printf " [%s - %s]", $def{label}{$def{s2r}{$s}}, $cmds[0]{state}[$def{s2r}{$s}];
+				$output.=sprintf " [%s - %s]", $def{label}{$def{s2r}{$s}}, $cmds[0]{state}[$def{s2r}{$s}];
 			} else {
 				DEBUG3("No match ($def{s2r}{$s} - $def{s2r}{$def{s2r}{$s}}): $rc{match}[$def{s2r}{$def{s2r}{$s}}]");
 			}
@@ -3443,7 +3449,7 @@ sub report_ascii {
 		}
 	}
 	#--- print general errors if any occured
-	print error(0);
+	$output.=error(0);
 
 	#--- determine maximum length of name
 	my $maxlen=0;
@@ -3456,11 +3462,11 @@ sub report_ascii {
 
 		#--- special output statement defined?
 		if (defined($cmds[$no]{fmtstr})) {
-			my $output="printf " . $cmds[$no]{fmtstr};
-	 		$output.="," . join(",",@{$cmds[$no]{parms}}) if (defined($cmds[$no]{parms}));
-			$output=substitute_macros($output);
-			DEBUG4("output [ $cmds[$no]{name} ] = \'$output\'");
-			eval($output);
+			my $evalstr="sprintf " . $cmds[$no]{fmtstr};
+	 		$evalstr.="," . join(",",@{$cmds[$no]{parms}}) if (defined($cmds[$no]{parms}));
+			$evalstr=substitute_macros($output);
+			DEBUG4("output [ $cmds[$no]{name} ] = \'$evalstr\'");
+			$output.=eval($evalstr);
 			next;
 		}
 
@@ -3471,7 +3477,7 @@ sub report_ascii {
 		if ($opt{set}{report} & $DETAIL_NAGIOS2) {
 			next if ($cmds[$no]{rc} == $OK);
 			$cmds[$no]{output}=~s/\n//g;
-			printf ", %s %s%s",
+			$output.=sprintf ", %s %s%s",
 				$cmds[$no]{name},
 				$cmds[$no]{output},
 				($opt{set}{report} & $DETAIL_STDERR) ?  error($no) : "";
@@ -3549,7 +3555,7 @@ sub report_ascii {
 
 				}
 				
-				printf "%s[%2.d] %-4.4s %-${maxlen}s%s %s%s%s%s%s",
+				$output.=sprintf "%s[%2.d] %-4.4s %-${maxlen}s%s %s%s%s%s%s",
 					($opt{set}{report} & $DETAIL_NAGIOS2) ? ", " : "\n",
 					$cmds[$no]{number},
 					$def{label}{$cmds[$no]{rc}},
@@ -3564,7 +3570,7 @@ sub report_ascii {
 					$details,
 					$post;
 			} else {
-				printf "%s[%2.d] %s%s %s%s%s%s",
+				$output.=sprintf "%s[%2.d] %s%s %s%s%s%s",
 					($opt{set}{report} & $DETAIL_NAGIOS2) ? ", " : "\n",
 					$cmds[$no]{number},
 					$cmds[$no]{name},
@@ -3582,17 +3588,22 @@ sub report_ascii {
 
 	#--- print state settings and RC evaluation result
 	foreach my $s (sort numerically keys %{$def{s2r}}) {
-		printf "\n[%-8.8s] %-${maxlen}s%s", $def{label}{$def{s2r}{$s}}, ($rc{match}[$def{s2r}{$s}]) ? "TRUE" : "FALSE", $cmds[0]{state}[$def{s2r}{$s}] if ($opt{set}{verbose});
+		$output.=sprintf "\n[%-8.8s] %-${maxlen}s%s", $def{label}{$def{s2r}{$s}}, ($rc{match}[$def{s2r}{$s}]) ? "TRUE" : "FALSE", $cmds[0]{state}[$def{s2r}{$s}] if ($opt{set}{verbose});
 		DEBUG2(state_string_ascii($cmds[0]{state}[$def{s2r}{$s}]));
 		#--- print if some state matches
 		if (($cmds[0]{state}[$def{s2r}{$s}] ne $cmds[0]{state_default}[$def{s2r}{$s}] && $rc{match}[$def{s2r}{$s}]) ||
 	     		$opt{set}{report} & $DETAIL_LIST_FULL ) {
-			printf "\n[%2.2s] %-5s - %s", $def{label}{$def{s2r}{$s}}, $rc{match}[$def{s2r}{$s}]?"TRUE":"FALSE", $cmds[0]{state}[$def{s2r}{$s}];
+			$output.=sprintf "\n[%2.2s] %-5s - %s", $def{label}{$def{s2r}{$s}}, $rc{match}[$def{s2r}{$s}]?"TRUE":"FALSE", $cmds[0]{state}[$def{s2r}{$s}];
 		} else {
 			DEBUG3("No match ($def{s2r}{$s} - $def{s2r}{$def{s2r}{$s}}): $rc{match}[$def{s2r}{$def{s2r}{$s}}]");
 		}
 	}
-	printf "\n[%-8.8s] %-${maxlen}s\n", "OVERALL", $def{label}{$cmds[0]{rc}} if ($opt{set}{verbose});
+	$output.=sprintf "\n[%-8.8s] %-${maxlen}s\n", "OVERALL", $def{label}{$cmds[0]{rc}} if ($opt{set}{verbose});
+
+	#--- remove first newline if header line is omitted
+	$output=~s/^\n// if (!$print_header_line);
+
+	$output;
 }
 
 #---
