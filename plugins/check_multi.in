@@ -371,6 +371,8 @@ sub process_input {
 	my @SAVEARGV=@ARGV;
 	my $stdin="";
 
+	Getopt::Long::config("no_ignore_case");
+	Getopt::Long::config("bundling");
 	if (! GetOptions(
 		"f|filename=s"	=> \@{$opt{filename}},
 		"help"		=> \&myopt,
