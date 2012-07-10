@@ -27,7 +27,7 @@ foreach my $plugin (@plugins) {
 	}
 }
 
-plan tests => 112;
+plan tests => 114;
 
 my $result;
 my $testopts=testopts::get_testopts;
@@ -727,6 +727,23 @@ like(
 	$result->output,
 	'/OK - 1 plugins checked, 1 ok\n'.
 	'\[ 1\] with_perfdata eins\|check_multi::check_multi::plugins=1 time=[\d\.]+ $/',
+	"output correct"
+);
+#-------------------------------------------------------------------------------
+#--- check_multi attribute with double quotes ----------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -s report=1+4+8 -x 'attribute [ string ] = \"one two\"' -x 'eeval [ out ] = \"\$string\$\"'",
+);
+is(
+	$result->return_code, 
+	0, 
+	"attribute with blank and double quotes - RC0"
+);
+like(
+	$result->output,
+	'/OK - 1 plugins checked, 1 ok\n'.
+	'\[ 1\] out one two\|check_multi::check_multi::plugins=1 time=[\d\.]+ $/',
 	"output correct"
 );
 #-------------------------------------------------------------------------------

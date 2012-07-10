@@ -1765,6 +1765,12 @@ sub parse_header {
 
 	#--- format: 'attribute [ tag::variable ] = value'
 	if ($type eq "attribute") {
+
+		#--- check value and remove quotes, if needed
+		while ($cmd=~/"(.*)"|'(.*)'/) { 
+			$cmd=$1;
+		}
+
 		#--- 1. 'attribute [ variable ] = value' - update set variable
 		if ($key eq "") {
 			if (!defined($opt{set}{$name})) {
