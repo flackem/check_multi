@@ -357,7 +357,7 @@ my $check_multi = {
 *DEBUG1=($opt{set}{verbose}>=1) ? \&debug_message : sub {};
 *DEBUG2=($opt{set}{verbose}>=2) ? \&debug_message : sub {};
 *DEBUG3=($opt{set}{verbose}>=3) ? \&debug_message : sub {};
-*DEBUG4=($opt{set}{verbose}>=3) ? \&debug_message : sub {};
+*DEBUG4=($opt{set}{verbose}>=4) ? \&debug_message : sub {};
 
 #-------------------------------------------------------------------------------
 #--- subs ----------------------------------------------------------------------
@@ -372,7 +372,6 @@ sub process_input {
 	my $stdin="";
 
 	Getopt::Long::config("no_ignore_case");
-	Getopt::Long::config("bundling");
 	if (! GetOptions(
 		"f|filename=s"	=> \@{$opt{filename}},
 		"help"		=> \&myopt,
