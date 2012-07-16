@@ -1344,7 +1344,10 @@ sub substitute_states {
 #---
 #--- sets settings as environment variables
 #---
-sub set_env_settings {
+sub export_env_settings {
+	#--- do another input processing to reflect changes from command files (attribute)
+	exit $UNKNOWN if (&process_input != $OK);
+
 	#--- add all set options as environment variables, so client scripts can use it
 	foreach my $option (sort keys(%{$opt{set}})) {
 		$ENV{"MULTI_set_".$option}=$opt{set}{$option} if defined($opt{set}{$option});
@@ -4685,7 +4688,7 @@ add_error(0,"please don't run plugins as root!") if ($opt{set}{user}=~/root/ && 
 &parse_lines(@{$opt{execute}});
 
 #--- provide settings as env variables
-&set_env_settings;
+&export_env_settings;
 
 #--- quick exit if only encoding of commands requested
 if ($opt{set}{report} & $DETAIL_ENCODE_COMMANDS) {
