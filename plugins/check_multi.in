@@ -1010,6 +1010,17 @@ sub mytrim {
 }
 
 #---
+#--- returns max length of parameter strings
+#---
+sub maxlen {
+	my $len = 0;
+	while (my $l = length(shift)) {
+		$len = $l if ($l > $len);
+	}
+	$len;
+}
+
+#---
 #--- simple hexdump function
 #---
 sub hexdump {
@@ -3462,10 +3473,8 @@ sub report_ascii {
 	$output.=error(0);
 
 	#--- determine maximum length of name
-	my $maxlen=0;
-	for ($no=1;$no<=$#cmds;$no++) {
-		$maxlen=length($cmds[$no]{name}) if length($cmds[$no]{name}) > $maxlen;
-	}
+	my $maxlen=maxlen(map { $_->{name} } @cmds);
+	my $maxstatuslen=maxlen(keys %{$def{code}});
 
 	#--- loop over commands: report particular results for long plugin output
 	for ($no=1;$no<=$#cmds;$no++) {
@@ -3598,17 +3607,17 @@ sub report_ascii {
 
 	#--- print state settings and RC evaluation result
 	foreach my $s (sort numerically keys %{$def{s2r}}) {
-		$output.=sprintf "\n[%-8.8s] %-${maxlen}s%s", $def{label}{$def{s2r}{$s}}, ($rc{match}[$def{s2r}{$s}]) ? "TRUE" : "FALSE", $cmds[0]{state}[$def{s2r}{$s}] if ($opt{set}{verbose});
+		$output.=sprintf "\n[%-8.8s] %-${maxstatuslen}s %s", $def{label}{$def{s2r}{$s}}, ($rc{match}[$def{s2r}{$s}]) ? "TRUE" : "FALSE", $cmds[0]{state}[$def{s2r}{$s}] if ($opt{set}{verbose});
 		DEBUG2(state_string_ascii($cmds[0]{state}[$def{s2r}{$s}]));
 		#--- print if some state matches
 		if (($cmds[0]{state}[$def{s2r}{$s}] ne $cmds[0]{state_default}[$def{s2r}{$s}] && $rc{match}[$def{s2r}{$s}]) ||
 	     		$opt{set}{report} & $DETAIL_LIST_FULL ) {
-			$output.=sprintf "\n[%2.2s] %-5s - %s", $def{label}{$def{s2r}{$s}}, $rc{match}[$def{s2r}{$s}]?"TRUE":"FALSE", $cmds[0]{state}[$def{s2r}{$s}];
+			$output.=sprintf "\n[%2.2s] %-${maxstatuslen}s - %s", $def{label}{$def{s2r}{$s}}, $rc{match}[$def{s2r}{$s}]?"TRUE":"FALSE", $cmds[0]{state}[$def{s2r}{$s}];
 		} else {
 			DEBUG3("No match ($def{s2r}{$s} - $def{s2r}{$def{s2r}{$s}}): $rc{match}[$def{s2r}{$def{s2r}{$s}}]");
 		}
 	}
-	$output.=sprintf "\n[%-8.8s] %-${maxlen}s\n", "OVERALL", $def{label}{$cmds[0]{rc}} if ($opt{set}{verbose});
+	$output.=sprintf "\n[%-8.8s] %-${maxstatuslen}s\n", "OVERALL", $def{label}{$cmds[0]{rc}} if ($opt{set}{verbose});
 
 	#--- remove first newline if header line is omitted
 	$output=~s/^\n// if (!$print_header_line);
