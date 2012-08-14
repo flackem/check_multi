@@ -3619,6 +3619,10 @@ sub report_ascii {
 	}
 	$output.=sprintf "\n[%-8.8s] %-${maxstatuslen}s\n", "OVERALL", $def{label}{$cmds[0]{rc}} if ($opt{set}{verbose});
 
+	#--- remove pipe char (to not influence perfdata)
+	$output=~s/\|\|/ OR /g;
+	$output=~s/\|/ PIPE /g;
+
 	#--- remove first newline if header line is omitted
 	$output=~s/^\n// if (!$print_header_line);
 

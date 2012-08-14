@@ -213,7 +213,7 @@ is(
 like(
 	$result->output,
 	'/^OK - 1 plugins checked, 1 ok\n'.
-	'\[ 1\] eins eins \[Invalid perfdata discarded - multiple pipe chars: \'eins=1\|zwei=2\'\]\|check_multi::check_multi::plugins=1 time=\d+\.\d+ $/',
+	'\[ 1\] eins eins \[Invalid perfdata discarded - multiple pipe chars: \'eins=1 PIPE zwei=2\'\]\|check_multi::check_multi::plugins=1 time=\d+\.\d+ $/',
 	"output correct"
 );
 #-------------------------------------------------------------------------------
