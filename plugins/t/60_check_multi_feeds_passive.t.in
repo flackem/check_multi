@@ -67,7 +67,7 @@ is(
 );
 like(
 	$result->output,
-	'/define service.*service_description eins.*host_name localhost/s',
+	'/define service.*service_description eins.*host_name/s',
 	"output correct - passed"
 );
 #-------------------------------------------------------------------------------
