@@ -286,6 +286,8 @@ my %opt=(
 		tmp_etc		=> "@tmp_etc@",
 		# octal permissions of tmp_dir
 		tmp_dir_permissions => "@tmp_dir_permissions@",
+		# use hard state for livestatus / statusdat
+		use_hard_state => @use_hard_state@,
 		# characters which are allowed in macros
 		valid_macro_chars => 'A-Za-z0-9\.\@\-\_\:',
 		# characters which are allowed in tags
@@ -2011,7 +2013,9 @@ sub parse_header {
 				$cmds[$i]{error}=[];
 				$cmds[$i]{host}=shift(@result);
 				$cmds[$i]{service}=shift(@result);
+				#--- first rc is current_state, second is hard state
 				$cmds[$i]{rc}=shift(@result);
+				$cmds[$i]{rc}=shift(@result) if ($opt{set}{use_hard_state});
 				$cmds[$i]{output}=shift(@result);
 				$cmds[$i]{performance}=shift(@result);
 				$cmds[$i]{plugin}="lifestatus";
@@ -2060,7 +2064,9 @@ sub parse_header {
 				$cmds[$i]{runtime}=0;
 				$cmds[$i]{error}=[];
 				$cmds[$i]{host}=shift(@result);
+				#--- first rc is current_state, second is hard state
 				$cmds[$i]{rc}=shift(@result);
+				$cmds[$i]{rc}=shift(@result) if ($opt{set}{use_hard_state});
 				$cmds[$i]{output}=shift(@result);
 				$cmds[$i]{performance}=shift(@result);
 				$cmds[$i]{plugin}="lifestatus";
@@ -2689,7 +2695,9 @@ sub get_status_dat_host {
          $status_dat->{hoststatus}->{$host_name}->{long_plugin_output};
 		chomp $output;
 		return (
-			$status_dat->{hoststatus}->{$host_name}->{last_hard_state},
+			($opt{set}{use_hard_state}) 
+				? $status_dat->{hoststatus}->{$host_name}->{last_hard_state}
+				: $status_dat->{hoststatus}->{$host_name}->{current_state},
 			$output,
 			$status_dat->{hoststatus}->{$host_name}->{check_command},
 			$status_dat->{hoststatus}->{$host_name}->{performance_data},
@@ -2771,7 +2779,9 @@ sub get_status_dat_service {
         	$status_dat->{servicestatus}->{$host_name}->{$service_description}->{long_plugin_output};
 		chomp $output;
 		return (
-			$status_dat->{servicestatus}->{$host_name}->{$service_description}->{last_hard_state},
+			($opt{set}{use_hard_state}) 
+				? $status_dat->{servicestatus}->{$host_name}->{$service_description}->{last_hard_state}
+				: $status_dat->{servicestatus}->{$host_name}->{$service_description}->{current_state},
 			$output,
 			$status_dat->{servicestatus}->{$host_name}->{$service_description}->{check_command},
 			$status_dat->{servicestatus}->{$host_name}->{$service_description}->{performance_data},
@@ -2855,10 +2865,14 @@ sub read_status_dat {
 					chomp($r{check_command});
 				} elsif (/^\tlast_check=(.*)/) {
 					$r{last_check}=$1;
+				} elsif (/^\tcurrent_state=(.*)/) {
+					$r{current_state}=$1;
 				} elsif (/^\tlast_hard_state=(.*)/) {
 					$r{last_hard_state}=$1;
 				} elsif (/^\tlast_hard_state_change=(.*)/) {
 					$r{last_hard_state_change}=$1;
+				} elsif (/^\tlast_state_change=(.*)/) {
+					$r{last_state_change}=$1;
 				} elsif (/^\tplugin_output=(.*)/) {
 					$r{plugin_output}=$1;
 				} elsif (/^\tlong_plugin_output=(.*)/) {
@@ -2875,8 +2889,10 @@ sub read_status_dat {
 					$r{performance_data}=$1;
 				} elsif (/^\t\}$/) {
 					$status_dat->{hoststatus}->{"$r{host_name}"}->{check_command}=$r{check_command};
+					$status_dat->{hoststatus}->{"$r{host_name}"}->{current_state}=$r{current_state};
 					$status_dat->{hoststatus}->{"$r{host_name}"}->{last_hard_state}=$r{last_hard_state};
 					$status_dat->{hoststatus}->{"$r{host_name}"}->{last_hard_state_change}=$r{last_hard_state_change};
+					$status_dat->{hoststatus}->{"$r{host_name}"}->{last_state_change}=$r{last_state_change};
 					$status_dat->{hoststatus}->{"$r{host_name}"}->{last_check}=$r{last_check};
 					$status_dat->{hoststatus}->{"$r{host_name}"}->{long_plugin_output}=$r{long_plugin_output};
 					$status_dat->{hoststatus}->{"$r{host_name}"}->{performance_data}=$r{performance_data};
@@ -2895,12 +2911,16 @@ sub read_status_dat {
 				} elsif (/^\tcheck_command=([^!]+)/) {
 					$r{check_command}=$1;
 					chomp($r{check_command});
+				} elsif (/^\tcurrent_state=(.*)/) {
+					$r{current_state}=$1;
 				} elsif (/^\tlast_check=(.*)/) {
 					$r{last_check}=$1;
 				} elsif (/^\tlast_hard_state=(.*)/) {
 					$r{last_hard_state}=$1;
 				} elsif (/^\tlast_hard_state_change=(.*)/) {
 					$r{last_hard_state_change}=$1;
+				} elsif (/^\tlast_state_change=(.*)/) {
+					$r{last_state_change}=$1;
 				} elsif (/^\tplugin_output=(.*)/) {
 					$r{plugin_output}=$1;
 				} elsif (/^\tlong_plugin_output=(.*)/) {
@@ -2917,9 +2937,11 @@ sub read_status_dat {
 					$r{performance_data}=$1;
 				} elsif (/^\t\}$/) {
 					$status_dat->{servicestatus}->{"$r{host_name}"}->{"$r{service_description}"}->{check_command}=$r{check_command};
+					$status_dat->{servicestatus}->{"$r{host_name}"}->{"$r{service_description}"}->{current_state}=$r{current_state};
 					$status_dat->{servicestatus}->{"$r{host_name}"}->{"$r{service_description}"}->{last_check}=$r{last_check};
 					$status_dat->{servicestatus}->{"$r{host_name}"}->{"$r{service_description}"}->{last_hard_state}=$r{last_hard_state};
 					$status_dat->{servicestatus}->{"$r{host_name}"}->{"$r{service_description}"}->{last_hard_state_change}=$r{last_hard_state_change};
+					$status_dat->{servicestatus}->{"$r{host_name}"}->{"$r{service_description}"}->{last_state_change}=$r{last_state_change};
 					$status_dat->{servicestatus}->{"$r{host_name}"}->{"$r{service_description}"}->{performance_data}=$r{performance_data};
 					$status_dat->{servicestatus}->{"$r{host_name}"}->{"$r{service_description}"}->{plugin_output}=$r{plugin_output};
 					$status_dat->{servicestatus}->{"$r{host_name}"}->{"$r{service_description}"}->{long_plugin_output}=$r{long_plugin_output};
@@ -2952,7 +2974,7 @@ sub expand_livestatus_service {
 	if (!$livestatus_service) {
 		DEBUG4("1st read, creating service tree");
 
-		$livestatus_service=read_livestatus($livestatus_path,"GET services\nColumns: host_name description last_hard_state plugin_output long_plugin_output perf_data check_command\n");
+		$livestatus_service=read_livestatus($livestatus_path,"GET services\nColumns: host_name description current_state last_hard_state plugin_output long_plugin_output perf_data check_command\n");
 		if (!$livestatus_service) {
 			add_error(0,"expand_livestatus_service: could not read $livestatus_path");
 			return (undef,undef);
@@ -2977,6 +2999,7 @@ sub expand_livestatus_service {
 		if ($service->{host_name}=~/$host_name/ && $service->{description}=~/$service_description/) {
 			push @result,$service->{host_name};
 			push @result,$service->{description};
+			push @result,$service->{current_state};
 			push @result,$service->{last_hard_state};
 			my $output=defined($service->{plugin_output})?$service->{plugin_output}:"";
 			chomp($output);
@@ -2989,7 +3012,7 @@ sub expand_livestatus_service {
 			} else {
 				push @result, $service->{check_command};
 			}
-			DEBUG4("$service->{host_name}:$service->{description} matched $host_name:$service_description:$service->{last_hard_state}");
+			DEBUG4("$service->{host_name}:$service->{description} matched $host_name:$service_description:$service->{current_state}:$service->{last_hard_state}");
 		} else {
 			DEBUG4("$service->{host_name}:$service->{description} did not match $host_name:$service_description");
 		}
@@ -3031,6 +3054,7 @@ sub expand_livestatus_host {
 	foreach my $host (@{$livestatus_host}) {
 		if ("$host->{host_name}"=~/$host_name/) {
 			push @result,$host->{host_name};
+			push @result,$host->{current_state};
 			push @result,$host->{last_hard_state};
 			my $output=defined($host->{plugin_output})?$host->{plugin_output}:""; 
 			chomp($output);
@@ -3043,7 +3067,7 @@ sub expand_livestatus_host {
 			} else {
 				push @result, $host->{check_command};
 			}
-			DEBUG4("$host->{host_name} matched $host_name, state $host->{last_hard_state}");
+			DEBUG4("$host->{host_name} matched $host_name, current state $host->{current_state}, hard state $host->{last_hard_state}");
 		} else {
 			DEBUG4("$host->{host_name} did not match $host_name");
 		}

@@ -119,6 +119,7 @@ AC_ARG_WITH(target,			[  --with-target=<target_frame>             HTML target fr
 AC_ARG_WITH(tmp_dir,			[  --with-tmp_dir=<path>                    /path/to/tmp_dir (default:/tmp/check_multi)],tmp_dir=$withval,tmp_dir="/tmp/check_multi")
 AC_ARG_WITH(tmp_dir_permissions,	[  --with-tmp_dir_permissions=<octal perms> permissions of tmp_dir (default:01777)],tmp_dir_permissions=$withval,tmp_dir_permissions="01777")
 AC_ARG_WITH(tmp_etc,			[  --with-tmp_etc=<path>                    /path/to/tmp_dir/etc (default:$tmp_dir/etc)],tmp_etc=$withval,tmp_etc="$tmp_dir/etc")
+AC_ARG_WITH(use_hard_state,		[  --with-use_hard_state=<0|1>              use hard states for livestatus and statusdat checks (default:1)],use_hard_state=$withval,use_hard_state=1)
 AC_ARG_WITH(parent_timeout,		[ 
 major settings:
   --with-parent_timeut=<NN>                timeout for parent check (default:60)],parent_timeout=$withval,parent_timeout="60")
@@ -199,6 +200,7 @@ AC_SUBST(target)
 AC_SUBST(tmp_dir)
 AC_SUBST(tmp_dir_permissions)
 AC_SUBST(tmp_etc)
+AC_SUBST(use_hard_state)
 AC_SUBST(verbose)
 AC_SUBST(verbose_fields)
 

@@ -79,6 +79,7 @@ my $target="@target@";
 my $tmp_dir="@tmp_dir@";
 my $tmp_dir_permissions="@tmp_dir_permissions@";
 my $tmp_etc="@tmp_etc@";
+my $use_hard_state="@use_hard_state@";
 my $verbose="@verbose@";
 my $verbose_fields="@verbose_fields@";
 my $ac_configure_args="@ac_configure_args@";
@@ -175,6 +176,7 @@ while (my $f = shift @ARGV) {
 		s|\@tmp_etc\@|$tmp_etc|g;
 		s|\@tmp_dir_permissions\@|$tmp_dir_permissions|g;
 		s|\@parent_timeout\@|$parent_timeout|g;
+		s|\@use_hard_state\@|$use_hard_state|g;
 		s|\@verbose\@|$verbose|g;
 		s|\@verbose_fields\@|$verbose_fields|g;
 		s|\@sbindir\@|$sbindir|g;		# put all --with-vars before directories

@@ -463,13 +463,13 @@ servicestatus {
 	check_execution_time=0.037
 	check_latency=0.109
 	check_type=0
-	current_state=0
+	current_state=2
 	last_hard_state=0
 	last_event_id=12
 	current_event_id=23
 	current_problem_id=0
 	last_problem_id=7
-	current_attempt=1
+	current_attempt=3
 	max_attempts=4
 	state_type=1
 	last_state_change=1277187300

@@ -11,7 +11,7 @@ use testopts;
 
 my $t;
 
-plan tests => 20;
+plan tests => 24;
 
 my $result;
 #my $testopts="-s status_dat=status.dat -s dont_be_paranoid=1";
@@ -186,4 +186,38 @@ like(
 	#'/OK - 1 plugins checked, 1 ok\n\[ 1\] test_localhost.*PING OK.*\|check_multi\:\:check_multi\:\:plugins=1/s', 
 	'/OK - 1 plugins checked, 1 ok\n\[ 1\] host_localhost PING OK.*/s', 
 	"hosts localhost with macro output correct - passed"
+);
+
+#-------------------------------------------------------------------------------
+#--- service_check with hard state OK ------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -x 'statusdat [ eins ] = localhost:SSH' -s use_hard_state=1",
+);
+is(
+	$result->return_code, 
+	0,
+	"check_multi uses hard state in status.dat - RC".$result->return_code." - passed"
+);
+like(
+	$result->output,
+	'/OK - 1 plugins checked, 1 ok\n\[ 1\] eins_localhost_SSH SSH OK.*/s', 
+	"RC OK is hard state of localhost:SSH check - passed"
+);
+
+#-------------------------------------------------------------------------------
+#--- service_check with soft state CRITICAL  -----------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -x 'statusdat [ eins ] = localhost:SSH' -s use_hard_state=0",
+);
+is(
+	$result->return_code, 
+	2,
+	"check_multi uses soft state in status.dat - RC".$result->return_code." - passed"
+);
+like(
+	$result->output,
+	'/CRITICAL - 1 plugins checked, 1 critical \(eins_localhost_SSH\)\n\[ 1\] eins_localhost_SSH SSH OK.*/s', 
+	"RC CRITICAL is soft state of localhost:SSH check - passed"
 );
