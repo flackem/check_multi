@@ -561,6 +561,7 @@ ac_subst_vars='LTLIBOBJS
 LIBOBJS
 verbose_fields
 verbose
+use_hard_state
 tmp_etc
 tmp_dir_permissions
 tmp_dir
@@ -739,6 +740,7 @@ with_target
 with_tmp_dir
 with_tmp_dir_permissions
 with_tmp_etc
+with_use_hard_state
 with_parent_timeout
 with_child_timeout
 with_nagios_user
@@ -1416,6 +1418,7 @@ detail settings:
   --with-tmp_dir=<path>                    /path/to/tmp_dir (default:/tmp/check_multi)
   --with-tmp_dir_permissions=<octal perms> permissions of tmp_dir (default:01777)
   --with-tmp_etc=<path>                    /path/to/tmp_dir/etc (default:$tmp_dir/etc)
+  --with-use_hard_state=<0|1>              use hard states for livestatus and statusdat checks (default:0)
 
 major settings:
   --with-parent_timeut=<NN>                timeout for parent check (default:60)
@@ -2806,6 +2809,14 @@ else
 fi
 
 
+# Check whether --with-use_hard_state was given.
+if test "${with_use_hard_state+set}" = set; then :
+  withval=$with_use_hard_state; use_hard_state=$withval
+else
+  use_hard_state=0
+fi
+
+
 # Check whether --with-parent_timeout was given.
 if test "${with_parent_timeout+set}" = set; then :
   withval=$with_parent_timeout; parent_timeout=$withval
@@ -2863,6 +2874,7 @@ fi
 
 
 #--- substitutions
+
 
 
 
