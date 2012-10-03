@@ -152,7 +152,7 @@ my %opt=(
 		# path to check_multi config directory
 		config_dir	=> "@config_dir@",
 		# how many rows should be visible for cumulate statement?
-		cumulate_max_rows => 5,
+		cumulate_max_rows => 10,
 		# should cumulate ignore zero values?
 		cumulate_ignore_zero => @cumulate_ignore_zero@,
 		# don't complain about being root etc.
@@ -177,6 +177,14 @@ my %opt=(
 		# standard extension of check_multi command files,
 		# to be searched in directories
 		file_extension	=> "@file_extension@",
+		# historical data for numerical child check?
+		history	=> @history@,
+		# maximum size of history hash
+		history_maxsize	=> @history_maxsize@,
+		# maximum age of history entries (in seconds)
+		history_maxage	=> @history_maxage@,
+		# minimum number of history values, otherwise return UNKNOWN result
+		history_minvalues => @history_minvalues@,
 		# if ASCII output should be embedded into HTML output as a comment
 		html_ascii_notification => @html_ascii_notification@,
 		# if set, return UNKNOWN if command file is not found
@@ -998,9 +1006,31 @@ sub module {
 }
 
 #---
+#--- find index of cmds for given tag
+#---
+sub get_child_index {
+	my $name=shift;
+	for (my $i=1; $i<=$#cmds;$i++) {
+		return $i if ($cmds[$i]{name} eq $name);
+	}
+	return undef;
+}
+
+#---
 #--- numerical sort
 #---
 sub numerically { $a <=> $b }
+
+#---
+#--- add some figures
+#---
+sub sum {
+	my $sum = 0;
+	while (@_) {
+		$sum += shift;
+	}
+	return $sum;
+}
 
 #---
 #--- trim input string if found any chars from trim string
@@ -1346,6 +1376,7 @@ sub substitute_states {
 	for (my $no=1;$no<=$#cmds;$no++) {
 		$input=~s/\b($cmds[$no]{name})\b/$cmds[$no]{rc}/ig;
 	}
+
 	#--- 4. replace IGNORE
 	$input=~s/\b(IGNORE)\b/(0==1)/ig;
 
@@ -2592,14 +2623,16 @@ sub exec_command {
 			} else {
 				#--- fill new array members hashes
 				for (my $i=0;$i<=$#top;$i++) {
+
 					#--- name and output already set
 					$top[$i]{command}=$cmds[$no]{command};
 					$top[$i]{plugin}=$cmds[$no]{type};
 					$top[$i]{pplugin}=$cmds[$no]{plugin};
-					$top[$i]{ok}="";
-					$top[$i]{warning}="";
-					$top[$i]{critical}="";
-					$top[$i]{unknown}="";
+					$top[$i]{endtime}=$cmds[$no]{endtime};
+					$top[$i]{ok}=$cmds[$no]{ok};
+					$top[$i]{warning}=$cmds[$no]{warning};
+					$top[$i]{critical}=$cmds[$no]{critical};
+					$top[$i]{unknown}=$cmds[$no]{unknown};
 					$top[$i]{rc}=$OK;
 					$top[$i]{number}=$no+$i;
 					$top[$i]{visible}=1;
@@ -2610,10 +2643,22 @@ sub exec_command {
 					$top[$i]{process_perfdata}=1;
 					$top[$i]{performance}="$cmds[$no]{name}::$cmds[$no]{type}::$top[$i]{name}=$top[$i]{output}";
 				}
-				#--- replace original part with new array
+
+				#--- replace original cumulate entry with new array
 				splice(@cmds,$no,1,@top);
 				$cmds[0]{nallchecks}+=$#top;
 				$cmds[0]{nchecks}+=$#top;
+
+				#--- cumulate: we need to read another time the history, because it wasn't available during configuration time yet
+				if ($opt{set}{history}) {
+					#--- take HOSTNAME-SERVICEDESC to store historical cumulation data
+					if (! $opt{set}{HOSTNAME} || ! $opt{set}{SERVICEDESC}) {
+						print "history: we need HOSTNAME and SERVICEDESC for saving historical values.\nPlease specify -s HOSTNAME=<hostname> -s SERVICEDESC=<service description>\n";
+						return $UNKNOWN;
+					} else {
+						history_load($opt{set}{HOSTNAME}, $opt{set}{SERVICEDESC});
+					}
+				}
 			}
 		}
 
@@ -3132,6 +3177,296 @@ sub get_snmp {
 
 	return (0,$result->{$oid});
 }
+###################################################################################
+####
+# main
+#history_load("localhost","process");
+#my %p=();
+#
+#open(PROC, "ps -eo 'comm pcpu'|");
+#while (<PROC>) {
+#	next if (/^COMMAND/);
+#	my ($proc,$cpu)=split(/\s+/);
+#	$p{$proc}+=$cpu;
+#}
+#close(PROC);
+#foreach my $proc (sort keys %p) {
+#	push @cmds, { name => $proc} if (! get_child_index($proc));
+#	history_push($proc,time,$p{$proc});
+#}
+#history_store("localhost","process");
+#history_substitute("perl","   AVERAGE_FROM_TO ( time - 3600 , time )");
+#history_substitute("perl","   AVERAGE_LAST ( 5 ) "); 
+#history_substitute("perl","   WEIGHTED_AVERAGE_LAST ( 5 ) "); 
+####
+#--- 
+#--- store historical numerical values
+#--- host / tag (service) is required for file name
+#---
+sub history_store {
+	my ($host,$service)=@_;
+	my $count=0;
+	my @output=();
+	for (my $i=1; $i<=$#cmds;$i++) {
+		my $line=$cmds[$i]{name};
+		foreach my $timestamp (sort { $a <=> $b } keys %{$cmds[$i]{history}}) {
+			$timestamp=int($timestamp);
+			$line.=" $timestamp:$cmds[$i]{history}{$timestamp}";
+			$count++;
+		}
+		$line.="\n";
+		push @output, $line;
+	}
+	writefile("$opt{set}{tmp_dir}/history_${host}_${service}.txt", @output);
+	DEBUG3("$count values stored in $opt{set}{tmp_dir}/history_${host}_${service}.txt");
+	return $count;
+}
+
+#--- 
+#--- load historical numerical values from ASCII file
+#--- host / tag (service) is required for file name
+#---
+sub history_load {
+	my ($host,$service)=@_;
+	my $count=0;
+	my $content=readfile("$opt{set}{tmp_dir}/history_${host}_${service}.txt");
+
+	#--- split lines and parse timevalue tupels
+	foreach my $line (split('\n',$content)) {
+		#--- line format: key timestamp:value timestamp:value ...
+		my ($name, @timevalues)=split(' ',$line);
+		#--- ignore if $name is not found as child check
+		my $i=get_child_index($name);
+		if (! $i) {
+			DEBUG3("Cannot find child check $name, cannot load history data for $name");
+			next;
+		}
+		foreach my $tuple (@timevalues) {
+			my ($timestamp,$value)=split(':',$tuple);
+			$timestamp=int($timestamp);
+			$cmds[$i]{history}{$timestamp}=$value;
+			$count++;
+		}
+	}
+	DEBUG3("$count values read from $opt{set}{tmp_dir}/history_${host}_${service}.txt");
+	return $count;
+}
+
+#---
+#--- add numerical value to history hash
+#--- tupel is: timestamp:value
+#---
+sub history_push {
+
+	#--- loop over parameters
+	while (@_) {
+		#--- parameter triples: name timestamp value
+		my $name = shift;
+		my $timestamp = shift; 
+		my $value = shift;
+
+		$timestamp=int($timestamp);
+
+		#--- skip all non numerical values
+		next if ($value !~ /^[0-9\.\-\+]+$/);
+
+		#--- find corresponding object
+		my $index=get_child_index($name);
+		next if (!$index);
+
+		#print "name:$name timestamp:$timestamp value:$value\n";
+
+		#--- too old values in ringbuffer? delete the oldest value(s)
+		while (1) {
+			my $oldest = (sort {$a <=> $b } keys %{$cmds[$index]{history}})[0];
+			if ($oldest && $oldest <= time - $opt{set}{history_maxage}) {
+				DEBUG3("too old entries in history: deleting oldest entry $oldest:$cmds[$index]{history}{$oldest}");
+				delete $cmds[$index]{history}{$oldest};
+			} else {
+				last;
+			}
+		} 
+
+		#--- too many values in ringbuffer? delete the last value(s)
+		while (scalar(keys(%{$cmds[$index]{history}})) >= $opt{set}{history_maxsize}) {
+			my $oldest = (sort {$a <=> $b } keys %{$cmds[$index]{history}})[0];
+			DEBUG3("too many entries in history: deleting oldest history entry $oldest:$cmds[$index]{history}{$oldest}");
+			delete $cmds[$index]{history}{$oldest};
+		} 
+
+		#--- at last: add the new value;
+		DEBUG3("adding history entry to \$cmds[$index]: $name:$timestamp:$value");
+		$cmds[$index]{history}{$timestamp}=$value;
+	}
+}
+
+#---
+#--- perform history substitution in STATE statements
+#---
+sub history_substitute {
+	my ($name,$expression)=@_;
+
+	my $i=get_child_index($name);
+	if (! $i) {
+		DEBUG2("Child check $name not found");
+		return undef;
+	}
+	#
+	# KEYWORD ( options
+	#
+	#--- AVERAGE_FROM_TO (FROM, TO)
+	if ($expression=~/(.*)(AVERAGE_FROM_TO|AVERAGE_LAST|WEIGHTED_AVERAGE_FROM_TO|WEIGHTED_AVERAGE_LAST)\s*\(([^\)]+)\)\s*(.*)/i) {
+		my $pre=$1;
+		my $expression=uc($2);
+		my @parm=split(',',$3);
+		my $post=$4;
+		my @result=();
+		my @timestamps=();
+		my $first_timestamp = 0;
+		my $previous_timestamp = 0;
+		my $last_timestamp = 0;
+		my $count=0;
+		for (my $i=0;$i<=$#parm;$i++) {
+			$parm[$i]=&trim($parm[$i], '\s');
+		}
+		DEBUG2("expression:>$expression< >" . join('< >', @parm) . "<");
+
+		# T1   T2    T3 T4      T5
+		# +----+-----+--+-------+
+		#   5s   6s   3s   8s     
+
+		#--- take values between FROM and TO timestamp
+		if ($expression=~/^AVERAGE_FROM_TO$/) {
+			my $from=0;
+			my $to=0;
+
+			#--- evaluate and check parameters
+			$from=eval($parm[0]);
+			if ($@) {
+				add_error(0,"Error: invalid FROM parameter: $from");
+				return undef;
+			}
+			$to=eval($parm[1]);
+			if ($@) {
+				add_error(0,"Error: invalid TO parameter: $to");
+				return undef;
+			}
+			if ($from > $to) {
+				add_error("Error: FROM parameter: $from is later than TO parameter: $to");
+				return undef;
+			}
+			DEBUG3(sprintf "current time: %s\ntime from...: %s\ntime to.....: %s", 
+				readable_sortable_timestamp(time), 
+				readable_sortable_timestamp($from), 
+				readable_sortable_timestamp($to));
+			for my $timestamp (sort { $b <=> $a } keys (%{$cmds[$i]{history}})) {
+				if ($timestamp >= $from && $timestamp <= $to) {
+					$first_timestamp = $timestamp if (! $first_timestamp);
+					if ($previous_timestamp) {
+						push @result, $cmds[$i]{history}{$timestamp} * ($previous_timestamp - $timestamp);
+						DEBUG3("%4d. %10.2f %5ds ( %s ) product: %10.2f", 
+							++$count,
+							$cmds[$i]{history}{$timestamp}, 
+							$previous_timestamp - $timestamp, 
+							readable_sortable_timestamp($timestamp),
+							$cmds[$i]{history}{$timestamp} * ($previous_timestamp - $timestamp));
+					}
+					$last_timestamp = $previous_timestamp = $timestamp;
+				}
+			}
+			if ($#result < $opt{set}{history_minvalues}) {
+				DEBUG1(sprintf "Too few history results found - is: %d, should be: %d", $#result + 1, $opt{set}{history_minvalues});
+				return undef;
+			}
+			DEBUG3(sprintf "    avg: %10.2f%6ds                         product: %10.2f\n\n", 
+				&sum(@result) / ($first_timestamp - $last_timestamp),
+				$first_timestamp - $last_timestamp,
+				&sum(@result));	
+			DEBUG3( sprintf "result: $pre %.2f $post", &sum(@result) / ($first_timestamp - $last_timestamp));
+			return sprintf "$pre %.2f $post", &sum(@result) / ($first_timestamp - $last_timestamp);
+
+		#--- take last N values
+		} elsif ($expression=~/^AVERAGE_LAST$/) {
+			#--- parameter check
+			if (! $parm[0] || $parm[0] !~ /\d+/) {
+				add_error(0, "Error: invalid FROM parameter: $parm[0]");
+				return undef;
+			}
+			my @sorted = sort { $b <=> $a } keys %{$cmds[$i]{history}};
+			for my $timestamp (splice(@sorted, 0, $parm[0]+1)) {
+				#--- we're ready if we pushed enough values
+				last if ($#result + 1 == $parm[0]);
+
+				$first_timestamp = $timestamp if (! $first_timestamp);
+				if ($previous_timestamp) {
+					push @result, $cmds[$i]{history}{$timestamp} * ($previous_timestamp - $timestamp);
+					DEBUG3(sprintf "%4d. %10.2f %5ds ( %s ) product: %10.2f", 
+						++$count,
+						$cmds[$i]{history}{$timestamp}, 
+						$previous_timestamp - $timestamp, 
+						readable_sortable_timestamp($timestamp),
+						$cmds[$i]{history}{$timestamp} * ($previous_timestamp - $timestamp));
+				}
+				$last_timestamp = $previous_timestamp = $timestamp;
+			}
+			if ($#result < $opt{set}{history_minvalues}) {
+				DEBUG1(sprintf "Too few history results found - is: %d, should be: %d", $#result + 1, $opt{set}{history_minvalues});
+				return undef;
+			}
+			DEBUG3(sprintf " avg: %10.2f%6ds                         product: %10.2f", 
+				&sum(@result) / ($first_timestamp - $last_timestamp),
+				$first_timestamp - $last_timestamp,
+				&sum(@result));	
+			DEBUG3(sprintf "result: $pre %.2f $post", &sum(@result) / ($first_timestamp - $last_timestamp));
+			return sprintf "$pre %.2f $post", &sum(@result) / ($first_timestamp - $last_timestamp);
+
+		#--- take last N values
+		} elsif ($expression=~/^WEIGHTED_AVERAGE_LAST$/) {
+			my $num = $parm[0];
+			#--- parameter check
+			if (! $num || $num !~ /\d+/) {
+				add_error(0,"Error: invalid number parameter: $num");
+				return undef;
+			} else {
+				#printf "Last $num parameters taken\n";
+			}
+
+			#--- sort timestamps from newest (largest) to oldest
+			my @sorted = sort { $b <=> $a } keys %{$cmds[$i]{history}};
+			@sorted = splice(@sorted,0,$num);
+			#printf "Timestamps: %s\n", join(',',@sorted);
+
+			#--- determine 1st and last timestamp in range
+			for my $timestamp (@sorted) {
+				$last_timestamp = $timestamp if (! $last_timestamp);
+				$first_timestamp = $timestamp;
+			}
+			for my $timestamp (@sorted) {
+				#--- we're ready if we pushed enough values
+				last if ($#result + 1 == $num);
+
+				push @result, $cmds[$i]{history}{$timestamp} * ($timestamp - $first_timestamp + 1);
+				push @timestamps, ($timestamp - $first_timestamp + 1);
+				DEBUG3(sprintf "%4d. %10.2f x %4d ( %s ) product: %10.2f", 
+					++$count,
+					$cmds[$i]{history}{$timestamp}, 
+					($timestamp -$first_timestamp + 1), 
+					readable_sortable_timestamp($timestamp),
+					$cmds[$i]{history}{$timestamp} * ($timestamp - $first_timestamp + 1));
+			}
+			if ($#result < $opt{set}{history_minvalues}) {
+				DEBUG1(sprintf "Too few history results found - is: %d, should be: %d", $#result + 1, $opt{set}{history_minvalues});
+				return undef;
+			}
+			DEBUG3(sprintf " avg: %10.2f  %5d                         product: %10.2f", 
+				&sum(@result) / &sum(@timestamps),
+				&sum(@timestamps),
+				&sum(@result));	
+			DEBUG3(sprintf "result: $pre %.2f $post", &sum(@result) / &sum(@timestamps));
+			return sprintf "$pre %.2f $post", &sum(@result) / &sum(@timestamps);
+		}
+	} 
+}
 
 #---
 #--- eval state rules
@@ -3266,6 +3601,9 @@ sub global_result_rating {
 		#--- count all child checks
 		$rc{count_all}[$cmds[$no]{rc}]++;	# count all return codes
 		push @{$rc{list_all}[$cmds[$no]{rc}]},$cmds[$no]{name}; # add plugin to all list
+
+		# add top values to history
+		history_push($cmds[$no]{name},$cmds[$no]{endtime},$cmds[$no]{output}) if ($opt{set}{history});
 	}
 
 	#--- sort in severity order
@@ -3319,6 +3657,9 @@ sub single_result_rating {
 		} else {
 			DEBUG4("expression found for $def{llabel}{$state}: >>>$cmds[$no]{$def{llabel}{$state}}<<<");
 		}
+
+		#--- history substitution
+		$cmds[$no]{$def{llabel}{$state}}=trim(history_substitute($cmds[$no]{name},$cmds[$no]{$def{llabel}{$state}}));
 
 		#my ($result,$message)=eval_result("\'$cmds[$no]{output}\'$cmds[$no]{$def{llabel}{$state}}");
 		my ($result,$message)=eval_result("$cmds[$no]{$def{llabel}{$state}}");
@@ -4724,6 +5065,17 @@ add_error(0,"please don't run plugins as root!") if ($opt{set}{user}=~/root/ && 
 #--- parse single command lines
 &parse_lines(@{$opt{execute}});
 
+#--- read history
+if ($opt{set}{history}) {
+	#--- take HOSTNAME-SERVICEDESC to store historical cumulation data
+	if (! $opt{set}{HOSTNAME} || ! $opt{set}{SERVICEDESC}) {
+		print "history: we need HOSTNAME and SERVICEDESC for saving historical values.\nPlease specify -s HOSTNAME=<hostname> -s SERVICEDESC=<service description>\n";
+		exit $UNKNOWN;
+	} else {
+		history_load($opt{set}{HOSTNAME}, $opt{set}{SERVICEDESC});
+	}
+}
+
 #--- provide settings as env variables
 &export_env_settings;
 
@@ -4811,6 +5163,9 @@ $cmds[0]{endtime}=time;
 
 #--- report
 &report_all;
+
+#--- save history after top update
+history_store($opt{set}{HOSTNAME}, $opt{set}{SERVICEDESC}) if ($opt{set}{history});
 
 #--- return rc with highest severity
 DEBUG4("This is the end - with RC $cmds[0]{rc}");

@@ -598,6 +598,10 @@ illegal_chars
 ignore_missing_cmd_file
 hostname
 html_ascii_notification
+history_minvalues
+history_maxage
+history_maxsize
+history
 gunzip
 file_extension
 findbin
@@ -708,6 +712,10 @@ with_feed_passive_dir
 with_feed_passive_dir_permissions
 with_findbin
 with_file_extension
+with_history
+with_history_maxsize
+with_history_maxage
+with_history_minvalues
 with_html_ascii_notification
 with_ignore_missing_cmd_file
 with_illegal_chars
@@ -1386,6 +1394,10 @@ detail settings:
   --with-feed_passive_dir_permissions=<octal perms> permissions for feed passive config dir (default:01777)
   --with-findbin=<0|1>                     use Perl module FindBin for addressing plugins (default:1)
   --with-file_extension=<ext>              default extension for check_multi command files (default:"cmd")
+  --with-history=<0|1>                     shall we store historical data for numerical checks? (default: 0)
+  --with-history_maxsize=<NN>              maximum number of history entries (default: 24*12 = 288)
+  --with-history_maxage=<NN>               maximum age of history entries in seconds (default: 24*60*60 = 86400)
+  --with-history_minvalues=<NN>            minimum of history entries, until a state rule gets valid (default: 3)
   --with-html_ascii_notification=<0|1>     HTML output contains comment with ASCII output for notifications (default:0)
   --with-ignore_missing_cmd_file=<0|1>     if missing cmd files should be ignored (default:0)
   --with-illegal_chars=<chars>             characters to be stripped from command files (default:"\r")
@@ -1418,7 +1430,7 @@ detail settings:
   --with-tmp_dir=<path>                    /path/to/tmp_dir (default:/tmp/check_multi)
   --with-tmp_dir_permissions=<octal perms> permissions of tmp_dir (default:01777)
   --with-tmp_etc=<path>                    /path/to/tmp_dir/etc (default:$tmp_dir/etc)
-  --with-use_hard_state=<0|1>              use hard states for livestatus and statusdat checks (default:0)
+  --with-use_hard_state=<0|1>              use hard states for livestatus and statusdat checks (default:1)
 
 major settings:
   --with-parent_timeut=<NN>                timeout for parent check (default:60)
@@ -2553,6 +2565,38 @@ else
 fi
 
 
+# Check whether --with-history was given.
+if test "${with_history+set}" = set; then :
+  withval=$with_history; history=$withval
+else
+  history=0
+fi
+
+
+# Check whether --with-history_maxsize was given.
+if test "${with_history_maxsize+set}" = set; then :
+  withval=$with_history_maxsize; history_maxsize=$withval
+else
+  history_maxsize=288
+fi
+
+
+# Check whether --with-history_maxage was given.
+if test "${with_history_maxage+set}" = set; then :
+  withval=$with_history_maxage; history_maxage=$withval
+else
+  history_maxage=86400
+fi
+
+
+# Check whether --with-history_minvalues was given.
+if test "${with_history_minvalues+set}" = set; then :
+  withval=$with_history_minvalues; history_minvalues=$withval
+else
+  history_minvalues=3
+fi
+
+
 # Check whether --with-html_ascii_notification was given.
 if test "${with_html_ascii_notification+set}" = set; then :
   withval=$with_html_ascii_notification; html_ascii_notification=$withval
@@ -2813,7 +2857,7 @@ fi
 if test "${with_use_hard_state+set}" = set; then :
   withval=$with_use_hard_state; use_hard_state=$withval
 else
-  use_hard_state=0
+  use_hard_state=1
 fi
 
 
@@ -2874,6 +2918,10 @@ fi
 
 
 #--- substitutions
+
+
+
+
 
 
 
