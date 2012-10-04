@@ -2649,7 +2649,7 @@ sub exec_command {
 				$cmds[0]{nallchecks}+=$#top;
 				$cmds[0]{nchecks}+=$#top;
 
-				#--- cumulate: we need to read another time the history, because it wasn't available during configuration time yet
+				#--- we need to update the history, because the checks weren't available before
 				if ($opt{set}{history}) {
 					#--- take HOSTNAME-SERVICEDESC to store historical cumulation data
 					if (! $opt{set}{HOSTNAME} || ! $opt{set}{SERVICEDESC}) {
@@ -2659,22 +2659,29 @@ sub exec_command {
 						history_load($opt{set}{HOSTNAME}, $opt{set}{SERVICEDESC});
 					}
 				}
+				#--- do all post processing for the new child checks
+				for (my $cno=$no; $cno <= $no+$#top; $cno++) {
+					set_env_vars($cno);
+					single_result_rating($cno);
+					set_env_vars($cno);
+				}
 			}
-		}
+		} else {
 
-		#--- set environment variable states
-		set_env_vars($no);
-
-		#--- evaluate single command RC rating
-		single_result_rating($no);
-
-		#--- set environment variable states
-		set_env_vars($no);
-
-		#--- suppress_perfdata set? ignore perfdata
-		if ($cmds[$no]{process_perfdata} && $cmds[$no]{performance}) {
-			$ENV{"MULTI_PERFDATA_".$cmds[$no]{name}}="$cmds[$no]{performance}";
-			DEBUG4("environment var MULTI_PERFDATA_$cmds[$no]{name}=$cmds[$no]{performance}");
+			#--- set environment variable states
+			set_env_vars($no);
+	
+			#--- evaluate single command RC rating
+			single_result_rating($no);
+	
+			#--- set environment variable states
+			set_env_vars($no);
+	
+			#--- suppress_perfdata set? ignore perfdata
+			if ($cmds[$no]{process_perfdata} && $cmds[$no]{performance}) {
+				$ENV{"MULTI_PERFDATA_".$cmds[$no]{name}}="$cmds[$no]{performance}";
+				DEBUG4("environment var MULTI_PERFDATA_$cmds[$no]{name}=$cmds[$no]{performance}");
+			}
 		}
 	}
 	return $cmds[$no]{rc};
@@ -3229,6 +3236,13 @@ sub history_store {
 sub history_load {
 	my ($host,$service)=@_;
 	my $count=0;
+
+	#--- present a nicer error message if no history file could be found
+	if (! -f "$opt{set}{tmp_dir}/history_${host}_${service}.txt") {
+		writefile("$opt{set}{tmp_dir}/history_${host}_${service}.txt",());
+		add_error(0,"History initialization");
+		return $count;
+	}
 	my $content=readfile("$opt{set}{tmp_dir}/history_${host}_${service}.txt");
 
 	#--- split lines and parse timevalue tupels
@@ -3236,17 +3250,20 @@ sub history_load {
 		#--- line format: key timestamp:value timestamp:value ...
 		my ($name, @timevalues)=split(' ',$line);
 		#--- ignore if $name is not found as child check
-		my $i=get_child_index($name);
+		my $i=get_child_index(trim($name));
 		if (! $i) {
 			DEBUG3("Cannot find child check $name, cannot load history data for $name");
 			next;
 		}
+		my $namecount=0;
 		foreach my $tuple (@timevalues) {
 			my ($timestamp,$value)=split(':',$tuple);
 			$timestamp=int($timestamp);
 			$cmds[$i]{history}{$timestamp}=$value;
 			$count++;
+			$namecount++;
 		}
+		DEBUG3(sprintf "loaded %d time:value tupel for $name", $namecount);
 	}
 	DEBUG3("$count values read from $opt{set}{tmp_dir}/history_${host}_${service}.txt");
 	return $count;
@@ -3295,7 +3312,7 @@ sub history_push {
 		} 
 
 		#--- at last: add the new value;
-		DEBUG3("adding history entry to \$cmds[$index]: $name:$timestamp:$value");
+		DEBUG3("adding time:value tupel $name:$timestamp:$value to \$cmds[$index]");
 		$cmds[$index]{history}{$timestamp}=$value;
 	}
 }
@@ -3374,8 +3391,12 @@ sub history_substitute {
 					$last_timestamp = $previous_timestamp = $timestamp;
 				}
 			}
-			if ($#result < $opt{set}{history_minvalues}) {
-				DEBUG1(sprintf "Too few history results found - is: %d, should be: %d", $#result + 1, $opt{set}{history_minvalues});
+			if ($#result + 1 < $opt{set}{history_minvalues}) {
+				DEBUG1(sprintf "Too few history results found from %s to %s - is: %d, should be: %d", 
+					readable_parseable_timestamp($from), 
+					readable_parseable_timestamp($to), 
+					$#result + 1, 
+					$opt{set}{history_minvalues});
 				return undef;
 			}
 			DEBUG3(sprintf "    avg: %10.2f%6ds                         product: %10.2f\n\n", 
@@ -3393,9 +3414,10 @@ sub history_substitute {
 				return undef;
 			}
 			my @sorted = sort { $b <=> $a } keys %{$cmds[$i]{history}};
-			for my $timestamp (splice(@sorted, 0, $parm[0]+1)) {
+			for my $timestamp (@sorted) {
+			#for my $timestamp (splice(@sorted, 0, $parm[0]+1)) {
 				#--- we're ready if we pushed enough values
-				last if ($#result + 1 == $parm[0]);
+				last if ($#result + 1 >= $parm[0]);
 
 				$first_timestamp = $timestamp if (! $first_timestamp);
 				if ($previous_timestamp) {
@@ -3409,7 +3431,7 @@ sub history_substitute {
 				}
 				$last_timestamp = $previous_timestamp = $timestamp;
 			}
-			if ($#result < $opt{set}{history_minvalues}) {
+			if ($#result + 1 < $opt{set}{history_minvalues}) {
 				DEBUG1(sprintf "Too few history results found - is: %d, should be: %d", $#result + 1, $opt{set}{history_minvalues});
 				return undef;
 			}
@@ -3454,7 +3476,7 @@ sub history_substitute {
 					readable_sortable_timestamp($timestamp),
 					$cmds[$i]{history}{$timestamp} * ($timestamp - $first_timestamp + 1));
 			}
-			if ($#result < $opt{set}{history_minvalues}) {
+			if ($#result + 1 < $opt{set}{history_minvalues}) {
 				DEBUG1(sprintf "Too few history results found - is: %d, should be: %d", $#result + 1, $opt{set}{history_minvalues});
 				return undef;
 			}
@@ -3650,6 +3672,9 @@ sub single_result_rating {
 			DEBUG4("original RC was $old_rc -> moving this RC to child check RC");
 		}
 
+		#--- history substitution
+		$cmds[$no]{$def{llabel}{$state}}=trim(history_substitute($cmds[$no]{name},$cmds[$no]{$def{llabel}{$state}}));
+
 		#--- no special settings for evaluation? then do not evaluate!
 		if (!$cmds[$no]{$def{llabel}{$state}}) {
 			DEBUG4("no expression for $def{llabel}{$state} -> no evaluation");
@@ -3657,9 +3682,6 @@ sub single_result_rating {
 		} else {
 			DEBUG4("expression found for $def{llabel}{$state}: >>>$cmds[$no]{$def{llabel}{$state}}<<<");
 		}
-
-		#--- history substitution
-		$cmds[$no]{$def{llabel}{$state}}=trim(history_substitute($cmds[$no]{name},$cmds[$no]{$def{llabel}{$state}}));
 
 		#my ($result,$message)=eval_result("\'$cmds[$no]{output}\'$cmds[$no]{$def{llabel}{$state}}");
 		my ($result,$message)=eval_result("$cmds[$no]{$def{llabel}{$state}}");
