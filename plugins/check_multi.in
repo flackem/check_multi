@@ -2661,6 +2661,9 @@ sub exec_command {
 				}
 				#--- do all post processing for the new child checks
 				for (my $cno=$no; $cno <= $no+$#top; $cno++) {
+					if ($opt{set}{history}) {
+						$cmds[$cno]{output} .= " (" . join(',', map { $cmds[$cno]{history}{$_} } (sort keys %{$cmds[$cno]{history}})[0..5]) . ")";
+					}
 					set_env_vars($cno);
 					single_result_rating($cno);
 					set_env_vars($cno);
@@ -3332,7 +3335,7 @@ sub history_substitute {
 	# KEYWORD ( options
 	#
 	#--- AVERAGE_FROM_TO (FROM, TO)
-	if ($expression=~/(.*)(AVERAGE_FROM_TO|AVERAGE_LAST|WEIGHTED_AVERAGE_FROM_TO|WEIGHTED_AVERAGE_LAST)\s*\(([^\)]+)\)\s*(.*)/i) {
+	if ($expression=~/(.*)\b(AVERAGE_FROM_TO\b|\bAVERAGE_LAST|WEIGHTED_AVERAGE_FROM_TO|WEIGHTED_AVERAGE_LAST)\b\s*\(([^\)]+)\)\s*(.*)/i) {
 		my $pre=$1;
 		my $expression=uc($2);
 		my @parm=split(',',$3);
@@ -3947,7 +3950,7 @@ sub report_ascii {
 								' ',
 								' ',
 								$field . '.' x ($verbose_field_len - length($field)),
-								format_fields($field, $cmds[$no]{$field});
+								format_fields($field, \$cmds[$no]{$field});
 						}
 					} else {
 						if (defined($cmds[$no]{$field})) {
@@ -3955,7 +3958,7 @@ sub report_ascii {
 								' ',
 								' ',
 								$field . '.' x ($verbose_field_len - length($field)),
-								format_fields($field, $cmds[$no]{$field});
+								format_fields($field, \$cmds[$no]{$field});
 						}
 					}
 
@@ -4036,13 +4039,30 @@ sub state_string_ascii {
 #--- helper routine which formats fields
 #---
 sub format_fields {
-	my ($field, $content)=@_;
+	my ($field, $contentref)=@_;
+	DEBUG3("field:$field \$\$contentref:$$contentref ref(\$\$contentref):".ref($$contentref));
 	if ($field =~ /endtime|starttime/) {
-		return readable_sortable_timestamp($content);
+		return readable_sortable_timestamp($$contentref);
 	} elsif ($field =~ /runtime/) {
-		return sprintf "%.6f", $content;
+		return sprintf "%.6f", $$contentref;
+	} elsif (ref($$contentref) eq 'ARRAY') {
+		my $string="";
+		for (my $i=0; $i<=$#{$$contentref}; $i++) {
+			$string.=sprintf "%d. %s ", $i+1, @{$$contentref}[$i];
+		}
+		chomp($string);
+		DEBUG3("array string:$string");
+		return $string;
+	} elsif (ref($$contentref) eq 'HASH') {
+		my $string="";
+		foreach my $key (sort keys %{$$contentref}) {
+			$string.=sprintf "%s:%s ", $key, ${$$contentref}{$key};
+		}
+		chomp($string);
+		DEBUG3("hash string:$string");
+		return $string;
 	} else {
-		return $content;
+		return $$contentref;
 	}
 }
 #---
