@@ -3655,7 +3655,7 @@ sub single_result_rating {
 		}
 
 		#--- history substitution
-		$cmds[$no]{$def{llabel}{$state}}=trim(history_substitute($cmds[$no]{name},$cmds[$no]{$def{llabel}{$state}}));
+		$cmds[$no]{$def{llabel}{$state}}=trim(history_substitute($cmds[$no]{name},$cmds[$no]{$def{llabel}{$state}})) if ($opt{set}{history});
 
 		#--- no special settings for evaluation? then do not evaluate!
 		if (!$cmds[$no]{$def{llabel}{$state}}) {

@@ -760,7 +760,7 @@ is(
 like(
 	$result->output,
 	'/WARNING - 1 plugins checked, 1 warning \(eins\)\n'.
-	'\[ 1\] eins eins \[UNKNOWN: output matched rule \'eins =\~ \/eins\/\',WARNING: output matched rule \'eins =\~ \/eins\/\'\]$/',
+	'\[ 1\] eins eins \[UNKNOWN: output matched rule \'eins =\~ \/eins\/\', WARNING: output matched rule \'eins =\~ \/eins\/\'\]$/',
 	"output correct"
 );
 #-------------------------------------------------------------------------------
@@ -777,7 +777,7 @@ is(
 like(
 	$result->output,
 	'/CRITICAL - 1 plugins checked, 1 critical \(zwei\)\n'.
-	'\[ 1\] zwei zwei \[UNKNOWN: output matched rule \'zwei =\~ \/zwei\/\',WARNING: output matched rule \'zwei =\~ /zwei/\'\]$/',
+	'\[ 1\] zwei zwei \[UNKNOWN: output matched rule \'zwei =\~ \/zwei\/\', WARNING: output matched rule \'zwei =\~ /zwei/\'\]$/',
 	"output correct"
 );
 #-------------------------------------------------------------------------------
@@ -981,7 +981,7 @@ is(
 );
 like(
 	$result->output,
-	'/UNKNOWN - 0 plugins checked,  \[parse_lines: pure numerical tag \'123\' is invalid,no checks defined\]/',
+	'/UNKNOWN - 0 plugins checked,  \[parse_lines: pure numerical tag \'123\' is invalid, no checks defined\]/',
 	"output correct",
 );
 #-------------------------------------------------------------------------------
