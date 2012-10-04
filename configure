@@ -613,6 +613,7 @@ extinfo_in_status
 exec_open3
 ethtool
 empty_output_is_unknown
+cumulate_max_rows
 cumulate_ignore_zero
 config_dir
 contrib_dir
@@ -702,6 +703,7 @@ with_checkresults_dir
 with_child_interval
 with_config_dir
 with_cumulate_ignore_zero
+with_cumulate_max_rows
 with_empty_output_is_unknown
 with_ethtool
 with_exec_open3
@@ -1384,6 +1386,7 @@ detail settings:
   --with-child_interval=<time>             time between child checks, fractions of seconds allowed (default:0.0)
   --with-config_dir=<path>                 directory for check_multi configuration files (default:${sysconfdir}/check_multi)
   --with-cumulate_ignore_zero=<0|1>        cumulate ignores zero values (default:1)
+  --with-cumulate_max_rows=<N>             how many rows should be returned? (default:5)
   --with-empty_output_is_unknown=<0|1>     should empty output be flagged as UNKNOWN (default:1)
   --with-ethtool=</path/to/ethtool>        define path to ethtool (default:/sbin/ethtool)
   --with-exec_open3=<0|1>                  use new exec method with function open3
@@ -2475,6 +2478,14 @@ else
 fi
 
 
+# Check whether --with-cumulate_max_rows was given.
+if test "${with_cumulate_max_rows+set}" = set; then :
+  withval=$with_cumulate_max_rows; cumulate_max_rows=$withval
+else
+  cumulate_max_rows=5
+fi
+
+
 # Check whether --with-empty_output_is_unknown was given.
 if test "${with_empty_output_is_unknown+set}" = set; then :
   withval=$with_empty_output_is_unknown; empty_output_is_unknown=$withval
@@ -2918,6 +2929,7 @@ fi
 
 
 #--- substitutions
+
 
 
 

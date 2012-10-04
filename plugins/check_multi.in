@@ -152,7 +152,7 @@ my %opt=(
 		# path to check_multi config directory
 		config_dir	=> "@config_dir@",
 		# how many rows should be visible for cumulate statement?
-		cumulate_max_rows => 10,
+		cumulate_max_rows => @cumulate_max_rows@,
 		# should cumulate ignore zero values?
 		cumulate_ignore_zero => @cumulate_ignore_zero@,
 		# don't complain about being root etc.
@@ -1568,7 +1568,7 @@ sub add_error {
 #---
 sub error {
 	my ($no)=shift;
-	my ($separator)=shift || ',';
+	my ($separator)=shift || ', ';
 	return "" if ($no < 0 || $no > $#cmds || ! ref($cmds[$no]{error}));
         my $errmsg=join($separator,@{$cmds[$no]{error}});
 	return ($errmsg)?" [$errmsg]":"";
@@ -2662,7 +2662,7 @@ sub exec_command {
 				#--- do all post processing for the new child checks
 				for (my $cno=$no; $cno <= $no+$#top; $cno++) {
 					if ($opt{set}{history}) {
-						$cmds[$cno]{output} .= " (" . join(',', map { $cmds[$cno]{history}{$_} } (sort keys %{$cmds[$cno]{history}})[0..5]) . ")";
+						add_error($cno, "history: $cmds[$cno]{output}," . join(',', map { $cmds[$cno]{history}{$_} } (sort keys %{$cmds[$cno]{history}})[0..5]));
 					}
 					set_env_vars($cno);
 					single_result_rating($cno);
@@ -3187,28 +3187,7 @@ sub get_snmp {
 
 	return (0,$result->{$oid});
 }
-###################################################################################
-####
-# main
-#history_load("localhost","process");
-#my %p=();
-#
-#open(PROC, "ps -eo 'comm pcpu'|");
-#while (<PROC>) {
-#	next if (/^COMMAND/);
-#	my ($proc,$cpu)=split(/\s+/);
-#	$p{$proc}+=$cpu;
-#}
-#close(PROC);
-#foreach my $proc (sort keys %p) {
-#	push @cmds, { name => $proc} if (! get_child_index($proc));
-#	history_push($proc,time,$p{$proc});
-#}
-#history_store("localhost","process");
-#history_substitute("perl","   AVERAGE_FROM_TO ( time - 3600 , time )");
-#history_substitute("perl","   AVERAGE_LAST ( 5 ) "); 
-#history_substitute("perl","   WEIGHTED_AVERAGE_LAST ( 5 ) "); 
-####
+
 #--- 
 #--- store historical numerical values
 #--- host / tag (service) is required for file name
