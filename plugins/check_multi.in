@@ -3365,14 +3365,15 @@ sub history_substitute {
 			for my $timestamp (sort { $b <=> $a } keys (%{$cmds[$i]{history}})) {
 				if ($timestamp >= $from && $timestamp <= $to) {
 					$first_timestamp = $timestamp if (! $first_timestamp);
-					$previous_timestamp = $timestamp + 1 if (!$previous_timestamp);
-					push @result, $cmds[$i]{history}{$timestamp} * ($previous_timestamp - $timestamp);
-					DEBUG3("%4d. %10.2f %5ds ( %s ) product: %10.2f", 
-						++$count,
-						$cmds[$i]{history}{$timestamp}, 
-						$previous_timestamp - $timestamp, 
-						readable_sortable_timestamp($timestamp),
-						$cmds[$i]{history}{$timestamp} * ($previous_timestamp - $timestamp));
+					if ($previous_timestamp) {
+						push @result, $cmds[$i]{history}{$timestamp} * ($previous_timestamp - $timestamp);
+						DEBUG3("%4d. %10.2f %5ds ( %s ) product: %10.2f", 
+							++$count,
+							$cmds[$i]{history}{$timestamp}, 
+							$previous_timestamp - $timestamp, 
+							readable_sortable_timestamp($timestamp),
+							$cmds[$i]{history}{$timestamp} * ($previous_timestamp - $timestamp));
+					}
 					$last_timestamp = $previous_timestamp = $timestamp;
 				}
 			}
@@ -3386,10 +3387,10 @@ sub history_substitute {
 			}
 			DEBUG3(sprintf "    avg: %10.2f%6ds                         product: %10.2f\n\n", 
 				&sum(@result) / ($first_timestamp - $last_timestamp),
-				$first_timestamp - $last_timestamp + 1,
+				$first_timestamp - $last_timestamp,
 				&sum(@result));	
-			DEBUG3( sprintf "result: $pre %.2f $post", &sum(@result) / ($first_timestamp - $last_timestamp + 1));
-			return sprintf "$pre %.2f $post", &sum(@result) / ($first_timestamp - $last_timestamp + 1);
+			DEBUG3( sprintf "result: $pre %.2f $post", &sum(@result) / ($first_timestamp - $last_timestamp));
+			return sprintf "$pre %.2f $post", &sum(@result) / ($first_timestamp - $last_timestamp);
 
 		#--- take last N values
 		} elsif ($expression=~/^AVERAGE_LAST$/) {
@@ -3404,14 +3405,16 @@ sub history_substitute {
 				last if ($#result + 1 >= $parm[0]);
 
 				$first_timestamp = $timestamp if (! $first_timestamp);
-				$previous_timestamp = $timestamp + 1 if (!$previous_timestamp);
-				push @result, $cmds[$i]{history}{$timestamp} * ($previous_timestamp - $timestamp);
-				DEBUG3(sprintf "%4d. %10.2f %5ds ( %s ) product: %10.2f", 
-					++$count,
-					$cmds[$i]{history}{$timestamp}, 
-					$previous_timestamp - $timestamp, 
-					readable_sortable_timestamp($timestamp),
-					$cmds[$i]{history}{$timestamp} * ($previous_timestamp - $timestamp));
+				#--- we first need an interval to calculate the value * interval
+				if ($previous_timestamp) {
+					push @result, $cmds[$i]{history}{$previous_timestamp} * ($previous_timestamp - $timestamp);
+					DEBUG3(sprintf "%4d. %10.2f %5ds ( %s ) product: %10.2f", 
+						++$count,
+						$cmds[$i]{history}{$previous_timestamp}, 
+						$previous_timestamp - $timestamp, 
+						readable_sortable_timestamp($previous_timestamp),
+						$cmds[$i]{history}{$previous_timestamp} * ($previous_timestamp - $timestamp));
+				}
 				$last_timestamp = $previous_timestamp = $timestamp;
 			}
 			if ($#result + 1 < $opt{set}{history_minvalues}) {
@@ -3419,11 +3422,11 @@ sub history_substitute {
 				return undef;
 			}
 			DEBUG3(sprintf " avg: %10.2f%6ds                         product: %10.2f", 
-				&sum(@result) / ($first_timestamp - $last_timestamp + 1),
-				$first_timestamp - $last_timestamp + 1,
+				&sum(@result) / ($first_timestamp - $last_timestamp),
+				$first_timestamp - $last_timestamp,
 				&sum(@result));	
-			DEBUG3(sprintf "result: $pre %.2f $post", &sum(@result) / ($first_timestamp - $last_timestamp + 1));
-			return sprintf "$pre %.2f $post", &sum(@result) / ($first_timestamp - $last_timestamp + 1);
+			DEBUG3(sprintf "result: $pre %.2f $post", &sum(@result) / ($first_timestamp - $last_timestamp));
+			return sprintf "$pre %.2f $post", &sum(@result) / ($first_timestamp - $last_timestamp);
 
 		#--- take last N values
 		} elsif ($expression=~/^WEIGHTED_AVERAGE_LAST$/) {
