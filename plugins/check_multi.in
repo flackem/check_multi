@@ -2665,6 +2665,7 @@ sub exec_command {
 						add_error($cno, "history: $cmds[$cno]{output}," . join(',', map { $cmds[$cno]{history}{$_} } (sort keys %{$cmds[$cno]{history}})[0..5]));
 					}
 					set_env_vars($cno);
+					history_push($cmds[$no]{name},$cmds[$no]{endtime},$cmds[$no]{output}) if ($opt{set}{history});
 					single_result_rating($cno);
 					set_env_vars($cno);
 				}
@@ -2674,6 +2675,9 @@ sub exec_command {
 			#--- set environment variable states
 			set_env_vars($no);
 	
+			# add value to history
+			history_push($cmds[$no]{name},$cmds[$no]{endtime},$cmds[$no]{output}) if ($opt{set}{history});
+
 			#--- evaluate single command RC rating
 			single_result_rating($no);
 	
@@ -3361,15 +3365,14 @@ sub history_substitute {
 			for my $timestamp (sort { $b <=> $a } keys (%{$cmds[$i]{history}})) {
 				if ($timestamp >= $from && $timestamp <= $to) {
 					$first_timestamp = $timestamp if (! $first_timestamp);
-					if ($previous_timestamp) {
-						push @result, $cmds[$i]{history}{$timestamp} * ($previous_timestamp - $timestamp);
-						DEBUG3("%4d. %10.2f %5ds ( %s ) product: %10.2f", 
-							++$count,
-							$cmds[$i]{history}{$timestamp}, 
-							$previous_timestamp - $timestamp, 
-							readable_sortable_timestamp($timestamp),
-							$cmds[$i]{history}{$timestamp} * ($previous_timestamp - $timestamp));
-					}
+					$previous_timestamp = $timestamp + 1 if (!$previous_timestamp);
+					push @result, $cmds[$i]{history}{$timestamp} * ($previous_timestamp - $timestamp);
+					DEBUG3("%4d. %10.2f %5ds ( %s ) product: %10.2f", 
+						++$count,
+						$cmds[$i]{history}{$timestamp}, 
+						$previous_timestamp - $timestamp, 
+						readable_sortable_timestamp($timestamp),
+						$cmds[$i]{history}{$timestamp} * ($previous_timestamp - $timestamp));
 					$last_timestamp = $previous_timestamp = $timestamp;
 				}
 			}
@@ -3383,10 +3386,10 @@ sub history_substitute {
 			}
 			DEBUG3(sprintf "    avg: %10.2f%6ds                         product: %10.2f\n\n", 
 				&sum(@result) / ($first_timestamp - $last_timestamp),
-				$first_timestamp - $last_timestamp,
+				$first_timestamp - $last_timestamp + 1,
 				&sum(@result));	
-			DEBUG3( sprintf "result: $pre %.2f $post", &sum(@result) / ($first_timestamp - $last_timestamp));
-			return sprintf "$pre %.2f $post", &sum(@result) / ($first_timestamp - $last_timestamp);
+			DEBUG3( sprintf "result: $pre %.2f $post", &sum(@result) / ($first_timestamp - $last_timestamp + 1));
+			return sprintf "$pre %.2f $post", &sum(@result) / ($first_timestamp - $last_timestamp + 1);
 
 		#--- take last N values
 		} elsif ($expression=~/^AVERAGE_LAST$/) {
@@ -3397,20 +3400,18 @@ sub history_substitute {
 			}
 			my @sorted = sort { $b <=> $a } keys %{$cmds[$i]{history}};
 			for my $timestamp (@sorted) {
-			#for my $timestamp (splice(@sorted, 0, $parm[0]+1)) {
 				#--- we're ready if we pushed enough values
 				last if ($#result + 1 >= $parm[0]);
 
 				$first_timestamp = $timestamp if (! $first_timestamp);
-				if ($previous_timestamp) {
-					push @result, $cmds[$i]{history}{$timestamp} * ($previous_timestamp - $timestamp);
-					DEBUG3(sprintf "%4d. %10.2f %5ds ( %s ) product: %10.2f", 
-						++$count,
-						$cmds[$i]{history}{$timestamp}, 
-						$previous_timestamp - $timestamp, 
-						readable_sortable_timestamp($timestamp),
-						$cmds[$i]{history}{$timestamp} * ($previous_timestamp - $timestamp));
-				}
+				$previous_timestamp = $timestamp + 1 if (!$previous_timestamp);
+				push @result, $cmds[$i]{history}{$timestamp} * ($previous_timestamp - $timestamp);
+				DEBUG3(sprintf "%4d. %10.2f %5ds ( %s ) product: %10.2f", 
+					++$count,
+					$cmds[$i]{history}{$timestamp}, 
+					$previous_timestamp - $timestamp, 
+					readable_sortable_timestamp($timestamp),
+					$cmds[$i]{history}{$timestamp} * ($previous_timestamp - $timestamp));
 				$last_timestamp = $previous_timestamp = $timestamp;
 			}
 			if ($#result + 1 < $opt{set}{history_minvalues}) {
@@ -3418,11 +3419,11 @@ sub history_substitute {
 				return undef;
 			}
 			DEBUG3(sprintf " avg: %10.2f%6ds                         product: %10.2f", 
-				&sum(@result) / ($first_timestamp - $last_timestamp),
-				$first_timestamp - $last_timestamp,
+				&sum(@result) / ($first_timestamp - $last_timestamp + 1),
+				$first_timestamp - $last_timestamp + 1,
 				&sum(@result));	
-			DEBUG3(sprintf "result: $pre %.2f $post", &sum(@result) / ($first_timestamp - $last_timestamp));
-			return sprintf "$pre %.2f $post", &sum(@result) / ($first_timestamp - $last_timestamp);
+			DEBUG3(sprintf "result: $pre %.2f $post", &sum(@result) / ($first_timestamp - $last_timestamp + 1));
+			return sprintf "$pre %.2f $post", &sum(@result) / ($first_timestamp - $last_timestamp + 1);
 
 		#--- take last N values
 		} elsif ($expression=~/^WEIGHTED_AVERAGE_LAST$/) {
@@ -3605,9 +3606,6 @@ sub global_result_rating {
 		#--- count all child checks
 		$rc{count_all}[$cmds[$no]{rc}]++;	# count all return codes
 		push @{$rc{list_all}[$cmds[$no]{rc}]},$cmds[$no]{name}; # add plugin to all list
-
-		# add top values to history
-		history_push($cmds[$no]{name},$cmds[$no]{endtime},$cmds[$no]{output}) if ($opt{set}{history});
 	}
 
 	#--- sort in severity order
