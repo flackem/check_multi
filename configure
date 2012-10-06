@@ -1385,7 +1385,7 @@ detail settings:
   --with-checkresults_dir=<path>           directory for Nagios checkresults (default:${localstatedir}/spool/checkresults)
   --with-child_interval=<time>             time between child checks, fractions of seconds allowed (default:0.0)
   --with-config_dir=<path>                 directory for check_multi configuration files (default:${sysconfdir}/check_multi)
-  --with-cumulate_ignore_zero=<0|1>        cumulate ignores zero values (default:1)
+  --with-cumulate_ignore_zero=<0|1>        cumulate ignores zero values (default:0)
   --with-cumulate_max_rows=<N>             how many rows should be returned? (default:5)
   --with-empty_output_is_unknown=<0|1>     should empty output be flagged as UNKNOWN (default:1)
   --with-ethtool=</path/to/ethtool>        define path to ethtool (default:/sbin/ethtool)
@@ -2474,7 +2474,7 @@ fi
 if test "${with_cumulate_ignore_zero+set}" = set; then :
   withval=$with_cumulate_ignore_zero; cumulate_ignore_zero=$withval
 else
-  cumulate_ignore_zero="1"
+  cumulate_ignore_zero=0
 fi
 
 

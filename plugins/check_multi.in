@@ -2662,10 +2662,10 @@ sub exec_command {
 				#--- do all post processing for the new child checks
 				for (my $cno=$no; $cno <= $no+$#top; $cno++) {
 					if ($opt{set}{history}) {
-						add_error($cno, "history: $cmds[$cno]{output}," . join(',', map { $cmds[$cno]{history}{$_} } (sort keys %{$cmds[$cno]{history}})[0..5]));
+						history_push($cmds[$cno]{name}, $cmds[$cno]{endtime}, $cmds[$cno]{output});
+						add_error($cno, "history: ".join(',', map { $cmds[$cno]{history}{$_} } (sort keys %{$cmds[$cno]{history}})[0..5]));
 					}
 					set_env_vars($cno);
-					history_push($cmds[$no]{name},$cmds[$no]{endtime},$cmds[$no]{output}) if ($opt{set}{history});
 					single_result_rating($cno);
 					set_env_vars($cno);
 				}
@@ -3268,16 +3268,17 @@ sub history_push {
 		my $timestamp = shift; 
 		my $value = shift;
 
-		$timestamp=int($timestamp);
-
 		#--- skip all non numerical values
 		next if ($value !~ /^[0-9\.\-\+]+$/);
+
+		#--- force integer timestamp (1 second resolution)
+		$timestamp=int($timestamp);
 
 		#--- find corresponding object
 		my $index=get_child_index($name);
 		next if (!$index);
 
-		#print "name:$name timestamp:$timestamp value:$value\n";
+		DEBUG3("adding name:$name timestamp:$timestamp value:$value");
 
 		#--- too old values in ringbuffer? delete the oldest value(s)
 		while (1) {

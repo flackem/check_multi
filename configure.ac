@@ -73,7 +73,7 @@ AC_ARG_WITH(complain_unknown_macros,	[  --with-complain_unknown_macros=<0|1>    
 AC_ARG_WITH(checkresults_dir,		[  --with-checkresults_dir=<path>           directory for Nagios checkresults (default:${localstatedir}/spool/checkresults)],checkresults_dir=$withval,checkresults_dir="${localstatedir}/spool/checkresults")
 AC_ARG_WITH(child_interval,		[  --with-child_interval=<time>             time between child checks, fractions of seconds allowed (default:0.0)],child_interval=$withval,child_interval=0.0)
 AC_ARG_WITH(config_dir,			[  --with-config_dir=<path>                 directory for check_multi configuration files (default:${sysconfdir}/check_multi)],config_dir=$withval,config_dir="${sysconfdir}/check_multi")
-AC_ARG_WITH(cumulate_ignore_zero,	[  --with-cumulate_ignore_zero=<0|1>        cumulate ignores zero values (default:1)],cumulate_ignore_zero=$withval,cumulate_ignore_zero="1")
+AC_ARG_WITH(cumulate_ignore_zero,	[  --with-cumulate_ignore_zero=<0|1>        cumulate ignores zero values (default:0)],cumulate_ignore_zero=$withval,cumulate_ignore_zero=0)
 AC_ARG_WITH(cumulate_max_rows,	        [  --with-cumulate_max_rows=<N>             how many rows should be returned? (default:5)],cumulate_max_rows=$withval,cumulate_max_rows=5)
 AC_ARG_WITH(empty_output_is_unknown,	[  --with-empty_output_is_unknown=<0|1>     should empty output be flagged as UNKNOWN (default:1)],empty_output_is_unknown=$withval,empty_output_is_unknown="1")
 if test ethtool=""; then
