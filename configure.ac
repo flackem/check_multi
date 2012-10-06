@@ -233,6 +233,7 @@ $PERL subst plugins/check_multi
 $PERL subst plugins/t/Makefile
 $PERL subst plugins/t/testopts.pm
 $PERL subst plugins/t/10_check_multi.t
+$PERL subst plugins/t/15_check_multi_history.t
 $PERL subst plugins/t/20_check_multi_macros.t
 $PERL subst plugins/t/30_check_multi_perfdata.t
 $PERL subst plugins/t/50_check_multi_checkresults.t

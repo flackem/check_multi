@@ -69,6 +69,7 @@ all:
 	@echo "            or:  make test-extreme       (random tag and macro values)"
 	@echo "            or:  make test-feeds-passive (requires Perl module XML::Simple)"
 	@echo "            or:  make test-livestatus    (requires livestatus module and Perl Module Monitoring::Livestatus)"
+	@echo "            or:  make test-history"
 	@echo "            or:  make test-macros"
 	@echo "            or:  make test-perfdata"
 	@echo "            or:  make test-statusdat"
@@ -96,6 +97,8 @@ test-all:
 test:
 	@ cd $(SRC_PL_TEST)  && $(MAKE) -e $@
 test-standard:
+	@ cd $(SRC_PL_TEST)  && $(MAKE) -e $@
+test-history:
 	@ cd $(SRC_PL_TEST)  && $(MAKE) -e $@
 test-macros:
 	@ cd $(SRC_PL_TEST)  && $(MAKE) -e $@

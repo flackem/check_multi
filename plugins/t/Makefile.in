@@ -13,6 +13,7 @@ all:
 
 clean:
 	-rm -f 10_check_multi.t
+	-rm -f 15_check_multi_history.t
 	-rm -f 20_check_multi_macros.t
 	-rm -f 30_check_multi_perfdata.t
 	-rm -f 50_check_multi_checkresults.t
@@ -32,10 +33,13 @@ devclean: distclean
 test: 
 	@PERL@ $(PERLOPTS) \
 		10_check_multi.t \
+		15_check_multi_history.t \
 		20_check_multi_macros.t \
 		30_check_multi_perfdata.t
 test-standard:
 	@PERL@ $(PERLOPTS) 10_check_multi.t
+test-history:
+	@PERL@ $(PERLOPTS) 15_check_multi_history.t
 test-macros:
 	@PERL@ $(PERLOPTS) 20_check_multi_macros.t
 test-perfdata:
@@ -55,6 +59,7 @@ test-timeout:
 test-all:
 	@PERL@ $(PERLOPTS) \
 		10_check_multi.t \
+		15_check_multi_history.t \
 		20_check_multi_macros.t \
 		30_check_multi_perfdata.t \
 		50_check_multi_checkresults.t \

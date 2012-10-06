@@ -10,6 +10,11 @@ $VERSION     = 1.00;
 @EXPORT_OK   = qw(get_testopts);
 
 sub get_testopts  { 
+	my %skip = ();
+	for (@_) {
+		$skip{$_}=1;
+	}
+
 	my $set={
 		action_mouseover		=> 0,
 		cancel_before_global_timeout	=> 0,
@@ -31,6 +36,10 @@ sub get_testopts  {
 		file_extension			=> "cmd",
 		#HOSTADDRESS			=> "127.0.0.1",
 		#HOSTNAME			=> "localhost",
+		history				=> 0,
+		history_maxsize			=> 5,
+		history_maxage			=> 300,
+		history_minvalues		=> 3,
 		html_ascii_notification		=> 0,
 		ignore_missing_cmd_file		=> 0,
 		illegal_chars			=> "",
@@ -74,6 +83,7 @@ sub get_testopts  {
 	
 	my $testopts="";
 	foreach my $key (sort keys %{$set}) {
+		next if ($skip{$key});
 		$testopts.=" -s $key=$set->{$key}";
 	}
 	return $testopts;

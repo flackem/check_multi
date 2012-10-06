@@ -1,0 +1,131 @@
+#! @PERL@ -w -I ..
+#
+# Process Tests via check_multi
+# thanks to Ton Voon for his persistency on testing ;)
+#
+
+use strict;
+use Test::More;
+use NPTest;
+use testopts;
+
+my $t;
+
+#--- add $libexec_dir to PATH to be sure that plugins will be called from libexec_dir
+my $libexec_dir="@libexecdir@";
+$ENV{PATH}="$libexec_dir:$ENV{PATH}";
+
+#--- check needed plugins for tests
+my @plugins=(
+	"echo",
+	"@PERL@",
+);
+foreach my $plugin (@plugins) {
+	my $path_to_plugin=`which $plugin`; chomp $path_to_plugin;
+	if (! -x "$path_to_plugin") {
+		plan skip_all => "tests because component $plugin not found or not executable as \'$path_to_plugin\'";
+	}
+}
+plan tests => 10;
+
+my $result;
+#my $testopts="-s dont_be_paranoid=1";
+my $testopts=testopts::get_testopts("history","HOSTNAME","SERVICEDESC","report","verbose");
+
+#--- special history options
+$testopts.=" -s history=1 -s HOSTNAME=localhost -s SERVICEDESC=number";
+#--- initialize / remove history
+unlink "tmp/history_localhost_number.txt" if (-f "tmp/history_localhost_number.txt");
+
+#-------------------------------------------------------------------------------
+#--- history initialization - check 1 ------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi --report 1+4 --verbose $testopts -s verbose_fields=history -x 'command [ number ] = echo 1'",
+);
+is(
+	$result->return_code, 
+	0, 
+	"check_multi initializes history - RC0 - passed"
+);
+like(
+	$result->output,
+	'/OK - 1 plugins checked, 1 ok \[History initialization\]\n\[ 1\] OK   number 1\n\s+history: \d+:1/s', 
+	"output correct - passed"
+);
+#--- sleep 1 is important here, otherwise the latter result will overwrite the check before
+sleep 1;
+
+#-------------------------------------------------------------------------------
+#--- history check 2 -----------------------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi --report 1+4 --verbose $testopts -s verbose_fields=history -x 'command [ number ] = echo 2'",
+);
+is(
+	$result->return_code, 
+	0, 
+	"check_multi initializes history - RC0 - passed"
+);
+like(
+	$result->output,
+	'/OK - 1 plugins checked, 1 ok\n\[ 1\] OK   number 2\n\s+history: \d+:1 \d+:2/s', 
+	"output correct - passed"
+);
+#--- sleep 1 is important here, otherwise the latter result will overwrite the check before
+sleep 1;
+
+#-------------------------------------------------------------------------------
+#--- history check 3 -----------------------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi --report 1+4 --verbose $testopts -s verbose_fields=history -x 'command [ number ] = echo 3'",
+);
+is(
+	$result->return_code, 
+	0, 
+	"check_multi initializes history - RC0 - passed"
+);
+like(
+	$result->output,
+	'/OK - 1 plugins checked, 1 ok\n\[ 1\] OK   number 3\n\s+history: \d+:1 \d+:2 \d+:3/s', 
+	"output correct - passed"
+);
+#--- sleep 1 is important here, otherwise the latter result will overwrite the check before
+sleep 1;
+
+#-------------------------------------------------------------------------------
+#--- history check 4 -----------------------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi --report 1+4 --verbose $testopts -s verbose_fields=history -x 'command [ number ] = echo 4'",
+);
+is(
+	$result->return_code, 
+	0, 
+	"check_multi initializes history - RC0 - passed"
+);
+like(
+	$result->output,
+	'/OK - 1 plugins checked, 1 ok\n\[ 1\] OK   number 4\n\s+history: \d+:1 \d+:2 \d+:3 \d+:4/s', 
+	"output correct - passed"
+);
+#--- sleep 1 is important here, otherwise the latter result will overwrite the check before
+sleep 1;
+
+#-------------------------------------------------------------------------------
+#--- history state rule CRITICAL -----------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi --report 1+4 --verbose $testopts -s verbose_fields=history -x 'command [ number ] = echo 5' -x 'attribute [ number::critical ] = AVERAGE_LAST( 3 ) >= 2'",
+);
+is(
+	$result->return_code, 
+	2, 
+	"check_multi initializes history - RC0 - passed"
+);
+like(
+	$result->output,
+	'/CRITICAL - 1 plugins checked, 1 critical \(number\)\n\[ 1\] CRIT number 5 \[CRITICAL: output matched rule \'\d+\.\d+ >= 2\'\]\n\s+history: \d+:1 \d+:2 \d+:3 \d+:4 \d+:5/',
+	"output correct - passed"
+);

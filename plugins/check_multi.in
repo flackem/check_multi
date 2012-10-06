@@ -2640,8 +2640,8 @@ sub exec_command {
 					$top[$i]{feeded}=1;
 					$top[$i]{runtime}=0;
 					$top[$i]{type}=$cmds[$no]{type};
-					$top[$i]{process_perfdata}=1;
-					$top[$i]{performance}="$cmds[$no]{name}::$cmds[$no]{type}::$top[$i]{name}=$top[$i]{output}";
+					$top[$i]{process_perfdata}=$cmds[$no]{process_perfdata};
+					$top[$i]{performance}="$cmds[$no]{name}::$cmds[$no]{type}::$top[$i]{name}=$top[$i]{output}" if ($top[$i]{process_perfdata});
 				}
 
 				#--- replace original cumulate entry with new array
