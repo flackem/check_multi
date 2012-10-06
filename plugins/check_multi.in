@@ -3318,7 +3318,7 @@ sub history_substitute {
 	# KEYWORD ( options
 	#
 	#--- AVERAGE_FROM_TO (FROM, TO)
-	if ($expression=~/(.*)\b(AVERAGE_FROM_TO\b|\bAVERAGE_LAST|WEIGHTED_AVERAGE_FROM_TO|WEIGHTED_AVERAGE_LAST)\b\s*\(([^\)]+)\)\s*(.*)/i) {
+	if ($expression=~/(.*)\b(AVERAGE_FROM_TO|AVERAGE_LAST|WEIGHTED_AVERAGE_FROM_TO|WEIGHTED_AVERAGE_LAST)\b\s*\(([^\)]+)\)\s*(.*)/i) {
 		my $pre=$1;
 		my $expression=uc($2);
 		my @parm=split(',',$3);
@@ -3428,7 +3428,66 @@ sub history_substitute {
 			DEBUG3(sprintf "result: $pre %.2f $post", &sum(@result) / ($first_timestamp - $last_timestamp));
 			return sprintf "$pre %.2f $post", &sum(@result) / ($first_timestamp - $last_timestamp);
 
-		#--- take last N values
+		#--- take last N values, but weight the latest most
+		} elsif ($expression=~/^WEIGHTED_AVERAGE_FROM_TO$/) {
+			my $from=0;
+			my $to=0;
+
+			#--- evaluate and check parameters
+			$from=eval($parm[0]);
+			if ($@) {
+				add_error(0,"Error: invalid FROM parameter: $from");
+				return undef;
+			}
+			DEBUG3("from:$from");
+			$to=eval($parm[1]);
+			if ($@) {
+				add_error(0,"Error: invalid TO parameter: $to");
+				return undef;
+			}
+			DEBUG3("to:$to");
+			if ($from > $to) {
+				add_error("Error: FROM parameter: $from is later than TO parameter: $to");
+				return undef;
+			}
+			DEBUG3(sprintf "current time: %s\ntime from...: %s\ntime to.....: %s", 
+				readable_sortable_timestamp(time), 
+				readable_sortable_timestamp($from), 
+				readable_sortable_timestamp($to));
+
+			#--- sort timestamps from newest (largest) to oldest
+			my @sorted = sort { $b <=> $a } keys %{$cmds[$i]{history}};
+
+			#--- determine 1st and last timestamp in range
+			for my $timestamp (@sorted) {
+				$last_timestamp = $timestamp if ($timestamp <= $to && ! $last_timestamp);
+				$first_timestamp = $timestamp if ($timestamp >= $from);
+			}
+			for my $timestamp (@sorted) {
+				#--- skip timestamps out of the from-to interval
+				next if ($timestamp < $from || $timestamp > $to);
+
+				push @result, $cmds[$i]{history}{$timestamp} * ($timestamp - $first_timestamp + 1);
+				push @timestamps, ($timestamp - $first_timestamp + 1);
+				DEBUG3(sprintf "%4d. %10.2f x %4d ( %s ) product: %10.2f", 
+					++$count,
+					$cmds[$i]{history}{$timestamp}, 
+					($timestamp -$first_timestamp + 1), 
+					readable_sortable_timestamp($timestamp),
+					$cmds[$i]{history}{$timestamp} * ($timestamp - $first_timestamp + 1));
+			}
+			if ($#result + 1 < $opt{set}{history_minvalues}) {
+				DEBUG1(sprintf "Too few history results found - is: %d, should be: %d", $#result + 1, $opt{set}{history_minvalues});
+				return undef;
+			}
+			DEBUG3(sprintf " avg: %10.2f  %5d                         product: %10.2f", 
+				&sum(@result) / &sum(@timestamps),
+				&sum(@timestamps),
+				&sum(@result));	
+			DEBUG3(sprintf "result: $pre %.2f $post", &sum(@result) / &sum(@timestamps));
+			return sprintf "$pre %.2f $post", &sum(@result) / &sum(@timestamps);
+
+		#--- take last N values, but weight the latest most
 		} elsif ($expression=~/^WEIGHTED_AVERAGE_LAST$/) {
 			my $num = $parm[0];
 			#--- parameter check
@@ -3442,7 +3501,6 @@ sub history_substitute {
 			#--- sort timestamps from newest (largest) to oldest
 			my @sorted = sort { $b <=> $a } keys %{$cmds[$i]{history}};
 			@sorted = splice(@sorted,0,$num);
-			#printf "Timestamps: %s\n", join(',',@sorted);
 
 			#--- determine 1st and last timestamp in range
 			for my $timestamp (@sorted) {
@@ -3472,6 +3530,8 @@ sub history_substitute {
 				&sum(@result));	
 			DEBUG3(sprintf "result: $pre %.2f $post", &sum(@result) / &sum(@timestamps));
 			return sprintf "$pre %.2f $post", &sum(@result) / &sum(@timestamps);
+		} else {
+			DEBUG3("Non covered expression: $expression");
 		}
 	} 
 }
