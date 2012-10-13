@@ -1,4 +1,4 @@
-attribute [ HOSTNAME              ] = `uname -n`
+attribute [ HOSTNAME              ] = localhost
 attribute [ SERVICEDESC           ] = sample_config_cumulate_process_cpu
 attribute [ history               ] = 1
 attribute [ cumulate_max_rows     ] = 10
