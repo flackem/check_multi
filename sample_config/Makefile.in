@@ -21,6 +21,7 @@ clean:
 	cd nagiostats		&& $(MAKE) -e $@
 	cd nagios_version	&& $(MAKE) -e $@
 	cd start_process	&& $(MAKE) -e $@
+	cd cumulate		&& $(MAKE) -e $@
 	
 
 distclean: clean
@@ -31,6 +32,7 @@ distclean: clean
 	cd nagiostats		&& $(MAKE) -e $@
 	cd nagios_version	&& $(MAKE) -e $@
 	cd start_process	&& $(MAKE) -e $@
+	cd cumulate		&& $(MAKE) -e $@
 	-rm -f Makefile
 
 devclean: distclean
@@ -43,3 +45,4 @@ install-config:
 	cd nagiostats		&& $(MAKE) -e $@
 	cd nagios_version	&& $(MAKE) -e $@
 	cd start_process	&& $(MAKE) -e $@
+	cd cumulate		&& $(MAKE) -e $@

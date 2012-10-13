@@ -1,0 +1,5 @@
+command [ process_cpu    ] = check_multi -f process_cpu.cmd
+command [ process_memory ] = check_multi -f process_mem.cmd
+command [ process_rss    ] = check_multi -f process_rss.cmd
+command [ process_cmd    ] = check_multi -f process_cmd.cmd
+command [ process_user   ] = check_multi -f process_user.cmd

@@ -1,0 +1,9 @@
+attribute [ HOSTNAME               ] = `uname -n`
+attribute [ SERVICEDESC            ] = sample_config_cumulate_process_cmd
+attribute [ history                ] = 1
+attribute [ cumulate_max_rows      ] = 10
+attribute [ cumulate_ignore_zero   ] = 0
+
+cumulate  [ process_cmd            ] = ps -eo 'comm' | grep -v root | sort | uniq -c | awk '{print $2,$1}'
+attribute [ process_cmd::warning   ] = WEIGHTED_AVERAGE_LAST(10) >  50
+attribute [ process_cmd::critical  ] = WEIGHTED_AVERAGE_LAST(10) > 100 

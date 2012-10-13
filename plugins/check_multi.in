@@ -153,6 +153,8 @@ my %opt=(
 		config_dir	=> "@config_dir@",
 		# how many rows should be visible for cumulate statement?
 		cumulate_max_rows => @cumulate_max_rows@,
+		# contains perl regex pattern, which components should be ignored by cumulate
+		cumulate_ignore => "",
 		# should cumulate ignore zero values?
 		cumulate_ignore_zero => @cumulate_ignore_zero@,
 		# don't complain about being root etc.
@@ -2616,7 +2618,11 @@ sub exec_command {
 		if ($cmds[$no]{type} eq "cumulate") {
 			#--- now output contains rows of 'key value' pairs
 			#--- and some top rows will be placed into @top
-			my @top=get_cumulated_top($cmds[$no]{output},$opt{set}{cumulate_max_rows});
+			my @top=get_cumulated_top(
+				$cmds[$no]{output},
+				$opt{set}{cumulate_max_rows},
+				$opt{set}{cumulate_ignore}
+			);
 			if ($#top<0) {
 				$cmds[$no]{output}="No output.";
 				$cmds[$no]{rc}=($opt{set}{empty_output_is_unknown}) ? $UNKNOWN : $OK;
@@ -2698,10 +2704,17 @@ sub exec_command {
 #--- read output and cumulate
 #---
 sub get_cumulated_top {
-	my ($output, $max_row)=@_;
+	my ($output, $max_row, $ignore_regex)=@_;
 	my %c=();
 	foreach my $line (split('\n',$output)) {
 		if ($line=~/\s*(\S*)\s+([\d\.]+)\s*/) {
+
+			#--- ignore pattern set? Then check this and eventually skip component
+			if ($ignore_regex && $1 =~ /$ignore_regex/i) {
+				DEBUG3("Skipped $1 - matched regex $ignore_regex");
+				next;
+			}
+
 			#--- zero value? count it if cumulate_ignore_zero=0
 			if ($opt{set}{cumulate_ignore_zero}) {
 				$c{"$1"}+=$2 if ($2);

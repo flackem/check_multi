@@ -1,0 +1,38 @@
+#---
+#--- Makefile sample_config/flight_recorder.cmd
+#---                        process_cpu.cmd
+#---                        process_mem.cmd
+#---                        process_rss.cmd
+#---                        process_cmd.cmd
+#---                        process_user.cmd
+#---
+#--- $Id$
+#---
+prefix=@prefix@
+HTMLDIR=@datarootdir@
+CGIDIR=@sbindir@
+CFGDIR=@config_dir@
+INSTALL=@INSTALL@
+INSTALL_OPTS=@INSTALL_OPTS@
+
+clean:
+	-rm -f flight_recorder.cmd
+	-rm -f process_cpu.cmd
+	-rm -f process_mem.cmd
+	-rm -f process_rss.cmd
+	-rm -f process_cmd.cmd
+	-rm -f process_user.cmd
+
+distclean: clean
+	-rm -f Makefile
+
+devclean: distclean
+
+install-config: 
+	$(INSTALL) -m 755 $(INSTALL_OPTS) -d $(DESTDIR)${CFGDIR}
+	$(INSTALL) -m 644 $(INSTALL_OPTS) flight_recorder.cmd $(DESTDIR)${CFGDIR}
+	$(INSTALL) -m 644 $(INSTALL_OPTS) process_cpu.cmd $(DESTDIR)${CFGDIR}
+	$(INSTALL) -m 644 $(INSTALL_OPTS) process_mem.cmd $(DESTDIR)${CFGDIR}
+	$(INSTALL) -m 644 $(INSTALL_OPTS) process_rss.cmd $(DESTDIR)${CFGDIR}
+	$(INSTALL) -m 644 $(INSTALL_OPTS) process_cmd.cmd $(DESTDIR)${CFGDIR}
+	$(INSTALL) -m 644 $(INSTALL_OPTS) process_user.cmd $(DESTDIR)${CFGDIR}

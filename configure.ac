@@ -273,6 +273,13 @@ $PERL subst sample_config/feed_passive/gencfg
 $PERL subst sample_config/feed_passive/feed_passive.cmd
 $PERL subst sample_config/feed_passive/feed_passive.cfg
 $PERL subst sample_config/feed_passive/service_definition.tpl
+$PERL subst sample_config/cumulate/Makefile
+$PERL subst sample_config/cumulate/flight_recorder.cmd
+$PERL subst sample_config/cumulate/process_cpu.cmd
+$PERL subst sample_config/cumulate/process_mem.cmd
+$PERL subst sample_config/cumulate/process_rss.cmd
+$PERL subst sample_config/cumulate/process_cmd.cmd
+$PERL subst sample_config/cumulate/process_user.cmd
 
 #---
 #--- review options and show the user what he has broken ;)
