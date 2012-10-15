@@ -3394,8 +3394,8 @@ sub history_substitute {
 				readable_sortable_timestamp($to));
 		#--- ...LAST ( number_of_values )
 		} elsif ($expression=~/LAST/) {
-			if (! $parm[0] || $parm[0] !~ /\d+/) {
-				add_error($i, "Error: invalid LAST number parameter: $num");
+			if (! $parm[0] || $parm[0] !~ /^\d+$/) {
+				add_error($i, "Error: invalid LAST number parameter: $parm[0]");
 				return undef;
 			}
 			$num = $parm[0];
@@ -3585,7 +3585,6 @@ sub history_substitute {
 					$opt{set}{history_minvalues});
 				return undef;
 			}
-			#DEBUG3(sprintf "result:%s sum(\@result):%.2f", join(',',@result), &sum(@result));
 			DEBUG3(sprintf "%42.42s average: %10.2f * %7ds = %10.2f\n\n", 
 				"",
 				&sum(@result) / ($last_timestamp - $first_timestamp),
@@ -3598,9 +3597,6 @@ sub history_substitute {
 		} elsif ($expression=~/^AVERAGE_DELTA_LAST$/) {
 
 			for my $timestamp (sort { $b <=> $a } keys (%{$cmds[$i]{history}})) {
-				#--- we're ready if we pushed enough values
-				last if ($#result + 1 >= $num);
-
 				$first_timestamp = $timestamp if (! $first_timestamp);
 				#--- we first need an interval to calculate the value * interval
 				if ($previous_timestamp) {
@@ -3616,12 +3612,15 @@ sub history_substitute {
 						($cmds[$i]{history}{$timestamp} - $cmds[$i]{history}{$previous_timestamp}) *  $interval);
 				}
 				$last_timestamp = $previous_timestamp = $timestamp;
+
+				#--- we're ready if we pushed enough values
+				last if ($#result + 1 >= $num);
 			}
 			if ($#result + 1 < $num) {
 				add_error($i, sprintf "Too few history intervals found - is: %d, should be: %d", $#result + 1, $num);
 				return undef;
 			}
-			#DEBUG3(sprintf "result:%s sum(\@result):%.2f", join(',',@result), &sum(@result));
+			printf "last_timestamp:$last_timestamp first_timestamp:$first_timestamp result(n):$#result + 1 num:$num\n";
 			DEBUG3(sprintf "%42.42s average: %10.2f * %7ds = %10.2f\n\n", 
 				"",
 				&sum(@result) / ($last_timestamp - $first_timestamp),
@@ -3662,7 +3661,6 @@ sub history_substitute {
 				add_error($i, sprintf "Too few history intervals found - is: %d, should be: %d", $#sorted + 1, $num);
 				return undef;
 			}
-			#DEBUG3(sprintf "result:%s sum(\@result):%.2f", join(',',@result), &sum(@result));
 			DEBUG3(sprintf "Delta %s %10.2f - %s %10.2f = %10.2f", 
 				readable_sortable_timestamp($sorted[0]),
 				$cmds[$i]{history}{$sorted[0]},

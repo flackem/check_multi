@@ -26,7 +26,7 @@ foreach my $plugin (@plugins) {
 		plan skip_all => "tests because component $plugin not found or not executable as \'$path_to_plugin\'";
 	}
 }
-plan tests => 10;
+plan tests => 20;
 
 my $result;
 #my $testopts="-s dont_be_paranoid=1";
@@ -36,6 +36,13 @@ my $testopts=testopts::get_testopts("history","HOSTNAME","SERVICEDESC","report",
 $testopts.=" -s history=1 -s HOSTNAME=localhost -s SERVICEDESC=number";
 #--- initialize / remove history
 unlink "tmp/history_localhost_number.txt" if (-f "tmp/history_localhost_number.txt");
+
+#--- be sure we're at the beginning of a second
+#--- otherwise the history second number may shift by one
+my $thistime=time;
+while (time == $thistime) {
+	; # do nothing but waiting
+}
 
 #-------------------------------------------------------------------------------
 #--- history initialization - check 1 ------------------------------------------
@@ -65,7 +72,7 @@ $result = NPTest->testCmd(
 is(
 	$result->return_code, 
 	0, 
-	"check_multi initializes history - RC0 - passed"
+	"check_multi 2nd value - RC0 - passed"
 );
 like(
 	$result->output,
@@ -84,7 +91,7 @@ $result = NPTest->testCmd(
 is(
 	$result->return_code, 
 	0, 
-	"check_multi initializes history - RC0 - passed"
+	"check_multi 3rd value - RC0 - passed"
 );
 like(
 	$result->output,
@@ -103,7 +110,7 @@ $result = NPTest->testCmd(
 is(
 	$result->return_code, 
 	0, 
-	"check_multi initializes history - RC0 - passed"
+	"check_multi 4th value - RC0 - passed"
 );
 like(
 	$result->output,
@@ -114,7 +121,7 @@ like(
 sleep 1;
 
 #-------------------------------------------------------------------------------
-#--- history state rule CRITICAL -----------------------------------------------
+#--- AVERAGE_LAST CRITICAL -----------------------------------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
 	"@PERL@ ../check_multi --report 1+4 --verbose $testopts -s verbose_fields=history -x 'command [ number ] = echo 5' -x 'attribute [ number::critical ] = AVERAGE_LAST( 3 ) >= 2'",
@@ -122,10 +129,95 @@ $result = NPTest->testCmd(
 is(
 	$result->return_code, 
 	2, 
-	"check_multi initializes history - RC0 - passed"
+	"check_multi AVERAGE_LAST critical - RC2 - passed"
 );
 like(
 	$result->output,
 	'/CRITICAL - 1 plugins checked, 1 critical \(number\)\n\[ 1\] CRIT number 5 \[CRITICAL: output matched rule \'\d+\.\d+ >= 2\'\]\n\s+history: \d+:1 \d+:2 \d+:3 \d+:4 \d+:5/',
+	"output correct - passed"
+);
+
+#-------------------------------------------------------------------------------
+#--- WEIGHTED_AVERAGE_LAST CRITICAL -----------------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi --report 1+4 --verbose $testopts -s verbose_fields=history -x 'command [ number ] = echo 5' -x 'attribute [ number::critical ] = WEIGHTED_AVERAGE_LAST( 3 ) >= 2'",
+);
+is(
+	$result->return_code, 
+	2, 
+	"check_multi WEIGHTED_AVERAGE_LAST critical - RC2 - passed"
+);
+like(
+	$result->output,
+	'/CRITICAL - 1 plugins checked, 1 critical \(number\)\n\[ 1\] CRIT number 5 \[CRITICAL: output matched rule \'\d+\.\d+ >= 2\'\]\n\s+history: \d+:2 \d+:3 \d+:4 \d+:5/',
+	"output correct - passed"
+);
+
+#-------------------------------------------------------------------------------
+#--- AVERAGE_FROM_TO CRITICAL --------------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi --report 1+4 --verbose $testopts -s verbose_fields=history -x 'command [ number ] = echo 5' -x 'attribute [ number::critical ] = AVERAGE_FROM_TO( time-5,time ) >= 2'",
+);
+is(
+	$result->return_code, 
+	2, 
+	"check_multi AVERAGE_FROM_TO critical - RC2 - passed"
+);
+like(
+	$result->output,
+	'/CRITICAL - 1 plugins checked, 1 critical \(number\)\n\[ 1\] CRIT number 5 \[CRITICAL: output matched rule \'\d+\.\d+ >= 2\'\]\n\s+history: \d+:2 \d+:3 \d+:4 \d+:5/',
+	"output correct - passed"
+);
+
+#-------------------------------------------------------------------------------
+#--- WEIGHTED_AVERAGE_FROM_TO CRITICAL --------------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi --report 1+4 --verbose $testopts -s verbose_fields=history -x 'command [ number ] = echo 5' -x 'attribute [ number::critical ] = WEIGHTED_AVERAGE_FROM_TO( time-5,time ) >= 2'",
+);
+is(
+	$result->return_code, 
+	2, 
+	"check_multi WEIGHTED_AVERAGE_FROM_TO critical - RC2 - passed"
+);
+like(
+	$result->output,
+	'/CRITICAL - 1 plugins checked, 1 critical \(number\)\n\[ 1\] CRIT number 5 \[CRITICAL: output matched rule \'\d+\.\d+ >= 2\'\]\n\s+history: \d+:2 \d+:3 \d+:4 \d+:5/',
+	"output correct - passed"
+);
+
+#-------------------------------------------------------------------------------
+#--- AVERAGE_DELTA_FROM_TO CRITICAL --------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi --report 1+4 --verbose $testopts -s verbose_fields=history -x 'command [ number ] = echo 5' -x 'attribute [ number::critical ] = AVERAGE_DELTA_FROM_TO( time-5,time ) >= 1'",
+);
+is(
+	$result->return_code, 
+	2, 
+	"check_multi AVERAGE_DELTA_FROM_TO critical - RC2 - passed"
+);
+like(
+	$result->output,
+	'/CRITICAL - 1 plugins checked, 1 critical \(number\)\n\[ 1\] CRIT number 5 \[CRITICAL: output matched rule \'\d+\.\d+ >= 1\'\]\n\s+history: \d+:2 \d+:3 \d+:4 \d+:5/',
+	"output correct - passed"
+);
+
+#-------------------------------------------------------------------------------
+#--- AVERAGE_DELTA_LAST CRITICAL --------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi --report 1+4 --verbose $testopts -s verbose_fields=history -x 'command [ number ] = echo 5' -x 'attribute [ number::critical ] = AVERAGE_DELTA_LAST( 3 ) != 0'",
+);
+is(
+	$result->return_code, 
+	2, 
+	"check_multi AVERAGE_DELTA_LAST critical - RC2 - passed"
+);
+like(
+	$result->output,
+	'/CRITICAL - 1 plugins checked, 1 critical \(number\)\n\[ 1\] CRIT number 5 \[CRITICAL: output matched rule \'\d+\.\d+ >= 1\'\]\n\s+history: \d+:2 \d+:3 \d+:4 \d+:5/',
 	"output correct - passed"
 );
