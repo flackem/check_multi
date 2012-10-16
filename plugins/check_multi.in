@@ -3348,6 +3348,8 @@ sub history_substitute {
 		"DELTA_LAST",
 		"WEIGHTED_AVERAGE_FROM_TO",
 		"WEIGHTED_AVERAGE_LAST",
+		"WEIGHTED_AVERAGE_DELTA_FROM_TO",
+		"WEIGHTED_AVERAGE_DELTA_LAST",
 	);
 	my $allowed=join('|',@keywords);
 
@@ -3628,6 +3630,96 @@ sub history_substitute {
 				&sum(@result));	
 			DEBUG3( sprintf "%51.51s $pre %.2f $post", "expression result:", &sum(@result) / ($last_timestamp - $first_timestamp));
 			return sprintf "$pre %.2f $post", &sum(@result) / ($last_timestamp - $first_timestamp);
+
+		#--- compute average delta from timestamp to timestamp
+		} elsif ($expression=~/^WEIGHTED_AVERAGE_DELTA_FROM_TO$/) {
+
+			#--- determine 1st and last timestamp in range
+			my @sorted = sort { $b <=> $a } keys %{$cmds[$i]{history}};
+			for my $timestamp (@sorted) {
+				if ($timestamp >= $from && $timestamp <= $to) {
+					$last_timestamp = $timestamp if (! $last_timestamp);
+					$first_timestamp = $timestamp;
+				}
+			}
+			#--- loop over timestamps from oldest (smallest) to newest
+			for my $timestamp (@sorted) {
+				if ($timestamp >= $from && $timestamp <= $to) {
+					if ($previous_timestamp) {
+						my $interval = $timestamp - $first_timestamp + 1;
+						push @result, ($cmds[$i]{history}{$timestamp} - $cmds[$i]{history}{$previous_timestamp}) * $interval;
+						push @timestamps, $interval;
+						DEBUG3(sprintf "%4d. %s %10.2f - %10.2f = %10.2f * %7d = %10.2f", 
+							$#result + 1,
+							readable_sortable_timestamp($timestamp),
+							$cmds[$i]{history}{$timestamp}, 
+							$cmds[$i]{history}{$previous_timestamp}, 
+							$cmds[$i]{history}{$timestamp} - $cmds[$i]{history}{$previous_timestamp}, 
+							$interval, 
+							($cmds[$i]{history}{$timestamp} - $cmds[$i]{history}{$previous_timestamp}) *  $interval);
+					}
+					$previous_timestamp = $timestamp;
+				}
+			}
+			if ($#result + 1 < $opt{set}{history_minvalues}) {
+				DEBUG1(sprintf "Too few history intervals found from %s to %s - is: %d, should be: %d", 
+					readable_sortable_timestamp($from), 
+					readable_sortable_timestamp($to), 
+					$#result + 1, 
+					$opt{set}{history_minvalues});
+				return undef;
+			}
+			DEBUG3(sprintf "%42.42s average: %10.2f * %7d = %10.2f\n\n", 
+				"",
+				&sum(@result) / &sum(@timestamps),
+				&sum(@timestamps),
+				&sum(@result));	
+			DEBUG3( sprintf "%51.51s $pre %.2f $post", "expression result:", &sum(@result) / &sum(@timestamps));
+			return sprintf "$pre %.2f $post", &sum(@result) / &sum(@timestamps);
+
+		#--- compute weighted average delta from last x values
+		} elsif ($expression=~/^WEIGHTED_AVERAGE_DELTA_LAST$/) {
+
+			#--- determine 1st and last timestamp in range
+			my @sorted = ();
+			foreach my $timestamp (sort { $b <=> $a } keys %{$cmds[$i]{history}}) {
+				#--- we're ready if we pushed enough values
+				last if ($#sorted + 1 >= $num);
+				$last_timestamp = $timestamp if (! $last_timestamp);
+				$first_timestamp = $timestamp;
+				push @sorted, $timestamp;
+			}
+			if ($#sorted + 1 < $num) {
+				add_error($i, sprintf "Too few history intervals found - is: %d, should be: %d", $#sorted + 1, $num);
+				return undef;
+			}
+
+			#--- loop over timestamps from oldest (smallest) to newest
+			for my $timestamp (@sorted) {
+
+				#--- we first need an interval to calculate the value * interval
+				if ($previous_timestamp) {
+					my $interval = $timestamp - $first_timestamp + 1;
+					push @result, ($cmds[$i]{history}{$timestamp} - $cmds[$i]{history}{$previous_timestamp}) * $interval;
+					push @timestamps, $interval;
+					DEBUG3(sprintf "%4d. %s %10.2f - %10.2f = %10.2f * %7d = %10.2f", 
+						$#result + 1,
+						readable_sortable_timestamp($timestamp),
+						$cmds[$i]{history}{$timestamp}, 
+						$cmds[$i]{history}{$previous_timestamp}, 
+						$cmds[$i]{history}{$timestamp} - $cmds[$i]{history}{$previous_timestamp}, 
+						$interval, 
+						($cmds[$i]{history}{$timestamp} - $cmds[$i]{history}{$previous_timestamp}) *  $interval);
+				}
+				$previous_timestamp = $timestamp;
+			}
+			DEBUG3(sprintf "%42.42s average: %10.2f * %7d = %10.2f\n\n", 
+				"",
+				&sum(@result) / &sum(@timestamps),
+				&sum(@timestamps),
+				&sum(@result));	
+			DEBUG3( sprintf "%51.51s $pre %.2f $post", "expression result:", &sum(@result) / &sum(@timestamps));
+			return sprintf "$pre %.2f $post", &sum(@result) / &sum(@timestamps);
 
 		#--- compute delta from timestamp to timestamp
 		} elsif ($expression=~/^DELTA_FROM_TO$/) {
