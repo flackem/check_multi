@@ -1036,6 +1036,45 @@ sub sum {
 }
 
 #---
+#--- return sum of given array
+#---
+sub abssum {
+	my $sum = 0;
+	while (@_) {
+		$sum += abs(shift);
+	}
+	return $sum;
+}
+
+#---
+#--- returns sums of diffs of a given array
+#---
+sub sumdiff {
+	my @arr = @_;
+	my $sum = 0;
+	while (@arr) {
+		last if ($#arr < 1);
+		$sum += $arr[1]-$arr[0];
+		shift(@arr);
+	}
+	return $sum;
+}
+
+#---
+#--- returns sums of diffs of a given array
+#---
+sub abssumdiff {
+	my @arr = @_;
+	my $sum = 0;
+	while (@arr) {
+		last if ($#arr < 1);
+		$sum += abs($arr[1]-$arr[0]);
+		shift(@arr);
+	}
+	return $sum;
+}
+
+#---
 #--- average of array part $@[parm1..$parm2]
 #---
 sub average {
@@ -3328,39 +3367,269 @@ sub history_push {
 	}
 }
 
+sub array_min_max {
+	my $arr = shift;
+	my $min = shift;
+	my $max = shift;
+	my @result = sort { $a <=> $b } @{$arr};
+	while (defined($result[0]) && $result[0] < $min) {
+		shift(@result);
+	}   
+	while (defined($result[$#result]) && $result[$#result] > $max) {
+		pop(@result);
+	}   
+	return @result;
+}
+
+sub closest_index_ref {
+	my $number  = shift;	# number to compare with
+	my $arr     = shift;
+	my $closest = 0;
+	for (my $i = 1; $i <= @{$arr}; $i++) {
+		$closest=$i if (abs($arr->[$i] - $number) < abs($arr->[$closest] - $number));
+	}
+	return $closest;
+}
+
+sub closest_index {
+	my $number  = shift;	# number to compare with
+	my @arr     = @_;
+	my $closest = 0;
+	for (my $i = 1; $i <= $#arr; $i++) {
+#printf "[%.2f] < [%.2f]: %s\n", abs($arr[$i] - $number), abs($arr[$closest] - $number), 
+			 (abs($arr[$i] - $number) < abs($arr[$closest] - $number)) ? "[TRUE]" : "[FALSE]";
+		$closest = $i if (abs($arr[$i] - $number) < abs($arr[$closest] - $number));
+	}
+	return $closest;
+}
+
+sub debug_interval_array {
+	my ($pre, $expression, $post, $sorted, $computed)=@_;
+	my $onepercent = &sum(\$computed) / 100;
+	DEBUG3("$expression:");
+	for (my $i = 1; $i <= $#{$sorted}; $i++) {
+		DEBUG3(sprintf "%4d. %25.25s (%7ds) %10.2f -> %10.2f = %5.2f%", 
+			$i,
+			readable_sortable_timestamp($sorted->[$i]),
+			$sorted->[$i] - $sorted->[$i-1],
+			$computed->[$i] / ($sorted->[$i] - $sorted->[$i-1]),
+			$computed->[$i],
+			$computed->[$i] / $onepercent);
+	}
+}
+
+sub history_debug {
+	my ($expression,$sorted, $computed, $timestamps) = @_;
+
+	DEBUG4( "expression:$expression\n".  "sorted timestamps:". Dumper($sorted).  "computed values:". Dumper($computed).  "interval:". Dumper($timestamps));
+
+	if ($expression=~/^AVERAGE$/i) {
+		my %sum = ();
+		my %percent = ();
+		return undef if ($#$sorted <= 0);
+		$percent{computed} = abs(&sum(@$computed))  / 100;
+		$percent{seconds} = abs(&sumdiff(@$sorted)) / 100;
+		DEBUG3("  No.  Timestamp                Value     Time Interval             Product\n");
+		for (my $i = 1; $i <= $#$sorted; $i++) {
+			my $interval = abs($sorted->[$i-1] - $sorted->[$i]);
+			DEBUG3( sprintf "%4d. %20.20s %10.2f * %4ds (%6.2f%%)       -> %10.2f (%6.2f%%)\n", 
+				$i, 
+				readable_sortable_timestamp($sorted->[$i]),
+				$computed->[$i-1] / $interval,
+				$interval,
+				$interval / $percent{seconds},
+				$computed->[$i-1],
+				$computed->[$i-1] / $percent{computed}
+			);
+			$sum{value} += $computed->[$i-1] / $interval;
+			$sum{seconds} += $interval;
+			$sum{spercent} += $interval / $percent{seconds},
+			$sum{factor} += $computed->[$i-1];
+			$sum{percent} += $computed->[$i-1] / $percent{computed};
+		}
+		DEBUG3( sprintf "%37s %6ds (%6.2f%%) %19.2f (%6.2f%%)\n", 
+			sprintf("Average ---> %.2f", $sum{factor} / $sum{seconds}), 
+			$sum{seconds}, $sum{spercent}, $sum{factor}, $sum{percent});
+
+	} elsif ($expression=~/^WEIGHTED_AVERAGE$/i) {
+		my %sum = ();
+		my %percent = ();
+		return undef if ($#$sorted <= 0);
+		$percent{computed} = abs(&sum(@$computed))  / 100;
+		$percent{seconds} = abs(&sumdiff(@$sorted)) / 100;
+
+		DEBUG3("  No.  Timestamp                Value     Time Interval Factor       Weighted Product\n");
+		for (my $i = 1; $i <= $#$sorted; $i++) {
+			my $interval = abs($sorted->[$i-1] - $sorted->[$i]);
+			DEBUG3( sprintf "%4d. %20.20s %10.2f * %4ds (%6.2f%%) * %3d -> %10.2f (%6.2f%%)\n", 
+				$i, 
+				readable_sortable_timestamp($sorted->[$i]),
+				$computed->[$i-1] / $timestamps->[$i-1] / $interval,
+				$interval,
+				$interval / $percent{seconds},
+				$#$sorted - $i + 1,
+				$computed->[$i-1],
+				$computed->[$i-1] / $percent{computed}
+			);
+			$sum{seconds} += $interval;
+			$sum{spercent} += $interval / $percent{seconds},
+			$sum{multiplicator} += $#$sorted - $i + 1;
+			$sum{factor} += $computed->[$i-1];
+			$sum{percent} += $computed->[$i-1] / $percent{computed};
+			$sum{divisor}+=($#$sorted - $i + 1) * $interval;
+		}
+		DEBUG3( sprintf "%37s %6ds (%6.2f%%) %19.2f (%6.2f%%)\n", 
+			sprintf("Weighted average ---> %.2f", $sum{factor} / $sum{divisor}), 
+			$sum{seconds}, $sum{spercent}, $sum{factor}, $sum{percent});
+
+	} elsif ($expression=~/^DELTA$/i) {
+		DEBUG3(sprintf "Delta %s %10.2f - %s %10.2f = %10.2f", 
+			readable_sortable_timestamp($sorted->[$#$sorted]),
+			$computed->[1],
+			readable_sortable_timestamp($sorted->[0]),
+			$computed->[0],
+			$computed->[0] - $computed->[1]);
+
+	} elsif ($expression=~/^WEIGHTED_AVERAGE_DELTA$/i) {
+		my %sum = ();
+		my %percent = ();
+		return undef if ($#$sorted <= 0);
+		for (my $i=0, $percent{computed}=0; $i <= $#$computed; $i++) {
+			my $old_percent_computed = $percent{computed};
+			$percent{computed} += abs($computed->[$i]) / 100;
+		}
+		$percent{seconds} = abs(&sumdiff(@$sorted)) / 100;
+		DEBUG3("  no.  timestamp                Delta        Time Interval      Delta/s  Factor      Weighted Product\n");
+		if ($#$sorted <= 0 || $#$computed <= 0 || $percent{computed} == 0 || $percent{seconds} == 0) {
+			DEBUG3("Not enough values for computing deltas");
+			return undef;
+		}
+		for (my $i = 1; $i <= $#$sorted; $i++) {
+			my $interval = abs($sorted->[$i-1] - $sorted->[$i]);
+			my $factor = $#$sorted - $i + 1;
+			DEBUG3( sprintf "%4d. %20.20s %10.2f / %7ds (%6.2f%%) = %10.2f * %3d -> %10.2f (%6.2f%%)\n", 
+				$i, 
+				readable_sortable_timestamp($sorted->[$i]),
+				$computed->[$i-1] * $timestamps->[$i-1] / $factor,
+				$interval,
+				$interval / $percent{seconds},
+				($computed->[$i-1] * $timestamps->[$i-1] / $factor) / $interval,
+				$#$sorted - $i + 1,
+				$computed->[$i-1],
+				abs($computed->[$i-1]) / $percent{computed}
+			);
+			$sum{seconds} += $interval;
+			$sum{spercent} += $interval / $percent{seconds},
+			$sum{value} += $computed->[$i-1];
+			$sum{factor} += $factor,
+			$sum{percent} += abs($computed->[$i-1]) / $percent{computed};
+			$sum{divisor}+=($factor * $interval);
+		}
+		DEBUG3( sprintf "%37s %9ds (%6.2f%%) %18d %13.2f (%6.2f%%)\n", 
+			sprintf("Weighted average ---> %.2f", $sum{value} / $sum{factor}), 
+			$sum{seconds}, $sum{spercent}, $sum{factor}, $sum{value}, $sum{percent});
+
+	} elsif ($expression=~/^AVERAGE_DELTA$/i) {
+		my %sum = ();
+		my %percent = ();
+		for (my $i=0, $percent{computed}=0; $i <= $#$computed; $i++) {
+			my $old_percent_computed = $percent{computed};
+			$percent{computed} += abs($computed->[$i] / $timestamps->[$i]) / 100;
+			DEBUG4(sprintf "--> %10.2f + abs(%10.2f / %10.2f) [ %10.2f] / 100 [%10.2f] = %10.2f",
+				$old_percent_computed, 
+				$computed->[$i],
+				$timestamps->[$i],
+				abs($computed->[$i] / $timestamps->[$i]),
+				abs($computed->[$i] / $timestamps->[$i] / 100),
+				$percent{computed});
+		}
+		$percent{seconds} = &abssumdiff(@$sorted) / 100;
+		#DEBUG3("\$#computed:$#$computed percent_computed:$percent{computed} percent_seconds:$percent{seconds}");
+		DEBUG3("  No.  Timestamp                Delta        Time Interval       Delta/s  Percent\n");
+		if ($#$sorted <= 0 || $#$computed <= 0 || $percent{computed} == 0 || $percent{seconds} == 0) {
+			DEBUG3("Not enough values for computing deltas");
+			return undef;
+		}
+		for (my $i = 1; $i <= $#$sorted; $i++) {
+			my $interval = abs($sorted->[$i-1] - $sorted->[$i]);
+			DEBUG3( sprintf "%4d. %20.20s %10.2f / %7ds (%6.2f%%) = %10.2f (%6.2f%%)\n", 
+				$i, 
+				readable_sortable_timestamp($sorted->[$i]),
+				$computed->[$i-1] * $interval,
+				$interval,
+				$interval / $percent{seconds},
+				$computed->[$i-1],
+				abs($computed->[$i-1] / $interval) / $percent{computed},
+			);
+			$sum{value} += $computed->[$i-1] / $interval;
+			$sum{seconds} += $interval;
+			$sum{spercent} += $interval / $percent{seconds},
+			$sum{factor} += ($computed->[$i-1] / $interval);
+			$sum{percent} += abs($computed->[$i-1] / $interval) / $percent{computed};
+		}
+		DEBUG3( sprintf "%37s %9ds (%6.2f%%)   %10.2f (%6.2f%%)\n", 
+				sprintf("Average of %d deltas ---> %.2f", 
+				$#$computed+1, $sum{factor} / ($#$computed + 1)), 
+				$sum{seconds}, $sum{spercent}, $sum{factor}, $sum{percent});
+
+	}
+}
+
 #---
 #--- perform history substitution in STATE statements
 #---
 sub history_substitute {
-	my ($name,$expression)=@_;
+	my ($name, $expression) = @_;
 
-	my $i=get_child_index($name);
+	# T1   T2    T3 T4      T5
+	# +----+-----+--+-------+
+	# +    +     +  +-------+
+	# +    +     +--+
+	# +    +-----+
+	# +----+
+	#   5s   6s   3s   8s     
+		
+	# averaging: multiplying with time interval
+	# weighted averageing: additionally multiplying with position
+
+	#x 1. replace FROM_TO / LAST with automatic detection: 2 parms = from_to, 1 parm = last
+	#x 1. standardize options
+	#x    a. generate sorted partial array
+	#x       - copy, splice for number
+	#x       - loop for from_to
+	#x    b. check array size. bail out if too small
+	#x 3. we have all needed data now:
+	#x    a. Number of Checks
+	#x    b. First timestamp
+	#x    c. Last timestamp
+	#x 4. Create new array with computed values
+	#  5. Do Stats / Reports
+	#  6. Return Value
+
+	my $i = get_child_index($name);
 	if (! $i) {
 		DEBUG2("Child check $name not found");
 		return undef;
 	}
-	my @keywords=(
-		"AVERAGE_DELTA_FROM_TO",
-		"AVERAGE_DELTA_LAST",
-		"AVERAGE_FROM_TO",
-		"AVERAGE_LAST",
-		"DELTA_FROM_TO",
-		"DELTA_LAST",
-		"WEIGHTED_AVERAGE_FROM_TO",
-		"WEIGHTED_AVERAGE_LAST",
-		"WEIGHTED_AVERAGE_DELTA_FROM_TO",
-		"WEIGHTED_AVERAGE_DELTA_LAST",
+	my @keywords = (
+		"AVERAGE",
+		"AVERAGE_DELTA",
+		"DELTA",
+		"WEIGHTED_AVERAGE",
+		"WEIGHTED_AVERAGE_DELTA",
 	);
-	my $allowed=join('|',@keywords);
+	my $allowed = join('|', @keywords);
 
 	#--- find expression replacements
-	if ($expression=~/(.*)\b($allowed)\b\s*\(([^\)]+)\)\s*(.*)/i) {
+	if ($expression =~ /(.*)\b($allowed)\b\s*\(([^\)]+)\)\s*(.*)/i) {
 		my $pre=$1;
 		my $expression=uc($2);
 		my @parm=split(',',$3);
 		my $post=$4;
-		my @result=();
+		my @computed=();
+		my @sorted = ();
 		my @timestamps=();
+		my @result = ();
 		my $first_timestamp = 0;
 		my $previous_timestamp = 0;
 		my $last_timestamp = 0;
@@ -3369,20 +3638,37 @@ sub history_substitute {
 		my $num = 0;
 
 		#--- parameter handling
+		#--- if one parameter:  last x values
+		#--- if two parameters: from, to timestamp
+		#---
+		DEBUG4("expression:>$expression< >" . join('< >', @parm) . "<");
+
 		for (my $i=0;$i<=$#parm;$i++) {
 			$parm[$i]=&trim($parm[$i], '\s');
 		}
-		DEBUG4("expression:>$expression< >" . join('< >', @parm) . "<");
+		#--- ...LAST ( number_of_values )
+		if ($#parm == 0) {
+			$num = $parm[0];
+			if (! $num || $num !~ /^\d+$/) {
+				add_error($i, "Error: invalid LAST number parameter: $num");
+				return undef;
+			}
+			@sorted = (sort { $b <=> $a } keys (%{$cmds[$i]{history}}));
+			if ($#sorted + 1 < $num) {
+				add_error($i, sprintf "Too few values found - is: %d, should be: %d", $#result + 1, $num);
+			}
+			@sorted=splice(@sorted, 0, $num);
+			DEBUG3(sprintf "$name: %s ( 0..%d ) [ %s ]", $expression, $#sorted, join(',',@sorted));
 
 		#--- ...FROM_TO ( from_time, to_time )
-		if ($expression=~/FROM_TO/) {
+		} elsif ($#parm == 1) {
 			$from=eval($parm[0]);
-			if ($@) {
+			if ($@ || $from !~ /[\d\.]+/) {
 				add_error($i, "Error: invalid FROM parameter: $from");
 				return undef;
 			}
 			$to=eval($parm[1]);
-			if ($@) {
+			if ($@ || $to !~ /[\d\.]+/) {
 				add_error($i, "Error: invalid TO parameter: $to");
 				return undef;
 			}
@@ -3390,377 +3676,119 @@ sub history_substitute {
 				add_error($i, "Error: FROM parameter: $from is later than TO parameter: $to");
 				return undef;
 			}
-			DEBUG3(sprintf "$name: %s ( from %s, to %s )", 
+			@sorted = sort { $b <=> $a } grep { $_ >= $from && $_ <= $to } keys (%{$cmds[$i]{history}});
+			@sorted = () if ($sorted[$#sorted] > $to || $sorted[0] < $from);
+			#DEBUG4(sprintf "before pop/unshift - \$#sorted:$#sorted");
+			for (1..&closest_index($to,@sorted)) { pop(@sorted); }
+			for (1..&closest_index($from,@sorted)) { unshift(@sorted); }
+			#DEBUG4(sprintf "after pop/unshift - \$#sorted:$#sorted");
+			if ($#sorted + 1 < $opt{set}{history_minvalues}) {
+				add_error($i, sprintf "Too few values found - is: %d, should be: %d", 
+					$#result + 1, 
+					$opt{set}{history_minvalues});
+			}
+			DEBUG3(sprintf "$name: %s ( %s - %s ) [ %s ] [ %s ]", 
 				$expression,
 				readable_sortable_timestamp($from), 
-				readable_sortable_timestamp($to));
-		#--- ...LAST ( number_of_values )
-		} elsif ($expression=~/LAST/) {
-			if (! $parm[0] || $parm[0] !~ /^\d+$/) {
-				add_error($i, "Error: invalid LAST number parameter: $parm[0]");
-				return undef;
-			}
-			$num = $parm[0];
-			DEBUG3(sprintf "$name: %s ( last %d )", $expression, $num);
+				readable_sortable_timestamp($to),
+				join(',', @sorted),
+				join(',', map { $cmds[$i]{history}{$_} } @sorted),
+			);
 		} else {
-			DEBUG3("Uncovered expression - neither FROM_TO nor LAST: $expression");
+			add_error($i, sprintf "Error: invalid parameter number %d (required: 1 or 2)", $#parm + 1);
+			return undef;
 		}
-
-
-		# T1   T2    T3 T4      T5
-		# +----+-----+--+-------+
-		#   5s   6s   3s   8s     
+		$first_timestamp = $sorted[$#sorted];
+		$last_timestamp = $sorted[0];
 
 		#--- compute average of values between FROM and TO timestamp
-		if ($expression=~/^AVERAGE_FROM_TO$/) {
-							
-			#--- loop over timestamps from newest (largest) to oldest
-			for my $timestamp (sort { $b <=> $a } keys (%{$cmds[$i]{history}})) {
-				if ($timestamp >= $from && $timestamp <= $to) {
-					$first_timestamp = $timestamp if (! $first_timestamp);
-					if ($previous_timestamp) {
-						push @result, $cmds[$i]{history}{$timestamp} * ($previous_timestamp - $timestamp);
-						DEBUG3(sprintf "%4d. %s %10.2f * %7ds = %10.2f", 
-							$#result + 1,
-							readable_sortable_timestamp($timestamp),
-							$cmds[$i]{history}{$timestamp}, 
-							$previous_timestamp - $timestamp, 
-							$cmds[$i]{history}{$timestamp} * ($previous_timestamp - $timestamp));
-					}
-					$last_timestamp = $previous_timestamp = $timestamp;
-				}
-			}
-			if ($#result + 1 < $opt{set}{history_minvalues}) {
-				add_error($i, sprintf "Too few history intervals found from %s to %s - is: %d, should be: %d", 
-					readable_sortable_timestamp($from), 
-					readable_sortable_timestamp($to), 
-					$#result + 1, 
-					$opt{set}{history_minvalues});
-				return undef;
-			}
-			DEBUG3(sprintf "%25.25s %10.2f * %7ds = %10.2f", 
-				"average:",
-				&sum(@result) / ($first_timestamp - $last_timestamp),
-				$first_timestamp - $last_timestamp,
-				&sum(@result));	
-			DEBUG3( sprintf "%25.25s $pre %.2f $post", 
-				"expression result:", 
-				&sum(@result) / ($first_timestamp - $last_timestamp));
-			return sprintf "$pre %.2f $post", &sum(@result) / ($first_timestamp - $last_timestamp);
-
-		#--- average of last n values
-		} elsif ($expression=~/^AVERAGE_LAST$/) {
-
-			for my $timestamp (sort { $b <=> $a } keys (%{$cmds[$i]{history}})) {
-				#--- we're ready if we pushed enough values
-				last if ($#result + 1 >= $num);
-
-				$first_timestamp = $timestamp if (! $first_timestamp);
-				#--- we first need an interval to calculate the value * interval
+		if ($expression=~/^AVERAGE$/) {
+			foreach my $timestamp (@sorted) {
 				if ($previous_timestamp) {
-					push @result, $cmds[$i]{history}{$previous_timestamp} * ($previous_timestamp - $timestamp);
-					DEBUG3(sprintf "%4d. %s %10.2f * %7ds = %10.2f", 
-						$#result + 1,
-						readable_sortable_timestamp($previous_timestamp),
-						$cmds[$i]{history}{$previous_timestamp}, 
-						$previous_timestamp - $timestamp, 
-						$cmds[$i]{history}{$previous_timestamp} * ($previous_timestamp - $timestamp));
-				}
-				$last_timestamp = $previous_timestamp = $timestamp;
-			}
-			if ($#result + 1 < $num) {
-				add_error($i, sprintf "Too few history intervals found - is: %d, should be: %d", $#result + 1, $num);
-				return undef;
-			}
-			DEBUG3(sprintf "%25.25s %10.2f * %7ds = %10.2f", 
-				"average:",
-				&sum(@result) / ($first_timestamp - $last_timestamp),
-				$first_timestamp - $last_timestamp,
-				&sum(@result));	
-			DEBUG3(sprintf "%25.25s $pre %.2f $post", 
-				"expression result:", 
-				&sum(@result) / ($first_timestamp - $last_timestamp));
-			return sprintf "$pre %.2f $post", &sum(@result) / ($first_timestamp - $last_timestamp);
-
-		#--- compute average of values between FROM and TO, but weight the latest most
-		} elsif ($expression=~/^WEIGHTED_AVERAGE_FROM_TO$/) {
-
-			#--- determine 1st and last timestamp in range
-			my @sorted = sort { $b <=> $a } keys %{$cmds[$i]{history}};
-			for my $timestamp (@sorted) {
-				$last_timestamp = $timestamp if ($timestamp <= $to && ! $last_timestamp);
-				$first_timestamp = $timestamp if ($timestamp >= $from);
-			}
-			for my $timestamp (@sorted) {
-				#--- skip timestamps out of the from-to interval
-				next if ($timestamp < $from || $timestamp > $to);
-
-				push @result, $cmds[$i]{history}{$timestamp} * ($timestamp - $first_timestamp + 1);
-				push @timestamps, ($timestamp - $first_timestamp + 1);
-				DEBUG3(sprintf "%4d. %s %10.2f x %7d = %10.2f", 
-					$#result + 1,
-					readable_sortable_timestamp($timestamp),
-					$cmds[$i]{history}{$timestamp}, 
-					($timestamp -$first_timestamp + 1), 
-					$cmds[$i]{history}{$timestamp} * ($timestamp - $first_timestamp + 1));
-			}
-			if ($#result + 1 < $opt{set}{history_minvalues}) {
-				add_error($i, sprintf "Too few history intervals found - is: %d, should be: %d", 
-					$#result + 1, 
-					$opt{set}{history_minvalues});
-				return undef;
-			}
-			DEBUG3(sprintf "%25.25s %10.2f * %7d = %10.2f", 
-				"weighted average:",
-				&sum(@result) / &sum(@timestamps),
-				&sum(@timestamps),
-				&sum(@result));	
-			DEBUG3(sprintf "%25.25s $pre %.2f $post", 
-				"expression result:", 
-				&sum(@result) / &sum(@timestamps));
-			return sprintf "$pre %.2f $post", &sum(@result) / &sum(@timestamps);
-
-		#--- take last N values, but weight the latest most
-		} elsif ($expression=~/^WEIGHTED_AVERAGE_LAST$/) {
-
-			#--- determine 1st and last timestamp in range
-			my @sorted = sort { $b <=> $a } keys %{$cmds[$i]{history}};
-			@sorted = splice(@sorted,0,$num);
-			for my $timestamp (@sorted) {
-				$last_timestamp = $timestamp if (! $last_timestamp);
-				$first_timestamp = $timestamp;
-			}
-			for my $timestamp (@sorted) {
-				#--- we're ready if we pushed enough values
-				last if ($#result + 1 == $num);
-
-				push @result, $cmds[$i]{history}{$timestamp} * ($timestamp - $first_timestamp + 1);
-				push @timestamps, ($timestamp - $first_timestamp + 1);
-				DEBUG3(sprintf "%4d. %s %10.2f * %7d = %10.2f", 
-					$#result + 1,
-					readable_sortable_timestamp($timestamp),
-					$cmds[$i]{history}{$timestamp}, 
-					($timestamp -$first_timestamp + 1), 
-					$cmds[$i]{history}{$timestamp} * ($timestamp - $first_timestamp + 1));
-			}
-			if ($#result + 1 < $num) {
-				add_error($i, sprintf "Too few history intervals found - is: %d, should be: %d", $#result + 1, $num);
-				return undef;
-			}
-			DEBUG3(sprintf "%25.25s %10.2f * %7d = %10.2f", 
-				"weighted average:",
-				&sum(@result) / &sum(@timestamps),
-				&sum(@timestamps),
-				&sum(@result));	
-			DEBUG3(sprintf "%25.25s $pre %.2f $post", 
-				"expression result:",
-				&sum(@result) / &sum(@timestamps));
-			return sprintf "$pre %.2f $post", &sum(@result) / &sum(@timestamps);
-
-		#--- compute average delta from timestamp to timestamp
-		} elsif ($expression=~/^AVERAGE_DELTA_FROM_TO$/) {
-
-			#--- loop over timestamps from oldest (smallest) to newest
-			for my $timestamp (sort { $a <=> $b } keys (%{$cmds[$i]{history}})) {
-				if ($timestamp >= $from && $timestamp <= $to) {
-					$first_timestamp = $timestamp if (! $first_timestamp);
-					if ($previous_timestamp) {
-						my $interval = $timestamp - $previous_timestamp;
-						push @result, ($cmds[$i]{history}{$timestamp} - $cmds[$i]{history}{$previous_timestamp}) * $interval;
-						DEBUG3(sprintf "%4d. %s %10.2f - %10.2f = %10.2f * %7ds = %10.2f", 
-							$#result + 1,
-							readable_sortable_timestamp($timestamp),
-							$cmds[$i]{history}{$timestamp}, 
-							$cmds[$i]{history}{$previous_timestamp}, 
-							$cmds[$i]{history}{$timestamp} - $cmds[$i]{history}{$previous_timestamp}, 
-							$interval, 
-							($cmds[$i]{history}{$timestamp} - $cmds[$i]{history}{$previous_timestamp}) *  $interval);
-					}
-					$last_timestamp = $previous_timestamp = $timestamp;
-				}
-			}
-			if ($#result + 1 < $opt{set}{history_minvalues}) {
-				DEBUG1(sprintf "Too few history intervals found from %s to %s - is: %d, should be: %d", 
-					readable_sortable_timestamp($from), 
-					readable_sortable_timestamp($to), 
-					$#result + 1, 
-					$opt{set}{history_minvalues});
-				return undef;
-			}
-			DEBUG3(sprintf "%42.42s average: %10.2f * %7ds = %10.2f\n\n", 
-				"",
-				&sum(@result) / ($last_timestamp - $first_timestamp),
-				$last_timestamp - $first_timestamp,
-				&sum(@result));	
-			DEBUG3( sprintf "%51.51s $pre %.2f $post", "expression result:", &sum(@result) / ($last_timestamp - $first_timestamp));
-			return sprintf "$pre %.2f $post", &sum(@result) / ($last_timestamp - $first_timestamp);
-
-		#--- compute average delta from last x values
-		} elsif ($expression=~/^AVERAGE_DELTA_LAST$/) {
-
-			for my $timestamp (sort { $b <=> $a } keys (%{$cmds[$i]{history}})) {
-				$first_timestamp = $timestamp if (! $first_timestamp);
-				#--- we first need an interval to calculate the value * interval
-				if ($previous_timestamp) {
-					my $interval = $timestamp - $previous_timestamp;
-					push @result, ($cmds[$i]{history}{$timestamp} - $cmds[$i]{history}{$previous_timestamp}) * $interval;
-					DEBUG3(sprintf "%4d. %s %10.2f - %10.2f = %10.2f * %7ds = %10.2f", 
-						$#result + 1,
-						readable_sortable_timestamp($timestamp),
-						$cmds[$i]{history}{$timestamp}, 
-						$cmds[$i]{history}{$previous_timestamp}, 
-						$cmds[$i]{history}{$timestamp} - $cmds[$i]{history}{$previous_timestamp}, 
-						$interval, 
-						($cmds[$i]{history}{$timestamp} - $cmds[$i]{history}{$previous_timestamp}) *  $interval);
-				}
-				$last_timestamp = $previous_timestamp = $timestamp;
-
-				#--- we're ready if we pushed enough values
-				last if ($#result + 1 >= $num);
-			}
-			if ($#result + 1 < $num) {
-				add_error($i, sprintf "Too few history intervals found - is: %d, should be: %d", $#result + 1, $num);
-				return undef;
-			}
-			printf "last_timestamp:$last_timestamp first_timestamp:$first_timestamp result(n):$#result + 1 num:$num\n";
-			DEBUG3(sprintf "%42.42s average: %10.2f * %7ds = %10.2f\n\n", 
-				"",
-				&sum(@result) / ($last_timestamp - $first_timestamp),
-				$last_timestamp - $first_timestamp,
-				&sum(@result));	
-			DEBUG3( sprintf "%51.51s $pre %.2f $post", "expression result:", &sum(@result) / ($last_timestamp - $first_timestamp));
-			return sprintf "$pre %.2f $post", &sum(@result) / ($last_timestamp - $first_timestamp);
-
-		#--- compute average delta from timestamp to timestamp
-		} elsif ($expression=~/^WEIGHTED_AVERAGE_DELTA_FROM_TO$/) {
-
-			#--- determine 1st and last timestamp in range
-			my @sorted = sort { $b <=> $a } keys %{$cmds[$i]{history}};
-			for my $timestamp (@sorted) {
-				if ($timestamp >= $from && $timestamp <= $to) {
-					$last_timestamp = $timestamp if (! $last_timestamp);
-					$first_timestamp = $timestamp;
-				}
-			}
-			#--- loop over timestamps from oldest (smallest) to newest
-			for my $timestamp (@sorted) {
-				if ($timestamp >= $from && $timestamp <= $to) {
-					if ($previous_timestamp) {
-						my $interval = $timestamp - $first_timestamp + 1;
-						push @result, ($cmds[$i]{history}{$timestamp} - $cmds[$i]{history}{$previous_timestamp}) * $interval;
-						push @timestamps, $interval;
-						DEBUG3(sprintf "%4d. %s %10.2f - %10.2f = %10.2f * %7d = %10.2f", 
-							$#result + 1,
-							readable_sortable_timestamp($timestamp),
-							$cmds[$i]{history}{$timestamp}, 
-							$cmds[$i]{history}{$previous_timestamp}, 
-							$cmds[$i]{history}{$timestamp} - $cmds[$i]{history}{$previous_timestamp}, 
-							$interval, 
-							($cmds[$i]{history}{$timestamp} - $cmds[$i]{history}{$previous_timestamp}) *  $interval);
-					}
-					$previous_timestamp = $timestamp;
-				}
-			}
-			if ($#result + 1 < $opt{set}{history_minvalues}) {
-				DEBUG1(sprintf "Too few history intervals found from %s to %s - is: %d, should be: %d", 
-					readable_sortable_timestamp($from), 
-					readable_sortable_timestamp($to), 
-					$#result + 1, 
-					$opt{set}{history_minvalues});
-				return undef;
-			}
-			DEBUG3(sprintf "%42.42s average: %10.2f * %7d = %10.2f\n\n", 
-				"",
-				&sum(@result) / &sum(@timestamps),
-				&sum(@timestamps),
-				&sum(@result));	
-			DEBUG3( sprintf "%51.51s $pre %.2f $post", "expression result:", &sum(@result) / &sum(@timestamps));
-			return sprintf "$pre %.2f $post", &sum(@result) / &sum(@timestamps);
-
-		#--- compute weighted average delta from last x values
-		} elsif ($expression=~/^WEIGHTED_AVERAGE_DELTA_LAST$/) {
-
-			#--- determine 1st and last timestamp in range
-			my @sorted = ();
-			foreach my $timestamp (sort { $b <=> $a } keys %{$cmds[$i]{history}}) {
-				#--- we're ready if we pushed enough values
-				last if ($#sorted + 1 >= $num);
-				$last_timestamp = $timestamp if (! $last_timestamp);
-				$first_timestamp = $timestamp;
-				push @sorted, $timestamp;
-			}
-			if ($#sorted + 1 < $num) {
-				add_error($i, sprintf "Too few history intervals found - is: %d, should be: %d", $#sorted + 1, $num);
-				return undef;
-			}
-
-			#--- loop over timestamps from oldest (smallest) to newest
-			for my $timestamp (@sorted) {
-
-				#--- we first need an interval to calculate the value * interval
-				if ($previous_timestamp) {
-					my $interval = $timestamp - $first_timestamp + 1;
-					push @result, ($cmds[$i]{history}{$timestamp} - $cmds[$i]{history}{$previous_timestamp}) * $interval;
-					push @timestamps, $interval;
-					DEBUG3(sprintf "%4d. %s %10.2f - %10.2f = %10.2f * %7d = %10.2f", 
-						$#result + 1,
-						readable_sortable_timestamp($timestamp),
-						$cmds[$i]{history}{$timestamp}, 
-						$cmds[$i]{history}{$previous_timestamp}, 
-						$cmds[$i]{history}{$timestamp} - $cmds[$i]{history}{$previous_timestamp}, 
-						$interval, 
-						($cmds[$i]{history}{$timestamp} - $cmds[$i]{history}{$previous_timestamp}) *  $interval);
+					push @computed, $cmds[$i]{history}{$timestamp} * ($previous_timestamp - $timestamp);
+					push @timestamps, $previous_timestamp - $timestamp;
+#printf "timestamp:$timestamp value:$cmds[$i]{history}{$timestamp} interval:$previous_timestamp - $timestamp\n";
 				}
 				$previous_timestamp = $timestamp;
 			}
-			DEBUG3(sprintf "%42.42s average: %10.2f * %7d = %10.2f\n\n", 
-				"",
-				&sum(@result) / &sum(@timestamps),
-				&sum(@timestamps),
-				&sum(@result));	
-			DEBUG3( sprintf "%51.51s $pre %.2f $post", "expression result:", &sum(@result) / &sum(@timestamps));
-			return sprintf "$pre %.2f $post", &sum(@result) / &sum(@timestamps);
+			history_debug($expression,\@sorted, \@computed, \@timestamps);
+			return sprintf "$pre %.2f $post", &sum(@computed) / &sum(@timestamps) if (&sum(@timestamps));
+							
+		#--- take last N values, but weight the latest most
+		} elsif ($expression=~/^WEIGHTED_AVERAGE$/) {
 
-		#--- compute delta from timestamp to timestamp
-		} elsif ($expression=~/^DELTA_FROM_TO$/) {
-
-			#--- loop over timestamps from oldest (smallest) to newest
-			for my $timestamp (sort { $b <=> $a } keys (%{$cmds[$i]{history}})) {
-				if ($timestamp >= $from && $timestamp <= $to) {
-					$first_timestamp = $timestamp if (! $first_timestamp);
-					$last_timestamp = $previous_timestamp = $timestamp;
+			foreach my $timestamp (@sorted) {
+				if ($previous_timestamp) {
+					my $seconds = $previous_timestamp - $timestamp;
+					my $factor = $#sorted - $#computed - 1;
+					push @computed, $cmds[$i]{history}{$timestamp} / $seconds * $factor;
+					DEBUG3(sprintf "\$#sorted:$#sorted \$#computed:$#computed value:$cmds[$i]{history}{$timestamp} * seconds:$seconds * factor:$factor = %d", $cmds[$i]{history}{$timestamp} * $seconds * $factor);
+					push @timestamps, $factor;
 				}
+				$previous_timestamp = $timestamp;
 			}
-			if ($first_timestamp == $last_timestamp) {
-				add_error($i, sprintf "No delta computing with only one historical value at %s", 
-					readable_sortable_timestamp($first_timestamp)); 
-				return undef;
-			}
-			DEBUG3(sprintf "Delta %s %10.2f - %s %10.2f = %10.2f", 
-				readable_sortable_timestamp($first_timestamp),
-				$cmds[$i]{history}{$first_timestamp},
-				readable_sortable_timestamp($last_timestamp),
-				$cmds[$i]{history}{$last_timestamp},
-				$cmds[$i]{history}{$first_timestamp} - $cmds[$i]{history}{$last_timestamp});
-			DEBUG3( sprintf "%51.51s $pre %.2f $post", "expression result:", $cmds[$i]{history}{$first_timestamp} - $cmds[$i]{history}{$last_timestamp});
-			return sprintf "$pre %.2f $post", $cmds[$i]{history}{$first_timestamp} - $cmds[$i]{history}{$last_timestamp};
+			history_debug($expression, \@sorted, \@computed, \@timestamps);
+			return sprintf "$pre %.2f $post", &sum(@computed) / &sum(@timestamps) if (&sum(@timestamps));
 
 		#--- compute delta from last value to last nth value
-		} elsif ($expression=~/^DELTA_LAST$/) {
-
-			my @sorted = sort { $b <=> $a } keys %{$cmds[$i]{history}};
-			if ($#sorted + 1 < $num) {
-				add_error($i, sprintf "Too few history intervals found - is: %d, should be: %d", $#sorted + 1, $num);
+		} elsif ($expression=~/^DELTA$/) {
+			if ($first_timestamp == $last_timestamp) {
+				add_error($i, sprintf "Only one value in history, could not compute delta");
 				return undef;
 			}
-			DEBUG3(sprintf "Delta %s %10.2f - %s %10.2f = %10.2f", 
-				readable_sortable_timestamp($sorted[0]),
-				$cmds[$i]{history}{$sorted[0]},
-				readable_sortable_timestamp($sorted[$num - 1]),
-				$cmds[$i]{history}{$sorted[$num - 1]},
-				$cmds[$i]{history}{$sorted[0]} - $cmds[$i]{history}{$sorted[$num - 1]});
-			DEBUG3( sprintf "%51.51s $pre %.2f $post", "expression result:", $cmds[$i]{history}{$sorted[0]} - $cmds[$i]{history}{$sorted[$num - 1]});
-			return sprintf "$pre %.2f $post", $cmds[$i]{history}{$sorted[0]} - $cmds[$i]{history}{$sorted[$num - 1]};
+			push @computed, $cmds[$i]{history}{$first_timestamp};
+			push @computed, $cmds[$i]{history}{$last_timestamp};
+			history_debug($expression,\@sorted, \@computed, \@timestamps);
+			return sprintf "$pre %.2f $post", $computed[0] - $computed[1];
+
+		#--- compute average delta from last x values
+		} elsif ($expression=~/^AVERAGE_DELTA$/) {
+			if ($first_timestamp == $last_timestamp) {
+				add_error($i, sprintf "Only one value in history, could not compute delta");
+				DEBUG3("Only one value in history, could not compute delta");
+				return undef;
+			}
+			foreach my $timestamp (@sorted) {
+				if ($previous_timestamp) {
+					my $interval = $previous_timestamp - $timestamp;
+					push @computed, ($cmds[$i]{history}{$timestamp} - $cmds[$i]{history}{$previous_timestamp}) / $interval;
+					push @timestamps, $interval;
+					DEBUG4(sprintf "\$#sorted:%d \$#computed:%d \$#timestamps:%d interval:%4d value:%10.2f", 
+						$#sorted, $#computed, $#timestamps, $interval, 
+						($cmds[$i]{history}{$timestamp} - $cmds[$i]{history}{$previous_timestamp}) / $interval);
+				}
+				$previous_timestamp = $timestamp;
+			}
+			history_debug($expression,\@sorted, \@computed, \@timestamps);
+			return sprintf "$pre %.2f $post", &sum(@computed) / ($last_timestamp - $first_timestamp);
+
+		#--- compute average delta from last x values and weight it (newest first)
+		} elsif ($expression=~/^WEIGHTED_AVERAGE_DELTA$/) {
+			if ($first_timestamp == $last_timestamp) {
+				add_error($i, sprintf "Only one value in history, could not compute delta");
+				DEBUG3("Only one value in history, could not compute delta");
+				return undef;
+			}
+			my $factorsum=0;
+			foreach my $timestamp (@sorted) {
+				if ($previous_timestamp) {
+					my $interval = abs($previous_timestamp - $timestamp);
+					my $factor = $#sorted - $#computed - 1;
+					$factorsum+=$factor;
+					push @computed, ($cmds[$i]{history}{$timestamp} - $cmds[$i]{history}{$previous_timestamp}) / $interval * $factor;
+					push @timestamps, $interval;
+					DEBUG4(sprintf "\$#sorted:%4d \$#computed:%4d value:%10.2f / interval:%4ds * factor:$factor = computed:%10.2f", 
+						$#sorted, 
+						$#computed, 
+						$cmds[$i]{history}{$timestamp} - $cmds[$i]{history}{$previous_timestamp}),
+						$interval, 
+						$factor,
+						($cmds[$i]{history}{$timestamp} - $cmds[$i]{history}{$previous_timestamp}) / $interval * $factor;
+				}
+				$previous_timestamp = $timestamp;
+			}
+			history_debug($expression,\@sorted, \@computed, \@timestamps);
+			return sprintf "$pre %.2f $post", &sum(@computed) / $factorsum;
 
 		} else {
 			add_error($i, "Unknown expression: $expression");
