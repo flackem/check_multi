@@ -3433,10 +3433,10 @@ sub history_debug {
 		my %percent = ();
 		$percent{computed} = abs(&sum(@$computed))  / 100;
 		$percent{seconds} = abs(&sumdiff(@$sorted)) / 100;
-		DEBUG3("  No.  Timestamp                Value     Time Interval             Product\n");
+		DEBUG3("  No.  Timestamp                Value     Time Interval             Product");
 		for (my $i = 1; $i <= $#$sorted; $i++) {
 			my $interval = abs($sorted->[$i-1] - $sorted->[$i]);
-			DEBUG3( sprintf "%4d. %20.20s %10.2f * %4ds (%6.2f%%)       -> %10.2f (%6.2f%%)\n", 
+			DEBUG3( sprintf "%4d. %20.20s %10.2f * %4ds (%6.2f%%)       -> %10.2f (%6.2f%%)", 
 				$i, 
 				readable_sortable_timestamp($sorted->[$i]),
 				$computed->[$i-1] / $interval,
@@ -3466,11 +3466,11 @@ sub history_debug {
 		}
 		$percent{divisor} = abs($sum{divisor})/100;
 
-		DEBUG3("  No.  Timestamp                Value    Time Factor   T*F         Weighted Product\n"); 
+		DEBUG3("  No.  Timestamp                Value    Time Factor   T*F         Weighted Product"); 
 		for (my $i = 1; $i <= $#$sorted; $i++) {
 			my $interval = abs($sorted->[$i-1] - $sorted->[$i]);
 			my $factor = $#$sorted - $i + 1;
-			DEBUG3( sprintf "%4d. %20.20s %10.2f * %4ds * %3d (%6.2f%%) -> %10.2f (%6.2f%%)\n", 
+			DEBUG3( sprintf "%4d. %20.20s %10.2f * %4ds * %3d (%6.2f%%) -> %10.2f (%6.2f%%)", 
 				$i, 
 				readable_sortable_timestamp($sorted->[$i]),
 				$computed->[$i-1] / $interval / $factor,
@@ -3483,7 +3483,7 @@ sub history_debug {
 			$sum{tfpercent} += $factor * $interval / $percent{divisor};
 			$sum{percent} += $computed->[$i-1] / $percent{computed};
 		}
-		DEBUG3( sprintf "%37s %10d    (%6.2f%%) %13.2f (%6.2f%%)\n", 
+		DEBUG3( sprintf "%37s %10d    (%6.2f%%) %13.2f (%6.2f%%)", 
 			sprintf("Weighted average ---> %.2f", $sum{value} / $sum{divisor}), 
 			$sum{divisor}, $sum{tfpercent}, $sum{value}, $sum{percent});
 
@@ -3503,7 +3503,7 @@ sub history_debug {
 			$percent{computed} += abs($computed->[$i]) / 100;
 		}
 		$percent{seconds} = abs(&sumdiff(@$sorted)) / 100;
-		DEBUG3("  No.  Timestamp                Delta        Time Interval      Delta/s  Factor      Weighted Product\n");
+		DEBUG3("  No.  Timestamp                Delta        Time Interval      Delta/s  Factor      Weighted Product");
 		if ($#$sorted <= 0 || $#$computed <= 0 || $percent{computed} == 0 || $percent{seconds} == 0) {
 			DEBUG3("Not enough values for computing deltas");
 			return undef;
@@ -3511,7 +3511,7 @@ sub history_debug {
 		for (my $i = 1; $i <= $#$sorted; $i++) {
 			my $interval = abs($sorted->[$i-1] - $sorted->[$i]);
 			my $factor = $#$sorted - $i + 1;
-			DEBUG3( sprintf "%4d. %20.20s %10.2f / %7ds (%6.2f%%) = %10.2f * %3d -> %10.2f (%6.2f%%)\n", 
+			DEBUG3( sprintf "%4d. %20.20s %10.2f / %7ds (%6.2f%%) = %10.2f * %3d -> %10.2f (%6.2f%%)", 
 				$i, 
 				readable_sortable_timestamp($sorted->[$i-1]),
 				$computed->[$i-1] * $timestamps->[$i-1] / $factor,
@@ -3529,7 +3529,7 @@ sub history_debug {
 			$sum{percent} += abs($computed->[$i-1]) / $percent{computed};
 			$sum{divisor}+=($factor * $interval);
 		}
-		DEBUG3( sprintf "%37s %9ds (%6.2f%%) %18d %13.2f (%6.2f%%)\n", 
+		DEBUG3( sprintf "%37s %9ds (%6.2f%%) %18d %13.2f (%6.2f%%)", 
 			sprintf("Weighted average ---> %.2f", $sum{value} / $sum{factor}), 
 			$sum{seconds}, $sum{spercent}, $sum{factor}, $sum{value}, $sum{percent});
 
@@ -3549,14 +3549,14 @@ sub history_debug {
 		}
 		$percent{seconds} = &abssumdiff(@$sorted) / 100;
 		DEBUG3("\$#computed:$#$computed percent_computed:$percent{computed} percent_seconds:$percent{seconds}");
-		DEBUG3("  No.  Timestamp                Delta        Time Interval       Delta/s  Percent\n");
+		DEBUG3("  No.  Timestamp                Delta        Time Interval       Delta/s  Percent");
 		if ($#$sorted < 1 || $#$computed < 1 || $percent{computed} == 0 || $percent{seconds} == 0) {
 			DEBUG3("Not enough values for computing deltas");
 			return undef;
 		}
 		for (my $i = 1; $i <= $#$sorted; $i++) {
 			my $interval = abs($sorted->[$i-1] - $sorted->[$i]);
-			DEBUG3( sprintf "%4d. %20.20s %10.2f / %7ds (%6.2f%%) = %10.2f (%6.2f%%)\n", 
+			DEBUG3( sprintf "%4d. %20.20s %10.2f / %7ds (%6.2f%%) = %10.2f (%6.2f%%)", 
 				$i, 
 				readable_sortable_timestamp($sorted->[$i-1]),
 				$computed->[$i-1] * $interval,
@@ -3571,7 +3571,7 @@ sub history_debug {
 			$sum{factor} += $computed->[$i-1];
 			$sum{percent} += abs($computed->[$i-1] / $interval) / $percent{computed};
 		}
-		DEBUG3( sprintf "%37s %9ds (%6.2f%%)   %10.2f (%6.2f%%)\n", 
+		DEBUG3( sprintf "%37s %9ds (%6.2f%%)   %10.2f (%6.2f%%)", 
 				sprintf("Average of %d deltas ---> %.2f", 
 				$#$computed+1, 
 				$sum{factor} / ($#$computed + 1)), 
