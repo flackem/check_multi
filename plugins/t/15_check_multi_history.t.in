@@ -34,14 +34,14 @@ my $testopts=testopts::get_testopts("history","HOSTNAME","SERVICEDESC","report",
 
 #--- special history options
 $testopts.=" -s history=1 -s HOSTNAME=localhost -s SERVICEDESC=number";
-#--- initialize / remove history
+#--- initialize / remove history file
 unlink "tmp/history_localhost_number.txt" if (-f "tmp/history_localhost_number.txt");
 
 #--- be sure we're at the beginning of a second
 #--- otherwise the history second number may shift by one
 #--- sleep to next second for beginners
-my $thistime=time;
-while (time == $thistime) {
+my $now=time;
+while (time == $now) {
 	; # do nothing but waiting
 }
 
@@ -62,8 +62,8 @@ like(
 	"output correct - passed"
 );
 #--- sleep 1 is important here, otherwise the latter result will overwrite the check before
-$thistime=time;
-while (time == $thistime) {
+$now=time;
+while (time == $now) {
 	; # do nothing but waiting
 }
 
@@ -84,8 +84,8 @@ like(
 	"output correct - passed"
 );
 #--- sleep 1 is important here, otherwise the latter result will overwrite the check before
-$thistime=time;
-while (time == $thistime) {
+$now=time;
+while (time == $now) {
 	; # do nothing but waiting
 }
 
@@ -106,8 +106,8 @@ like(
 	"output correct - passed"
 );
 #--- sleep 1 is important here, otherwise the latter result will overwrite the check before
-$thistime=time;
-while (time == $thistime) {
+$now=time;
+while (time == $now) {
 	; # do nothing but waiting
 }
 
@@ -128,22 +128,22 @@ like(
 	"output correct - passed"
 );
 #--- sleep 1 is important here, otherwise the latter result will overwrite the check before
-$thistime=time;
-while (time == $thistime) {
+$now=time;
+while (time == $now) {
 	; # do nothing but waiting
 }
 
-
 #-------------------------------------------------------------------------------
-#--- AVERAGE_LAST CRITICAL -----------------------------------------------------
+#--- AVERAGE(4) CRITICAL -------------------------------------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi --report 1+4 --verbose $testopts -s verbose_fields=history -x 'command [ number ] = echo 5' -x 'attribute [ number::critical ] = AVERAGE ( 3 ) >= 2' -vvv | grep history_debug",
+	#"@PERL@ ../check_multi --report 1+4 --verbose $testopts -s verbose_fields=history -x 'command [ number ] = echo 5' -x 'attribute [ number::critical ] = AVERAGE ( 4 ) >= 2' -vvvv | grep history_[sd]",
+	"@PERL@ ../check_multi --report 1+4 --verbose $testopts -s verbose_fields=history -x 'command [ number ] = echo 5' -x 'attribute [ number::critical ] = AVERAGE ( 4 ) >= 2'",
 );
 is(
 	$result->return_code, 
 	2, 
-	"check_multi AVERAGE LAST critical - RC2 - passed"
+	"check_multi AVERAGE(4) critical - RC2 - passed"
 );
 like(
 	$result->output,
@@ -152,15 +152,16 @@ like(
 );
 
 #-------------------------------------------------------------------------------
-#--- WEIGHTED_AVERAGE_LAST CRITICAL -----------------------------------------------------
+#--- WEIGHTED_AVERAGE(5) CRITICAL ----------------------------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi --report 1+4 --verbose $testopts -s verbose_fields=history -x 'command [ number ] = echo 5' -x 'attribute [ number::critical ] = WEIGHTED_AVERAGE ( 3 ) >= 2'",
+	#"@PERL@ ../check_multi --report 1+4 --verbose $testopts -s verbose_fields=history -x 'command [ number ] = echo 5' -x 'attribute [ number::critical ] = WEIGHTED_AVERAGE ( 4 ) >= 2' -vvvv | grep history_[sd]",
+	"@PERL@ ../check_multi --report 1+4 --verbose $testopts -s verbose_fields=history -x 'command [ number ] = echo 5' -x 'attribute [ number::critical ] = WEIGHTED_AVERAGE ( 4 ) >= 2'",
 );
 is(
 	$result->return_code, 
 	2, 
-	"check_multi WEIGHTED_AVERAGE LAST critical - RC2 - passed"
+	"check_multi WEIGHTED_AVERAGE(4) critical - RC2 - passed"
 );
 like(
 	$result->output,
@@ -177,7 +178,7 @@ $result = NPTest->testCmd(
 is(
 	$result->return_code, 
 	2, 
-	"check_multi AVERAGE FROM TO critical - RC2 - passed"
+	"check_multi AVERAGE(time-5,time) critical - RC2 - passed"
 );
 like(
 	$result->output,
@@ -194,7 +195,7 @@ $result = NPTest->testCmd(
 is(
 	$result->return_code, 
 	2, 
-	"check_multi WEIGHTED_AVERAGE FROM TO critical - RC2 - passed"
+	"check_multi WEIGHTED_AVERAGE(time-5,time) critical - RC2 - passed"
 );
 like(
 	$result->output,
@@ -206,12 +207,13 @@ like(
 #--- AVERAGE_DELTA_FROM_TO CRITICAL --------------------------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi --report 1+4 --verbose $testopts -s verbose_fields=history -x 'command [ number ] = echo 5' -x 'attribute [ number::critical ] = AVERAGE_DELTA_FROM_TO( time-5,time ) >= 1'",
+	#"@PERL@ ../check_multi --report 1+4 --verbose $testopts -s verbose_fields=history -x 'command [ number ] = echo 5' -x 'attribute [ number::critical ] = AVERAGE_DELTA( time-5, time ) >= 1' -vvvv | grep history_[sd]",
+	"@PERL@ ../check_multi --report 1+4 --verbose $testopts -s verbose_fields=history -x 'command [ number ] = echo 5' -x 'attribute [ number::critical ] = AVERAGE_DELTA( time-5, time ) >= 1'",
 );
 is(
 	$result->return_code, 
 	2, 
-	"check_multi AVERAGE_DELTA_FROM_TO critical - RC2 - passed"
+	"check_multi AVERAGE_DELTA(time-5,time) critical - RC2 - passed"
 );
 like(
 	$result->output,
@@ -220,15 +222,16 @@ like(
 );
 
 #-------------------------------------------------------------------------------
-#--- AVERAGE_DELTA_LAST CRITICAL --------------------------------------------
+#--- AVERAGE_DELTA(5) CRITICAL -------------------------------------------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
-	"@PERL@ ../check_multi --report 1+4 --verbose $testopts -s verbose_fields=history -x 'command [ number ] = echo 5' -x 'attribute [ number::critical ] = AVERAGE_DELTA_LAST( 3 ) != 0'",
+	#"@PERL@ ../check_multi --report 1+4 --verbose $testopts -s verbose_fields=history -x 'command [ number ] = echo 5' -x 'attribute [ number::critical ] = AVERAGE_DELTA( 4 ) != 0' -vvvv | grep history_[sd]",
+	"@PERL@ ../check_multi --report 1+4 --verbose $testopts -s verbose_fields=history -x 'command [ number ] = echo 5' -x 'attribute [ number::critical ] = AVERAGE_DELTA( 4 ) != 0'",
 );
 is(
 	$result->return_code, 
 	2, 
-	"check_multi AVERAGE_DELTA_LAST critical - RC2 - passed"
+	"check_multi AVERAGE_DELTA(4) critical - RC2 - passed"
 );
 like(
 	$result->output,
