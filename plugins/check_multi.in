@@ -3780,11 +3780,9 @@ sub history_substitute {
 			foreach my $timestamp (@sorted) {
 				if (!defined($min) || $min > $cmds[$i]{history}{$timestamp}) {
 					$min = $cmds[$i]{history}{$timestamp};
-					DEBUG3("timestamp:$timestamp min:$min");
 				}
 				push @computed, $cmds[$i]{history}{$timestamp};
 			}
-			DEBUG3("min:$min");
 			history_debug($expression,\@sorted, \@computed, \@timestamps);
 			$retstr = sprintf "$pre %.2f $post", $min;
 
