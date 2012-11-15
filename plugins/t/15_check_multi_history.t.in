@@ -26,7 +26,7 @@ foreach my $plugin (@plugins) {
 		plan skip_all => "tests because component $plugin not found or not executable as \'$path_to_plugin\'";
 	}
 }
-plan tests => 20;
+plan tests => 28;
 
 my $result;
 #my $testopts="-s dont_be_paranoid=1";
@@ -236,5 +236,77 @@ is(
 like(
 	$result->output,
 	'/CRITICAL - 1 plugins checked, 1 critical \(number\)\n\[ 1\] CRIT number 5 \[CRITICAL: output matched rule \'[-+]*\d+\.\d+ != 0\'\]\n\s+history: \d+:2 \d+:3 \d+:4 \d+:5/',
+	"output correct - passed"
+);
+
+#-------------------------------------------------------------------------------
+#--- MIN(4) CRITICAL -----------------------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	#"@PERL@ ../check_multi --report 1+4 --verbose $testopts -s verbose_fields=history -x 'command [ number ] = echo 5' -x 'attribute [ number::critical ] = MIN( 4 ) == 2' -vvv | grep history_[sd]",
+	"@PERL@ ../check_multi --report 1+4 --verbose $testopts -s verbose_fields=history -x 'command [ number ] = echo 5' -x 'attribute [ number::critical ] = MIN( 4 ) == 2'",
+);
+is(
+	$result->return_code, 
+	2, 
+	"check_multi MIN(5) critical - RC2 - passed"
+);
+like(
+	$result->output,
+	'/CRITICAL - 1 plugins checked, 1 critical \(number\)\n\[ 1\] CRIT number 5 \[CRITICAL: output matched rule \'[-+]*\d+\.\d+ == 2\'\]\n\s+history: \d+:2 \d+:3 \d+:4 \d+:5/',
+	"output correct - passed"
+);
+
+#-------------------------------------------------------------------------------
+#--- MIN(time-5,time) CRITICAL -------------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	#"@PERL@ ../check_multi --report 1+4 --verbose $testopts -s verbose_fields=history -x 'command [ number ] = echo 5' -x 'attribute [ number::critical ] = MIN( time - 5, time ) == 2' -vvv | grep history_[sd]",
+	"@PERL@ ../check_multi --report 1+4 --verbose $testopts -s verbose_fields=history -x 'command [ number ] = echo 5' -x 'attribute [ number::critical ] = MIN( time - 5, time ) == 2'",
+);
+is(
+	$result->return_code, 
+	2, 
+	"check_multi MIN(time - 5, time) critical - RC2 - passed"
+);
+like(
+	$result->output,
+	'/CRITICAL - 1 plugins checked, 1 critical \(number\)\n\[ 1\] CRIT number 5 \[CRITICAL: output matched rule \'[-+]*\d+\.\d+ == 2\'\]\n\s+history: \d+:2 \d+:3 \d+:4 \d+:5/',
+	"output correct - passed"
+);
+
+#-------------------------------------------------------------------------------
+#--- MAX(4) CRITICAL -----------------------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	#"@PERL@ ../check_multi --report 1+4 --verbose $testopts -s verbose_fields=history -x 'command [ number ] = echo 5' -x 'attribute [ number::critical ] = MAX( 4 ) != 0' -vvvv | grep history_[sd]",
+	"@PERL@ ../check_multi --report 1+4 --verbose $testopts -s verbose_fields=history -x 'command [ number ] = echo 5' -x 'attribute [ number::critical ] = MAX( 4 ) == 5'",
+);
+is(
+	$result->return_code, 
+	2, 
+	"check_multi MAX(4) critical - RC2 - passed"
+);
+like(
+	$result->output,
+	'/CRITICAL - 1 plugins checked, 1 critical \(number\)\n\[ 1\] CRIT number 5 \[CRITICAL: output matched rule \'[-+]*\d+\.\d+ == 5\'\]\n\s+history: \d+:2 \d+:3 \d+:4 \d+:5/',
+	"output correct - passed"
+);
+
+#-------------------------------------------------------------------------------
+#--- MAX(time-5,time) CRITICAL -------------------------------------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	#"@PERL@ ../check_multi --report 1+4 --verbose $testopts -s verbose_fields=history -x 'command [ number ] = echo 5' -x 'attribute [ number::critical ] = MAX( time - 5, time ) != 0' -vvvv | grep history_[sd]",
+	"@PERL@ ../check_multi --report 1+4 --verbose $testopts -s verbose_fields=history -x 'command [ number ] = echo 5' -x 'attribute [ number::critical ] = MAX( time - 5, time ) == 5'",
+);
+is(
+	$result->return_code, 
+	2, 
+	"check_multi MAX(time - 5, time) critical - RC2 - passed"
+);
+like(
+	$result->output,
+	'/CRITICAL - 1 plugins checked, 1 critical \(number\)\n\[ 1\] CRIT number 5 \[CRITICAL: output matched rule \'[-+]*\d+\.\d+ == 5\'\]\n\s+history: \d+:2 \d+:3 \d+:4 \d+:5/',
 	"output correct - passed"
 );

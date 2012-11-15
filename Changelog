@@ -1,6 +1,8 @@
 
 ===== Changelog =====
 
+	* added history with new computed macros (AVERAGE, WEIGHTED_AVERAGE,
+	  MIN, MAX, DELTA, AVERAGE_DELTA, WEIGHTED_AVERAGE_DELTA)
 	* changed Getopt::Long handling to allow old Perl versions
 	* new switch html_ascii_notification allows ASCII part in HTML output
 	* reorganized ascii verbose mode, prints selectable fields

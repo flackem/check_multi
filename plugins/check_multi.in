@@ -3623,6 +3623,8 @@ sub history_substitute {
 		"AVERAGE",
 		"AVERAGE_DELTA",
 		"DELTA",
+		"MIN",
+		"MAX",
 		"WEIGHTED_AVERAGE",
 		"WEIGHTED_AVERAGE_DELTA",
 	);
@@ -3662,13 +3664,18 @@ sub history_substitute {
 				add_error($i, "Error: invalid LAST number parameter: $num");
 				return undef;
 			}
-			@sorted = (sort { $b <=> $a } keys (%{$cmds[$i]{history}}))[0..$num-1];
-			if ($#sorted + 1 < $num) {
-				add_error($i, sprintf "Not enough values: %d of %d (required)", $#sorted + 1, $num);
+			if (scalar(keys(%{$cmds[$i]{history}})) + 1 <= $num) {
+				add_error($i, sprintf "Not enough values: %d of %d (required)", scalar(keys(%{$cmds[$i]{history}})), $num);
 				return undef;
 			}
+			@sorted = (sort { $b <=> $a } keys (%{$cmds[$i]{history}}))[0..$num-1];
 			#@sorted=splice(@sorted, 0, $num);
-			DEBUG3(sprintf "$name: %s ( 0..%d ) [ %s ]", $expression, $#sorted, join(',',@sorted));
+			DEBUG3(sprintf "$name: %s ( 0..%d ) [ %s ] [ %s ]", 
+				$expression, 
+				$#sorted, 
+				join(',',@sorted),
+				join(',', map { $cmds[$i]{history}{$_} } @sorted),
+			);
 
 		#--- ...FROM_TO ( from_time, to_time ) - 2 parameters
 		} elsif ($#parm == 1) {
@@ -3754,6 +3761,32 @@ sub history_substitute {
 			push @computed, $cmds[$i]{history}{$last_timestamp};
 			history_debug($expression,\@sorted, \@computed, \@timestamps);
 			$retstr = sprintf "$pre %.2f $post", $computed[1] - $computed[0] ;
+
+		#--- compute max of given values
+		} elsif ($expression=~/^MAX$/) {
+			my $max=undef;
+			foreach my $timestamp (@sorted) {
+				if (!defined($max) || $max < $cmds[$i]{history}{$timestamp}) {
+					$max = $cmds[$i]{history}{$timestamp};
+				}
+				push @computed, $cmds[$i]{history}{$timestamp};
+			}
+			history_debug($expression,\@sorted, \@computed, \@timestamps);
+			$retstr = sprintf "$pre %.2f $post", $max;
+
+		#--- compute max of given values
+		} elsif ($expression=~/^MIN$/) {
+			my $min=undef;
+			foreach my $timestamp (@sorted) {
+				if (!defined($min) || $min > $cmds[$i]{history}{$timestamp}) {
+					$min = $cmds[$i]{history}{$timestamp};
+					DEBUG3("timestamp:$timestamp min:$min");
+				}
+				push @computed, $cmds[$i]{history}{$timestamp};
+			}
+			DEBUG3("min:$min");
+			history_debug($expression,\@sorted, \@computed, \@timestamps);
+			$retstr = sprintf "$pre %.2f $post", $min;
 
 		#--- compute average delta from last x values
 		} elsif ($expression=~/^AVERAGE_DELTA$/) {
