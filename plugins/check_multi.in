@@ -3629,12 +3629,15 @@ sub history_substitute {
 		"WEIGHTED_AVERAGE_DELTA",
 	);
 	my $allowed = join('|', @keywords);
-	my $retstr=undef;
+	my $retstr = undef;
+	my $old_expression = "";
 
 	#--- find expression replacements
-	if ($expression =~ /(.*)\b($allowed)\b\s*\(([^\)]+)\)\s*(.*)/i) {
+	while ( $expression ne $old_expression && $expression =~ /(.*)\s*\b($allowed)\b\s*\(([^\)]+)\)\s*(.*)/i ) {
+
+		$old_expression = $expression;
 		my $pre=$1;
-		my $expression=uc($2);
+		$expression=uc($2);
 		my @parm=split(',',$3);
 		my $post=$4;
 		my @computed=();
@@ -3839,7 +3842,9 @@ sub history_substitute {
 		} else {
 			add_error($i, "Unknown expression: $expression");
 		}
-	} 
+		$expression = $retstr;
+		DEBUG4("1. expression:$expression old_expression:$old_expression pre:>$pre< post:>$post< retstr:$retstr");
+	}
 	DEBUG3("$expression substituted by: $retstr") if (defined($retstr));
 	return $retstr;
 }
@@ -4023,7 +4028,9 @@ sub single_result_rating {
 		}
 
 		#--- history substitution
-		$cmds[$no]{$def{llabel}{$state}}=trim(history_substitute($cmds[$no]{name},$cmds[$no]{$def{llabel}{$state}})) if ($opt{set}{history});
+		if ($opt{set}{history}) {
+			$cmds[$no]{$def{llabel}{$state}}=trim(history_substitute($cmds[$no]{name},$cmds[$no]{$def{llabel}{$state}}));
+		}
 
 		#--- no special settings for evaluation? then do not evaluate!
 		if (!$cmds[$no]{$def{llabel}{$state}}) {
