@@ -2717,7 +2717,7 @@ sub exec_command {
 				for (my $cno=$no; $cno <= $no+$#top; $cno++) {
 					if ($opt{set}{history}) {
 						history_push($cmds[$cno]{name}, $cmds[$cno]{endtime}, $cmds[$cno]{output});
-						add_error($cno, "history: ".join(',', map { $cmds[$cno]{history}{$_} } (sort { $b <=> $a } keys %{$cmds[$cno]{history}})[0..5]));
+						#add_error($cno, "history: ".join(',', map { $cmds[$cno]{history}{$_} } (sort { $b <=> $a } keys %{$cmds[$cno]{history}})[0..5]));
 					}
 					set_env_vars($cno);
 					single_result_rating($cno);
@@ -4732,6 +4732,10 @@ sub report_html {
 		}
 		$output.="</div>";
 	}
+
+	#--- remove pipe char (to not influence perfdata)
+	$output=~s/\|\|/ OR /g;
+	$output=~s/\|/ PIPE /g;
 
 	#--- status_in_extinfo? escape newlines by '<br>'
 	if ($opt{set}{extinfo_in_status}) {
