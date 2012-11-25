@@ -5,5 +5,5 @@ attribute [ cumulate_max_rows     ] = 10
 attribute [ cumulate_ignore_zero  ] = 0
 
 cumulate  [ process_cpu           ] = ps -eo 'comm,pcpu'
-attribute [ process_cpu::warning  ] = WEIGHTED_AVERAGE_LAST(10) > 80
-attribute [ process_cpu::critical ] = WEIGHTED_AVERAGE_LAST(10) > 90
+attribute [ process_cpu::warning  ] = WEIGHTED_AVERAGE(10) > 80
+attribute [ process_cpu::critical ] = WEIGHTED_AVERAGE(10) > 90

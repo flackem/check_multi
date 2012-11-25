@@ -334,7 +334,8 @@ my @cmds = (
 					"COUNT(CRITICAL) > 0", 	# CRITICAL
 					"COUNT(UNKNOWN) > 0"	# UNKNOWN
 				],
-		hash		=> "",		# hash for all child checks
+		hash		=> {},		# hash for all child checks
+		history_save	=> {},		# hash to save history data for currently non active checks
 		nallchecks	=> 0,		# number of all child checks (with non-visible checks)
 		name		=> "",		# no predefined name for parent (-n option)
 		nchecks		=> 0,		# number of child checks (visible)
@@ -3261,6 +3262,7 @@ sub history_store {
 	my ($host,$service)=@_;
 	my $count=0;
 	my @output=();
+	#--- store child checks data
 	for (my $i=1; $i<=$#cmds;$i++) {
 		my $line=$cmds[$i]{name};
 		foreach my $timestamp (sort { $a <=> $b } keys %{$cmds[$i]{history}}) {
@@ -3270,6 +3272,30 @@ sub history_store {
 		}
 		$line.="\n";
 		push @output, $line;
+	}
+	#--- store history data of non active checks (e.g. cumulate)
+	foreach my $name (keys %{$cmds[0]{history_save}}) {
+		#--- expire old data
+		while (1) {
+			my $oldest = (sort {$a <=> $b } keys %{$cmds[0]{history_save}{$name}})[0];
+			if ($oldest && $oldest <= time - $opt{set}{history_maxage}) {
+				DEBUG3("too old entries in history: deleting oldest entry $oldest:$cmds[0]{history_save}{$name}{$oldest}");
+				delete $cmds[0]{history_save}{$name}{$oldest};
+			} else {
+				last;
+			}
+		} 
+		#--- if there are still history values to save
+		if (scalar(keys(%{$cmds[0]{history_save}{$name}}))) {
+			my $line=$name;
+			foreach my $timestamp (sort { $a <=> $b } keys %{$cmds[0]{history_save}{$name}}) {
+				$timestamp=int($timestamp);
+				$line.=" $timestamp:$cmds[0]{history_save}{$name}{$timestamp}";
+				$count++;
+			}
+			$line.="\n";
+			push @output, $line;
+		}
 	}
 	writefile("$opt{set}{tmp_dir}/history_${host}_${service}.txt", @output);
 	DEBUG3("$count values stored in $opt{set}{tmp_dir}/history_${host}_${service}.txt");
@@ -3297,24 +3323,30 @@ sub history_load {
 		#--- line format: key timestamp:value timestamp:value ...
 		my ($name, @timevalues)=split(' ',$line);
 
-		#--- ignore if $name is not found as child check
-		#--- TODO: create child check to save data
+		#--- Read history data...
+		my $history_save_ref=undef;
 		my $i=get_child_index(trim($name));
-		if (! $i) {
-			DEBUG3("Cannot find child check $name, cannot load history data for $name");
-			next;
+
+		#--- ...and store it
+		#--- if child check available, at child check
+		if ($i) {
+			$history_save_ref=\%{$cmds[$i]{history}};
+		#--- if child check currently not active, in history hash of HEAD
+		} else {
+			DEBUG4("Cannot find child check $name, saving history data in history_save{$name}");
+			$history_save_ref=\%{$cmds[0]{history_save}{$name}};
 		}
 		my $namecount=0;
 		foreach my $tuple (@timevalues) {
 			my ($timestamp,$value)=split(':',$tuple);
 			$timestamp=int($timestamp);
-			$cmds[$i]{history}{$timestamp}=$value;
+			$history_save_ref->{$timestamp}=$value;
 			$count++;
 			$namecount++;
 		}
-		DEBUG3(sprintf "loaded %d time:value tupel for $name", $namecount);
+		DEBUG4(sprintf "loaded %d time:value tupel for $name", $namecount);
 	}
-	DEBUG3("$count values read from $opt{set}{tmp_dir}/history_${host}_${service}.txt");
+	DEBUG4("$count values read from $opt{set}{tmp_dir}/history_${host}_${service}.txt");
 	return $count;
 }
 
@@ -3341,13 +3373,13 @@ sub history_push {
 		my $index=get_child_index($name);
 		next if (!$index);
 
-		DEBUG3("adding name:$name timestamp:$timestamp value:$value");
+		DEBUG4("adding name:$name timestamp:$timestamp value:$value");
 
 		#--- too old values in ringbuffer? delete the oldest value(s)
 		while (1) {
 			my $oldest = (sort {$a <=> $b } keys %{$cmds[$index]{history}})[0];
 			if ($oldest && $oldest <= time - $opt{set}{history_maxage}) {
-				DEBUG3("too old entries in history: deleting oldest entry $oldest:$cmds[$index]{history}{$oldest}");
+				DEBUG4("too old entries in history: deleting oldest entry $oldest:$cmds[$index]{history}{$oldest}");
 				delete $cmds[$index]{history}{$oldest};
 			} else {
 				last;
@@ -3357,12 +3389,12 @@ sub history_push {
 		#--- too many values in ringbuffer? delete the last value(s)
 		while (scalar(keys(%{$cmds[$index]{history}})) >= $opt{set}{history_maxsize}) {
 			my $oldest = (sort {$a <=> $b } keys %{$cmds[$index]{history}})[0];
-			DEBUG3("too many entries in history: deleting oldest history entry $oldest:$cmds[$index]{history}{$oldest}");
+			DEBUG4("too many entries in history: deleting oldest history entry $oldest:$cmds[$index]{history}{$oldest}");
 			delete $cmds[$index]{history}{$oldest};
 		} 
 
 		#--- at last: add the new value;
-		DEBUG3("adding time:value tupel $name:$timestamp:$value to \$cmds[$index]");
+		DEBUG4("adding time:value tupel $name:$timestamp:$value to \$cmds[$index]");
 		$cmds[$index]{history}{$timestamp}=$value;
 	}
 }
@@ -3421,7 +3453,7 @@ sub debug_interval_array {
 sub history_debug {
 	my ($expression,$sorted, $computed, $timestamps) = @_;
 
-	DEBUG4( "expression:$expression\n".  "sorted timestamps:". Dumper($sorted).  "computed values:". Dumper($computed).  "interval:". Dumper($timestamps));
+	#DEBUG4( "expression:$expression\n".  "sorted timestamps:". Dumper($sorted).  "computed values:". Dumper($computed).  "interval:". Dumper($timestamps));
 
 	if ($#$sorted < 1) {
 		DEBUG3("Not enough values in history array: $#$sorted");
@@ -3433,6 +3465,8 @@ sub history_debug {
 		my %percent = ();
 		$percent{computed} = abs(&sum(@$computed))  / 100;
 		$percent{seconds} = abs(&sumdiff(@$sorted)) / 100;
+		return if (!$percent{seconds} || !$percent{computed});
+
 		DEBUG3("  No.  Timestamp                Value     Time Interval             Product");
 		for (my $i = 1; $i <= $#$sorted; $i++) {
 			my $interval = abs($sorted->[$i-1] - $sorted->[$i]);
@@ -3465,11 +3499,13 @@ sub history_debug {
 			$sum{divisor} += abs($sorted->[$i-1] - $sorted->[$i]) * ($#$sorted - $i + 1);
 		}
 		$percent{divisor} = abs($sum{divisor})/100;
+		return if (!$percent{divisor} || !$percent{computed});
 
 		DEBUG3("  No.  Timestamp                Value    Time Factor   T*F         Weighted Product"); 
 		for (my $i = 1; $i <= $#$sorted; $i++) {
 			my $interval = abs($sorted->[$i-1] - $sorted->[$i]);
 			my $factor = $#$sorted - $i + 1;
+			DEBUG4("interval:$interval factor:$factor percent{divisor}:$percent{divisor} percent{computed}:$percent{computed}");
 			DEBUG3( sprintf "%4d. %20.20s %10.2f * %4ds * %3d (%6.2f%%) -> %10.2f (%6.2f%%)", 
 				$i, 
 				readable_sortable_timestamp($sorted->[$i]),
@@ -3614,11 +3650,6 @@ sub history_substitute {
 	#  5. Do Stats / Reports
 	#  6. Return Value
 
-	my $i = get_child_index($name);
-	if (! $i) {
-		DEBUG2("Child check $name not found");
-		return undef;
-	}
 	my @keywords = (
 		"AVERAGE",
 		"AVERAGE_DELTA",
@@ -3631,7 +3662,15 @@ sub history_substitute {
 	my $allowed = join('|', @keywords);
 	my $retstr = undef;
 	my $old_expression = "";
+	my $i = undef;
 
+	
+	if (!defined($i = get_child_index($name))) {
+		DEBUG3("Child check $name not found");
+		return undef;
+	} else {
+		DEBUG4(sprintf "Child check[$i]:$name expression:$expression history values:%d", scalar(keys(%{$cmds[$i]{history}})));
+	}
 	#--- find expression replacements
 	while ( $expression ne $old_expression && $expression =~ /(.*)\s*\b($allowed)\b\s*\(([^\)]+)\)\s*(.*)/i ) {
 
@@ -3672,8 +3711,7 @@ sub history_substitute {
 				return undef;
 			}
 			@sorted = (sort { $b <=> $a } keys (%{$cmds[$i]{history}}))[0..$num-1];
-			#@sorted=splice(@sorted, 0, $num);
-			DEBUG3(sprintf "$name: %s ( 0..%d ) [ %s ] [ %s ]", 
+			DEBUG4(sprintf "$name: %s ( 0..%d ) [ %s ] [ %s ]", 
 				$expression, 
 				$#sorted, 
 				join(',',@sorted),
@@ -3700,7 +3738,7 @@ sub history_substitute {
 			@sorted = () if ($sorted[$#sorted] > $to || $sorted[0] < $from);
 			for (1..&closest_index($to,@sorted)) { pop(@sorted); }
 			for (1..&closest_index($from,@sorted)) { unshift(@sorted); }
-			DEBUG3(sprintf "$name: %s ( %s - %s ) [ %s ] [ %s ]", 
+			DEBUG4(sprintf "$name: %s ( %s - %s ) [ %s ] [ %s ]", 
 				$expression,
 				readable_sortable_timestamp($from), 
 				readable_sortable_timestamp($to),
@@ -3808,7 +3846,6 @@ sub history_substitute {
 				$previous_timestamp = $timestamp;
 			}
 			history_debug($expression,\@sorted, \@computed, \@timestamps);
-			#DEBUG3(sprintf "sum computed:%f \$#sorted:%f \$#computed:%f", &sum(@computed), $#sorted, $#computed);
 			$retstr = sprintf "$pre %.2f $post", &sum(@computed) / $#sorted;
 
 		#--- compute average delta from last x values and weight it (newest first)
@@ -3842,10 +3879,10 @@ sub history_substitute {
 		} else {
 			add_error($i, "Unknown expression: $expression");
 		}
+		DEBUG3("$old_expression substituted by: $retstr") if (defined($retstr));
 		$expression = $retstr;
-		DEBUG4("1. expression:$expression old_expression:$old_expression pre:>$pre< post:>$post< retstr:$retstr");
+		#DEBUG4("1. expression:$expression old_expression:$old_expression pre:>$pre< post:>$post< retstr:$retstr");
 	}
-	DEBUG3("$expression substituted by: $retstr") if (defined($retstr));
 	return $retstr;
 }
 

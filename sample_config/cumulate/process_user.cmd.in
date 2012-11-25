@@ -5,5 +5,5 @@ attribute [ cumulate_max_rows      ] = 10
 attribute [ cumulate_ignore_zero   ] = 0
 
 cumulate  [ process_user           ] = ps -eo 'user' | grep -v root | sort | uniq -c | awk '{print $2,$1}'
-attribute [ process_user::warning  ] = WEIGHTED_AVERAGE_LAST(10) >  50
-attribute [ process_user::critical ] = WEIGHTED_AVERAGE_LAST(10) > 100
+attribute [ process_user::warning  ] = WEIGHTED_AVERAGE(10) >  50
+attribute [ process_user::critical ] = WEIGHTED_AVERAGE(10) > 100
