@@ -2705,15 +2705,8 @@ sub exec_command {
 				$cmds[0]{nchecks}+=$#top;
 
 				#--- we need to update the history, because the checks weren't available before
-				if ($opt{set}{history}) {
-					#--- take HOSTNAME-SERVICEDESC to store historical cumulation data
-					if (! $opt{set}{HOSTNAME} || ! $opt{set}{SERVICEDESC}) {
-						print "history: we need HOSTNAME and SERVICEDESC for saving historical values.\nPlease specify -s HOSTNAME=<hostname> -s SERVICEDESC=<service description>\n";
-						return $UNKNOWN;
-					} else {
-						history_load($opt{set}{HOSTNAME}, $opt{set}{SERVICEDESC});
-					}
-				}
+				&history_load;
+
 				#--- do all post processing for the new child checks
 				for (my $cno=$no; $cno <= $no+$#top; $cno++) {
 					history_push($cmds[$cno]{name}, $cmds[$cno]{endtime}, $cmds[$cno]{output});
@@ -3304,8 +3297,18 @@ sub history_store {
 #--- host / tag (service) is required for file name
 #---
 sub history_load {
-	my ($host,$service)=@_;
 	my $count=0;
+	my $host=$opt{set}{HOSTNAME};
+	my $service=$opt{set}{SERVICEDESC};
+
+	#--- silently return if no history needed
+	return $count if (! $opt{set}{history});
+
+	#--- take HOSTNAME-SERVICEDESC to store historical cumulation data
+	if (! $host || ! $service ) {
+		print "history: we need HOSTNAME and SERVICEDESC for saving historical values.\nPlease specify -s HOSTNAME=<hostname> -s SERVICEDESC=<service description>\n";
+		exit $UNKNOWN;
+	}
 
 	#--- present a nicer error message if no history file could be found
 	if (! -f "$opt{set}{tmp_dir}/history_${host}_${service}.txt") {
@@ -5504,15 +5507,7 @@ add_error(0,"please don't run plugins as root!") if ($opt{set}{user}=~/root/ && 
 &parse_lines(@{$opt{execute}});
 
 #--- read history
-if ($opt{set}{history}) {
-	#--- take HOSTNAME-SERVICEDESC to store historical cumulation data
-	if (! $opt{set}{HOSTNAME} || ! $opt{set}{SERVICEDESC}) {
-		print "history: we need HOSTNAME and SERVICEDESC for saving historical values.\nPlease specify -s HOSTNAME=<hostname> -s SERVICEDESC=<service description>\n";
-		exit $UNKNOWN;
-	} else {
-		history_load($opt{set}{HOSTNAME}, $opt{set}{SERVICEDESC});
-	}
-}
+&history_load;
 
 #--- provide settings as env variables
 &export_env_settings;
