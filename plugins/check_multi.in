@@ -2716,10 +2716,7 @@ sub exec_command {
 				}
 				#--- do all post processing for the new child checks
 				for (my $cno=$no; $cno <= $no+$#top; $cno++) {
-					if ($opt{set}{history}) {
-						history_push($cmds[$cno]{name}, $cmds[$cno]{endtime}, $cmds[$cno]{output});
-						#add_error($cno, "history: ".join(',', map { $cmds[$cno]{history}{$_} } (sort { $b <=> $a } keys %{$cmds[$cno]{history}})[0..5]));
-					}
+					history_push($cmds[$cno]{name}, $cmds[$cno]{endtime}, $cmds[$cno]{output});
 					set_env_vars($cno);
 					single_result_rating($cno);
 					set_env_vars($cno);
@@ -2731,7 +2728,7 @@ sub exec_command {
 			set_env_vars($no);
 	
 			# add value to history
-			history_push($cmds[$no]{name},$cmds[$no]{endtime},$cmds[$no]{output}) if ($opt{set}{history});
+			history_push($cmds[$no]{name},$cmds[$no]{endtime},$cmds[$no]{output});
 
 			#--- evaluate single command RC rating
 			single_result_rating($no);
@@ -3355,6 +3352,10 @@ sub history_load {
 #--- tupel is: timestamp:value
 #---
 sub history_push {
+	my $count = 0;
+
+	#--- no history needed? then leave
+	return $count if (!$opt{set}{history});
 
 	#--- loop over parameters
 	while (@_) {
@@ -3396,7 +3397,9 @@ sub history_push {
 		#--- at last: add the new value;
 		DEBUG4("adding time:value tupel $name:$timestamp:$value to \$cmds[$index]");
 		$cmds[$index]{history}{$timestamp}=$value;
+		$count++;
 	}
+	return $count;
 }
 
 sub array_min_max {
