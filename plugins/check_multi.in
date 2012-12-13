@@ -3085,7 +3085,7 @@ sub expand_livestatus_service {
 	if (!$livestatus_service) {
 		DEBUG4("1st read, creating service tree");
 
-		$livestatus_service=read_livestatus($livestatus_path,"GET services\nColumns: host_name description current_state last_hard_state plugin_output long_plugin_output perf_data check_command\n");
+		$livestatus_service=read_livestatus($livestatus_path,"GET services\nColumns: host_name description state last_hard_state plugin_output long_plugin_output perf_data check_command\n");
 		if (!$livestatus_service) {
 			add_error(0,"expand_livestatus_service: could not read $livestatus_path");
 			return (undef,undef);
