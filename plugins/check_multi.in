@@ -2156,7 +2156,7 @@ sub parse_header {
 				}
 				$cmds[$i]{name}=($opt{set}{add_tag_to_list_entries})?"${name}_":"";
 				$cmds[$i]{name}.="$cmds[$i]{host}";
-				$cmds[$i]{name}=~s/[^A-Z-1-9_-]+/_/gi;
+				$cmds[$i]{name}=~s/[^A-Z0-9_-]+/_/gi;
 				if ($opt{set}{suppress_perfdata} &&
 					$opt{set}{suppress_perfdata}=~/\b$name\b/i) {
 					$cmds[$i]{process_perfdata}=0;
