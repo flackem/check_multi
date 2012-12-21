@@ -301,7 +301,7 @@ my %opt=(
 		# characters which are allowed in macros
 		valid_macro_chars => 'A-Za-z0-9\.\@\-\_\:',
 		# characters which are allowed in tags
-		valid_tag_chars => 'A-Za-z0-9\-\.\@\_\:\$',
+		valid_tag_chars => 'A-Za-z0-9\-\.\@\_\:\$\/',
 		# verbosity, from 1 (less verbose) to 3 (much verbose)
 		verbose		=> @verbose@,
 		# elements to be added to XML structure
@@ -2070,8 +2070,7 @@ sub parse_header {
 			$service=substitute_macros($service);
 
 			DEBUG4("expanding livestatus host:service \'$host:$service\'");
-			my @result=expand_livestatus_service($opt{set}{livestatus}, $host, $service);
-
+			my @result=expand_livestatus_service( $key ? $key : $opt{set}{livestatus}, $host, $service);
 			if (!defined($result[0])) {
 				add_error(0,"Could not expand host:service \'$host:$service\' from livestatus $opt{set}{livestatus}");
 				return -1;
@@ -2122,8 +2121,7 @@ sub parse_header {
 		} elsif (($host)=($cmd=~/\s*([^:]*)\s*/)) {
 			$host=substitute_macros($host);
 			DEBUG4("expanding livestatus host \'$host\'");
-			my @result=expand_livestatus_host($opt{set}{livestatus}, $host);
-
+			my @result=expand_livestatus_host( $key ? $key : $opt{set}{livestatus}, $host);
 			if (!defined($result[0])) {
 				add_error(0,"Could not expand host \'$host\' from livestatus $opt{set}{livestatus}");
 				return -1;
@@ -2158,7 +2156,7 @@ sub parse_header {
 				}
 				$cmds[$i]{name}=($opt{set}{add_tag_to_list_entries})?"${name}_":"";
 				$cmds[$i]{name}.="$cmds[$i]{host}";
-				$cmds[$i]{name}=~s/[^A-Z0-9_-]+/_/gi;
+				$cmds[$i]{name}=~s/[^A-Z-1-9_-]+/_/gi;
 				if ($opt{set}{suppress_perfdata} &&
 					$opt{set}{suppress_perfdata}=~/\b$name\b/i) {
 					$cmds[$i]{process_perfdata}=0;
