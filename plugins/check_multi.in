@@ -3188,8 +3188,11 @@ sub expand_livestatus_host {
 sub read_livestatus {
 	my ($livestatus_path, $query)=@_;
 
+	*debug = \&debug_message if ($opt{set}{verbose} >= 3);
 	my $ml=Monitoring::Livestatus->new(
-        	peer=>$livestatus_path,
+        	peer	=>$livestatus_path,
+		logger	=> "main",
+		verbose	=> ($opt{set}{verbose} >= 3) ? 1 : 0,
 	);
 	if($Monitoring::Livestatus::ErrorCode) {
 		add_error(0,"read_livestatus: $Monitoring::Livestatus::ErrorMessage");
