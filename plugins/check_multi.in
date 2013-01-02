@@ -2050,8 +2050,8 @@ sub parse_header {
 		$cmd=~s/\\n/\n/g;
 		$cmds[$i]{$key}{$subkey}=$cmd;
 
-	#--- format: 'livestatus [ tag[::plugin] ] = host'
-	#--- format: 'livestatus [ tag[::plugin] ] = host:service'
+	#--- format: 'livestatus [ tag ] = host'
+	#--- format: 'livestatus [ tag ] = host:service'
 	} elsif ($type eq "livestatus") {
 
 		if (!$opt{set}{use_monitoring_livestatus}) {
@@ -2064,112 +2064,34 @@ sub parse_header {
 				return -1;
 			}
 		}
-		#--- livestatus: split host and service from command, format: host:service
-		if ((my $host,$service)=($cmd=~/\s*([^:]*)\s*\:\s*(.*)\s*/)) {
-			$host=substitute_macros($host);
-			$service=substitute_macros($service);
 
-			DEBUG4("expanding livestatus host:service \'$host:$service\'");
-			my @result=expand_livestatus_service( $key ? $key : $opt{set}{livestatus}, $host, $service);
-			if (!defined($result[0])) {
-				add_error(0,"Could not expand host:service \'$host:$service\' from livestatus $opt{set}{livestatus}");
-				return -1;
-			}
-			while(@result) {
-				#--- increase counters if no overload
-				if (!defined($cmds[$i]{number})) {
-					$cmds[0]{nallchecks}++;
-					$cmds[0]{nchecks}++;
-					$cmds[$i]{number}=$cmds[0]{nchecks};
-				}
+		#--- increase counters if no overload
+		if (!defined($cmds[$i]{number})) {
+			$cmds[0]{nallchecks}++;
+			$cmds[0]{nchecks}++;
+			$cmds[$i]{number}=$cmds[0]{nchecks};
+		}
 
-				$cmds[$i]{type}=$type;
-				$cmds[$i]{command}=$cmd;
-				$cmds[$i]{ok}="";
-				$cmds[$i]{warning}="";
-				$cmds[$i]{critical}="";
-				$cmds[$i]{unknown}="";
-				$cmds[$i]{visible}=1;
-				$cmds[$i]{runtime}=0;
-				$cmds[$i]{error}=[];
-				$cmds[$i]{host}=shift(@result);
-				$cmds[$i]{service}=shift(@result);
-				#--- first rc is current_state, second is hard state
-				$cmds[$i]{rc}=shift(@result);
-				$cmds[$i]{rc}=shift(@result) if ($opt{set}{use_hard_state});
-				$cmds[$i]{output}=shift(@result);
-				$cmds[$i]{performance}=shift(@result);
-				$cmds[$i]{plugin}="lifestatus";
-				$cmds[$i]{pplugin}=shift(@result);
-				if ($cmds[$i]{host} eq "-1") {
-					$cmds[$i]{host}="UNKNOWN";
-					$cmds[$i]{service}="UNKNOWN";
-				}
-				$cmds[$i]{name}=($opt{set}{add_tag_to_list_entries})?"${name}_":"";
-				$cmds[$i]{name}.="$cmds[$i]{host}_$cmds[$i]{service}";
-				$cmds[$i]{name}=~s/[^A-Z0-9_-]+/_/gi;
-				if ($opt{set}{suppress_perfdata} &&
-					$opt{set}{suppress_perfdata}=~/\b$name\b/i) {
-					$cmds[$i]{process_perfdata}=0;
-					DEBUG2("perfdata of [ $name ] will be suppressed");
-				} else {
-					$cmds[$i]{process_perfdata}=1;
-				}
-				DEBUG4("added host:$cmds[$i]{host} / service:$cmds[$i]{service} / output:$cmds[$i]{output}");
-				$i++;
-			}
-		} elsif (($host)=($cmd=~/\s*([^:]*)\s*/)) {
-			$host=substitute_macros($host);
-			DEBUG4("expanding livestatus host \'$host\'");
-			my @result=expand_livestatus_host( $key ? $key : $opt{set}{livestatus}, $host);
-			if (!defined($result[0])) {
-				add_error(0,"Could not expand host \'$host\' from livestatus $opt{set}{livestatus}");
-				return -1;
-			}
-			while(@result) {
-				#--- increase counters if no overload
-				if (!defined($cmds[$i]{number})) {
-					$cmds[0]{nallchecks}++;
-					$cmds[0]{nchecks}++;
-					$cmds[$i]{number}=$cmds[0]{nchecks};
-				}
-
-				$cmds[$i]{type}=$type;
-				$cmds[$i]{command}=$cmd;
-				$cmds[$i]{ok}="";
-				$cmds[$i]{warning}="";
-				$cmds[$i]{critical}="";
-				$cmds[$i]{unknown}="";
-				$cmds[$i]{visible}=1;
-				$cmds[$i]{runtime}=0;
-				$cmds[$i]{error}=[];
-				$cmds[$i]{host}=shift(@result);
-				#--- first rc is current_state, second is hard state
-				$cmds[$i]{rc}=shift(@result);
-				$cmds[$i]{rc}=shift(@result) if ($opt{set}{use_hard_state});
-				$cmds[$i]{output}=shift(@result);
-				$cmds[$i]{performance}=shift(@result);
-				$cmds[$i]{plugin}="lifestatus";
-				$cmds[$i]{pplugin}=shift(@result);
-				if ($cmds[$i]{host} eq "-1") {
-					$cmds[$i]{host}="UNKNOWN";
-				}
-				$cmds[$i]{name}=($opt{set}{add_tag_to_list_entries})?"${name}_":"";
-				$cmds[$i]{name}.="$cmds[$i]{host}";
-				$cmds[$i]{name}=~s/[^A-Z0-9_-]+/_/gi;
-				if ($opt{set}{suppress_perfdata} &&
-					$opt{set}{suppress_perfdata}=~/\b$name\b/i) {
-					$cmds[$i]{process_perfdata}=0;
-					DEBUG2("perfdata of [ $name ] will be suppressed");
-				} else {
-					$cmds[$i]{process_perfdata}=1;
-				}
-				DEBUG4("added host:$cmds[$i]{host} / output:$cmds[$i]{output}");
-				$i++;
-			}
+		$cmds[$i]{type}=$type;
+		$cmds[$i]{name}=$name;
+		$cmds[$i]{command}=$cmd;
+		$cmds[$i]{plugin}=$type;
+		$cmds[$i]{pplugin}="";
+		$cmds[$i]{ok}="";
+		$cmds[$i]{warning}="";
+		$cmds[$i]{critical}="";
+		$cmds[$i]{unknown}="";
+		$cmds[$i]{rc}=$OK;
+		$cmds[$i]{visible}=1;
+		$cmds[$i]{output}="";
+		$cmds[$i]{error}=[];
+		$cmds[$i]{runtime}=0;
+		if ($opt{set}{suppress_perfdata} &&
+			$opt{set}{suppress_perfdata}=~/\b$name\b/i) {
+			$cmds[$i]{process_perfdata}=0;
+			DEBUG2("perfdata of [ $name ] will be suppressed");
 		} else {
-			add_error(0,"parse_header: invalid host or service in livestatus line \'$lineno\', format should be \'livestatus [ name ] = host[:service]\'");
-			return -1;
+			$cmds[$i]{process_perfdata}=1;
 		}
 
 	#--- format: 'snmp   [ tag ] = OID'
@@ -2712,6 +2634,117 @@ sub exec_command {
 					single_result_rating($cno);
 					set_env_vars($cno);
 				}
+			}
+
+		} elsif ($cmds[$no]{type} eq "livestatus") {
+
+			#--- livestatus: split host and service from command, format: host:service
+			if ((my $host, my $service)=($cmds[$no]{command}=~/\s*([^:]*)\s*\:\s*(.*)\s*/)) {
+				$host=substitute_macros($host);
+				$service=substitute_macros($service);
+	
+				#--- set socket default if no 
+				$cmds[$no]{livestatus} = $opt{set}{livestatus} if (!$cmds[$no]{livestatus});
+				DEBUG4("expanding livestatus host:service \'$host:$service\' from $cmds[$no]{livestatus}");
+				my @result=expand_livestatus_service( $cmds[$no]{livestatus} ? $cmds[$no]{livestatus} : $opt{set}{livestatus}, $host, $service);
+				if (!defined($result[0])) {
+					add_error(0,"Could not expand host:service \'$host:$service\' from livestatus socket $cmds[$no]{livestatus}");
+					return -1;
+				}
+				my @new=();
+				my $i = 0;
+				while(@result) {
+					$new[$i]{command}=$cmds[$no]{command};
+					$new[$i]{ok}="";
+					$new[$i]{warning}="";
+					$new[$i]{critical}="";
+					$new[$i]{unknown}="";
+					$new[$i]{visible}=1;
+					$new[$i]{runtime}=0;
+					$new[$i]{error}=[];
+					$new[$i]{number}=$no+$i;
+					$new[$i]{host}=shift(@result);
+					$new[$i]{service}=shift(@result);
+					#--- first rc is current_state, second is hard state
+					$new[$i]{rc}=shift(@result);
+					$new[$i]{rc}=shift(@result) if ($opt{set}{use_hard_state});
+					$new[$i]{output}=shift(@result);
+					$new[$i]{performance}=shift(@result);
+					$new[$i]{plugin}="lifestatus";
+					$new[$i]{pplugin}=shift(@result);
+					if ($new[$i]{host} eq "-1") {
+						$new[$i]{host}="UNKNOWN";
+						$new[$i]{service}="UNKNOWN";
+					}
+					$new[$i]{name}=($opt{set}{add_tag_to_list_entries})?"$cmds[$no]{name}_":"";
+					$new[$i]{name}.="$new[$i]{host}_$new[$i]{service}";
+					$new[$i]{name}=~s/[^A-Z0-9_-]+/_/gi;
+					if ($opt{set}{suppress_perfdata} &&
+						$opt{set}{suppress_perfdata}=~/\b$cmds[$no]{name}\b/i) {
+						$new[$i]{process_perfdata}=0;
+						DEBUG2("perfdata of [ $cmds[$no]{name} ] will be suppressed");
+					} else {
+						$new[$i]{process_perfdata}=1;
+					}
+					DEBUG4("livestatus - added host:$new[$i]{host} / service:$new[$i]{service}");
+					$i++;
+				}
+				#--- replace original livestatus entry with new array
+				splice(@cmds,$no,1,@new);
+				$cmds[0]{nallchecks}+=$#new;
+				$cmds[0]{nchecks}+=$#new;
+			} elsif (($host)=($cmds[$no]{command}=~/\s*([^:]*)\s*/)) {
+				$host=substitute_macros($host);
+				$cmds[$no]{livestatus} = $opt{set}{livestatus} if (!$cmds[$no]{livestatus});
+				DEBUG4("expanding livestatus host \'$host\' from $cmds[$no]{livestatus}");
+				my @result=expand_livestatus_host($cmds[$no]{livestatus}, $host);
+				if (!defined($result[0])) {
+					add_error(0,"Could not expand host \'$host\' from livestatus socket $cmds[$no]{livestatus}");
+					return -1;
+				}
+				my @new=();
+				my $i = 0;
+				while(@result) {
+					$new[$i]{command}=$cmds[$no]{command};
+					$new[$i]{ok}="";
+					$new[$i]{warning}="";
+					$new[$i]{critical}="";
+					$new[$i]{unknown}="";
+					$new[$i]{visible}=1;
+					$new[$i]{runtime}=0;
+					$new[$i]{error}=[];
+					$new[$i]{number}=$no+$i;
+					$new[$i]{host}=shift(@result);
+					#--- first rc is current_state, second is hard state
+					$new[$i]{rc}=shift(@result);
+					$new[$i]{rc}=shift(@result) if ($opt{set}{use_hard_state});
+					$new[$i]{output}=shift(@result);
+					$new[$i]{performance}=shift(@result);
+					$new[$i]{plugin}="lifestatus";
+					$new[$i]{pplugin}=shift(@result);
+					if ($new[$i]{host} eq "-1") {
+						$new[$i]{host}="UNKNOWN";
+					}
+					$new[$i]{name}=($opt{set}{add_tag_to_list_entries})?"$cmds[$no]{name}_":"";
+					$new[$i]{name}.="$new[$i]{host}";
+					$new[$i]{name}=~s/[^A-Z0-9_-]+/_/gi;
+					if ($opt{set}{suppress_perfdata} &&
+						$opt{set}{suppress_perfdata}=~/\b$cmds[$no]{name}\b/i) {
+						$new[$i]{process_perfdata}=0;
+						DEBUG2("perfdata of [ $cmds[$no]{name} ] will be suppressed");
+					} else {
+						$new[$i]{process_perfdata}=1;
+					}
+					DEBUG4("livestatus - added host:$host / output:$cmds[$no]{output}");
+					$i++;
+				}
+				#--- replace original livestatus entry with new array
+				splice(@cmds,$no,1,@new);
+				$cmds[0]{nallchecks}+=$#new;
+				$cmds[0]{nchecks}+=$#new;
+			} else {
+				add_error(0,"exec_command: invalid host or service in $cmds[$no]{command}, format should be \'livestatus [ name ] = host[:service]\'");
+				return -1;
 			}
 		} else {
 
