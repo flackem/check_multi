@@ -2086,6 +2086,7 @@ sub parse_header {
 		$cmds[$i]{output}="";
 		$cmds[$i]{error}=[];
 		$cmds[$i]{runtime}=0;
+		$cmds[$i]{livestatus} = $key if ($key);
 		if ($opt{set}{suppress_perfdata} &&
 			$opt{set}{suppress_perfdata}=~/\b$name\b/i) {
 			$cmds[$i]{process_perfdata}=0;
