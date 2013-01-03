@@ -1241,28 +1241,29 @@ sub trim {
 #--- substitute macros a la $HOSTNAME$ from environment
 #---
 sub substitute_macros {
-	my ($input)=@_;
+	my $input = shift;
+	my $timephase = shift || "RUNTIME";
 
 	if (! $input) {
-		DEBUG3("empty input - nothing to do");
+		DEBUG4("empty input - nothing to do");
 		return $input;
 	}
 
 	#--- first pass: replace 'normal' vars (without ':')
 	#--- to prepare objects.cache substitution after that
-	DEBUG3("checking expression \'$input\'");
+	DEBUG4("checking expression \'$input\'");
 	foreach my $match_var (($input=~/\$([$opt{set}{valid_macro_chars}]+)(?=\$)/gi)) {
  		if ($ENV{"MULTI_${match_var}"}) {
-			DEBUG3("1st run: var - replacing var \'$match_var\' with \'$ENV{\"MULTI_${match_var}\"}\'");
+			DEBUG4("1st run: var - replacing var \'$match_var\' with \'$ENV{\"MULTI_${match_var}\"}\'");
 			$input=~s/\$${match_var}\$/$ENV{"MULTI_${match_var}"}/gi;
 		} elsif ($ENV{"${NAGIOS}_${match_var}"}) {
-			DEBUG3("1st run: var - replacing var \'$match_var\' with \'$ENV{\"${NAGIOS}_${match_var}\"}\'");
+			DEBUG4("1st run: var - replacing var \'$match_var\' with \'$ENV{\"${NAGIOS}_${match_var}\"}\'");
 			$input=~s/\$${match_var}\$/$ENV{"${NAGIOS}_${match_var}"}/gi;
 		} else {
-			DEBUG3("1st run: var - var \'$match_var\' matching neither MULTI_var nor ${NAGIOS}_var!");
+			DEBUG4("1st run: var - var \'$match_var\' matching neither MULTI_var nor ${NAGIOS}_var!") if ($timephase != "compile");
 		}
 	}
-	DEBUG3("expression \'$input\' after 1st run (nagios var substitution)");
+	DEBUG4("expression \'$input\' after 1st run (nagios var substitution)");
 
 	#--- NOT case insensitive macro checking (Nagios does not either :-/)
 	#--- Note: due to blanks and other separating characters its possible, that 
@@ -1272,28 +1273,30 @@ sub substitute_macros {
 	while ($input=~/\$([$opt{set}{valid_macro_chars}]+)(?=\$)/g) {
 		my $var=$1;
 
-		DEBUG3("checking var \'$var\'");
+		DEBUG4("checking var \'$var\'");
 		#--- 1. check for MULTI var
 		if (defined($ENV{"MULTI_${var}"})) {
-			DEBUG3("2nd run - replacing env var \'MULTI_${var}\' with \'$ENV{\"MULTI_${var}\"}\'");
+			DEBUG4("2nd run - replacing env var \'MULTI_${var}\' with \'$ENV{\"MULTI_${var}\"}\'");
 			$input=~s/\$$var\$/$ENV{"MULTI_${var}"}/g;
 		#--- 2. check for @nagios_name@ var
 		} elsif (defined($ENV{"${NAGIOS}_${var}"})) {
-			DEBUG3("2nd run - replacing env var \'${NAGIOS}_${var} with \'$ENV{\"${NAGIOS}_${var}\"}\'");
+			DEBUG4("2nd run - replacing env var \'${NAGIOS}_${var} with \'$ENV{\"${NAGIOS}_${var}\"}\'");
 			$input=~s/\$$var\$/$ENV{"${NAGIOS}_${var}"}/g;
 		#--- 3. check for own variable $opt{set}{VAR}
 		} elsif (defined($opt{set}{"${var}"})) {
-			DEBUG3("2nd run - replacing var \'${var}\' with \'$opt{set}{${var}}\'");
+			DEBUG4("2nd run - replacing var \'${var}\' with \'$opt{set}{${var}}\'");
 			$input=~s/\$$var\$/$opt{set}{"${var}"}/g;
 		#--- 4. objects.cache substitution
 		} elsif ($var=~/^[a-z_]+:[a-z_]+:[a-z_]+:/) {
-			DEBUG3("2nd run - checking objects_cache var \'$var\'");
+			DEBUG4("2nd run - checking objects_cache var \'$var\'");
 			my $query=objects_cache_query($var);
 			my $substitution=parse_objects_cache($opt{set}{objects_cache},$query);
-			DEBUG3("2nd run - replacing objects_cache var \'$var\' with \'$substitution\'");
+			DEBUG4("2nd run - replacing objects_cache var \'$var\' with \'$substitution\'");
 			$input=~s/\$$var\$/$substitution/g;
-		} else {
-			DEBUG3("2nd run - \'$var\' was not handled - remove var");
+		} elsif ($timephase =~ /COMPILE/i) {
+			DEBUG4("2nd run - \'$var\' was not handled - leaving for runtime");
+		} elsif ($timephase =~ /RUNTIME/i) {
+			DEBUG3("2nd run - \'$var\' was not handled during runtime - remove var");
 			add_error($no, "Macro \$$var\$ not found") if ($opt{set}{complain_unknown_macros});
 			$input=~s/\$$var\$//g;
 		}
@@ -1778,13 +1781,14 @@ sub parse_lines {
 			$name=trim($name);
 
 			#--- macros?
-			$name=substitute_macros($name);
+			$name=substitute_macros($name, "COMPILETIME");
 
 			#--- still macro '$' in name? then macro was not substituted
-			if ($name=~/\$([^\$]+)\$/) {
-				add_error(0,"parse_lines: tag \'$name\' is invalid - macro \$$1\$ not found");
-				next LINE;
-			} elsif ($name eq "") {
+			#if ($name=~/\$([^\$]+)\$/) {
+				#add_error(0,"parse_lines: tag \'$name\' is invalid - macro \$$1\$ not found");
+				#next LINE;
+			##} elsif ($name eq "") {
+			if ($name eq "") {
 				add_error(0,"parse_lines: empty tag \'\' is invalid");
 				next LINE;
 			} elsif ($name=~/^[0-9]+$/) {
@@ -2109,12 +2113,12 @@ sub parse_header {
 		$cmds[$i]{translate}=0xff;
 		if ($cmd=~/\s*([^:]*)\s*\:\s*(.*)\s*\:\s*(.*)\s*/) {
 			$cmds[$i]{host}=$1;
-			$cmds[$i]{host}=substitute_macros($cmds[$i]{host});
+			$cmds[$i]{host}=substitute_macros($cmds[$i]{host}, "COMPILETIME");
 			$cmds[$i]{command}=$2;
 			$cmds[$i]{translate}=$3;
 		} elsif ($cmd=~/\s*([^:]*)\s*\:\s*(.*)\s*/) {
 			$cmds[$i]{host}=$1;
-			$cmds[$i]{host}=substitute_macros($cmds[$i]{host});
+			$cmds[$i]{host}=substitute_macros($cmds[$i]{host}, "COMPILETIME");
 			$cmds[$i]{command}=$2;
 		} else {
 			$cmds[$i]{host}=$opt{set}{HOSTNAME};
@@ -2143,7 +2147,7 @@ sub parse_header {
 	#--- format: 'statusdat [ tag[::plugin] ] = host, service'
 	} elsif ($type eq "statusdat") {
 
-		$cmd=substitute_macros($cmd);
+		$cmd=substitute_macros($cmd, "COMPILETIME");
 
 		#--- statusdat service: split host and service from command, format: host:service
 		if ($cmd=~/\s*([^:]*)\s*\:\s*(.*)\s*/) {
@@ -2644,8 +2648,9 @@ sub exec_command {
 				$host=substitute_macros($host);
 				$service=substitute_macros($service);
 	
-				#--- set socket default if no 
+				#--- set socket default if no socket defined
 				$cmds[$no]{livestatus} = $opt{set}{livestatus} if (!$cmds[$no]{livestatus});
+				$cmds[$no]{livestatus} = substitute_macros($cmds[$no]{livestatus});
 				DEBUG4("expanding livestatus host:service \'$host:$service\' from $cmds[$no]{livestatus}");
 				my @result=expand_livestatus_service( $cmds[$no]{livestatus} ? $cmds[$no]{livestatus} : $opt{set}{livestatus}, $host, $service);
 				if (!defined($result[0])) {
