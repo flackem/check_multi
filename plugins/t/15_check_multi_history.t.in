@@ -26,7 +26,7 @@ foreach my $plugin (@plugins) {
 		plan skip_all => "tests because component $plugin not found or not executable as \'$path_to_plugin\'";
 	}
 }
-plan tests => 28;
+plan tests => 20;
 
 my $result;
 #my $testopts="-s dont_be_paranoid=1";
@@ -34,104 +34,18 @@ my $testopts=testopts::get_testopts("history","HOSTNAME","SERVICEDESC","report",
 
 #--- special history options
 $testopts.=" -s history=1 -s HOSTNAME=localhost -s SERVICEDESC=number";
-#--- initialize / remove history file
-unlink "tmp/history_localhost_number.txt" if (-f "tmp/history_localhost_number.txt");
 
-#--- be sure we're at the beginning of a second
-#--- otherwise the history second number may shift by one
-#--- sleep to next second for beginners
+#--- wait until next seconds begins
 my $now=time;
 while (time == $now) {
-	; # do nothing but waiting
+        ; # do nothing but waiting
 }
-
-#-------------------------------------------------------------------------------
-#--- history initialization - check 1 ------------------------------------------
-#-------------------------------------------------------------------------------
-$result = NPTest->testCmd(
-	"@PERL@ ../check_multi --report 1+4 --verbose $testopts -s verbose_fields=history -x 'command [ number ] = echo 1'",
-);
-is(
-	$result->return_code, 
-	0, 
-	"check_multi initializes history - RC0 - passed"
-);
-like(
-	$result->output,
-	'/OK - 1 plugins checked, 1 ok \[History initialization\]\n\[ 1\] OK   number 1\n\s+history: \d+:1/s', 
-	"output correct - passed"
-);
-#--- sleep 1 is important here, otherwise the latter result will overwrite the check before
 $now=time;
-while (time == $now) {
-	; # do nothing but waiting
-}
 
-#-------------------------------------------------------------------------------
-#--- history check 2 -----------------------------------------------------------
-#-------------------------------------------------------------------------------
-$result = NPTest->testCmd(
-	"@PERL@ ../check_multi --report 1+4 --verbose $testopts -s verbose_fields=history -x 'command [ number ] = echo 2'",
-);
-is(
-	$result->return_code, 
-	0, 
-	"check_multi 2nd value - RC0 - passed"
-);
-like(
-	$result->output,
-	'/OK - 1 plugins checked, 1 ok\n\[ 1\] OK   number 2\n\s+history: \d+:1 \d+:2/s', 
-	"output correct - passed"
-);
-#--- sleep 1 is important here, otherwise the latter result will overwrite the check before
-$now=time;
-while (time == $now) {
-	; # do nothing but waiting
-}
-
-#-------------------------------------------------------------------------------
-#--- history check 3 -----------------------------------------------------------
-#-------------------------------------------------------------------------------
-$result = NPTest->testCmd(
-	"@PERL@ ../check_multi --report 1+4 --verbose $testopts -s verbose_fields=history -x 'command [ number ] = echo 3'",
-);
-is(
-	$result->return_code, 
-	0, 
-	"check_multi 3rd value - RC0 - passed"
-);
-like(
-	$result->output,
-	'/OK - 1 plugins checked, 1 ok\n\[ 1\] OK   number 3\n\s+history: \d+:1 \d+:2 \d+:3/s', 
-	"output correct - passed"
-);
-#--- sleep 1 is important here, otherwise the latter result will overwrite the check before
-$now=time;
-while (time == $now) {
-	; # do nothing but waiting
-}
-
-#-------------------------------------------------------------------------------
-#--- history check 4 -----------------------------------------------------------
-#-------------------------------------------------------------------------------
-$result = NPTest->testCmd(
-	"@PERL@ ../check_multi --report 1+4 --verbose $testopts -s verbose_fields=history -x 'command [ number ] = echo 4'",
-);
-is(
-	$result->return_code, 
-	0, 
-	"check_multi 4th value - RC0 - passed"
-);
-like(
-	$result->output,
-	'/OK - 1 plugins checked, 1 ok\n\[ 1\] OK   number 4\n\s+history: \d+:1 \d+:2 \d+:3 \d+:4/s', 
-	"output correct - passed"
-);
-#--- sleep 1 is important here, otherwise the latter result will overwrite the check before
-$now=time;
-while (time == $now) {
-	; # do nothing but waiting
-}
+#--- initialize history file
+open(HIST,">tmp/history_localhost_number.txt") || die "Cannot open tmp/history_localhost_number.txt:$!";
+printf HIST "number %d:1 %d:2 %d:3 %d:4 %d:5\n", $now-4, $now-3, $now-2, $now-1, $now;
+close HIST || die "Error writing tmp/history_localhost_number.txt:$!";
 
 #-------------------------------------------------------------------------------
 #--- AVERAGE(4) CRITICAL -------------------------------------------------------
@@ -147,9 +61,13 @@ is(
 );
 like(
 	$result->output,
-	'/CRITICAL - 1 plugins checked, 1 critical \(number\)\n\[ 1\] CRIT number 5 \[CRITICAL: output matched rule \'\d+\.\d+ >= 2\'\]\n\s+history: \d+:1 \d+:2 \d+:3 \d+:4 \d+:5/',
+	'/CRITICAL - 1 plugins checked, 1 critical \(number\)\n\[ 1\] CRIT number 5 \[CRITICAL: output matched rule \'\d+\.\d+ >= 2\'\]\n\s+history: \d+:2 \d+:3 \d+:4 \d+:5/',
 	"output correct - passed"
 );
+
+#open(HIST,"tmp/history_localhost_number.txt") || die "Cannot open tmp/history_localhost_number.txt:$!";
+#while (<HIST>) { print STDERR "$_"; }
+#close HIST || die "Error reading tmp/history_localhost_number.txt:$!";
 
 #-------------------------------------------------------------------------------
 #--- WEIGHTED_AVERAGE(5) CRITICAL ----------------------------------------------
