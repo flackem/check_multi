@@ -2702,6 +2702,7 @@ sub exec_command {
 			} elsif (($host)=($cmds[$no]{command}=~/\s*([^:]*)\s*/)) {
 				$host=substitute_macros($host);
 				$cmds[$no]{livestatus} = $opt{set}{livestatus} if (!$cmds[$no]{livestatus});
+				$cmds[$no]{livestatus} = substitute_macros($cmds[$no]{livestatus});
 				DEBUG4("expanding livestatus host \'$host\' from $cmds[$no]{livestatus}");
 				my @result=expand_livestatus_host($cmds[$no]{livestatus}, $host);
 				if (!defined($result[0])) {
@@ -3174,18 +3175,12 @@ sub expand_livestatus_host {
 		add_error(0,"expand_livestatus_host: empty host_name=$host_name specified");
 		return (undef,undef);
 	}
+	$livestatus_host=read_livestatus($livestatus_path,"GET hosts\nColumns: host_name last_hard_state plugin_output long_plugin_output perf_data check_command\n");
 	if (!$livestatus_host) {
-		DEBUG4("1st read, creating host tree");
-
-		$livestatus_host=read_livestatus($livestatus_path,"GET hosts\nColumns: host_name last_hard_state plugin_output long_plugin_output perf_data check_command\n");
-		if (!$livestatus_host) {
-			add_error(0,"expand_livestatus_host: could not read $livestatus_path");
-			return (undef,undef);
-		}
-		DEBUG4("$#{$livestatus_host} results");
-	} else {
-		DEBUG4("subsequent read, reading from host tree");
+		add_error(0,"expand_livestatus_host: could not read $livestatus_path");
+		return (undef,undef);
 	}
+	DEBUG4("$#{$livestatus_host} results");
 
 	#--- expand simple tokens to REGEX, if necessary
 	$host_name=($host_name=~/\/(.*)\//)?$1:'^'.$host_name.'$';
