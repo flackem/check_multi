@@ -187,6 +187,8 @@ my %opt=(
 		history_maxage	=> @history_maxage@,
 		# minimum number of history values, otherwise return UNKNOWN result
 		history_minvalues => @history_minvalues@,
+		# what to do in case of non numerical values?
+		history_non_numerical_value => "@history_non_numerical_value@",
 		# if ASCII output should be embedded into HTML output as a comment
 		html_ascii_notification => @html_ascii_notification@,
 		# if set, return UNKNOWN if command file is not found
@@ -910,6 +912,11 @@ Set options:
    feed_passive_autocreate=<0|1> - determines if passive feeded service descriptions should be created automatically, default:$opt{set}{feed_passive_autocreate}
    feed_passive_dir=<path> - path to passive service definition tree, default:$opt{set}{feed_passive_dir}
    file_extension=<ext> - standard file extension for config files, default:$opt{set}{file_extension}
+   history=<0|1> - save historical data for numerical child check?, default:$opt{set}{history}
+   history_maxsize=<number> - maximum number of historical values, default:$opt{set}{history_maxsize}
+   history_maxage=<sec> - maximum age of history entries (in seconds), default:$opt{set}{history_maxage}
+   history_minvalues=<number> - minimum number of history values, otherwise return UNKNOWN result, default:$opt{set}{history_minvalues}
+   history_non_numerical_value=<complain,extract> - what to do in case of non numerical values? default:$opt{set}{history_non_numerical_value}
    ignore_missing_cmd_file=<0|1> - do not complain if config file missing, default:$opt{set}{ignore_missing_cmd_file}
    illegal_chars=<characters> - specify characters to cleanup from command files
    image_path=</path/to/imagefiles> - relative path to Nagios imagefiles: default:$opt{set}{image_path}
@@ -3399,15 +3406,31 @@ sub history_push {
 		my $timestamp = shift; 
 		my $value = shift;
 
-		#--- skip all non numerical values
-		next if ($value !~ /^[0-9\.\-\+]+$/);
-
-		#--- force integer timestamp (1 second resolution)
-		$timestamp=int($timestamp);
-
 		#--- find corresponding object
 		my $index=get_child_index($name);
 		next if (!$index);
+
+		#--- non numerical values? 
+		if ($value !~ /^[0-9\.\-\+]+$/) {
+			DEBUG4("value:$value history_non_numerical_value:$opt{set}{history_non_numerical_value}");
+			if ($opt{set}{history_non_numerical_value}=~/complain/i) {
+				add_error($index, "non numerical value $value cannot be added to history");
+				next;
+			} elsif ($opt{set}{history_non_numerical_value}=~/extract/i) {
+				if ($value=~/([\-\+]*[0-9\.]+)/) {
+					DEBUG4("numerical extraction: $value -> $1");
+					$value=$1;
+				} else {
+					add_error($index, "non numerical value $value cannot be added to history");
+					next;
+				} 
+			} else {
+				add_error($index, "invalid content in variable history_non_numerical_value, allowed are \"complain\" and \"extract\"");
+			}
+		}
+
+		#--- force integer timestamp (1 second resolution)
+		$timestamp=int($timestamp);
 
 		DEBUG4("adding name:$name timestamp:$timestamp value:$value");
 

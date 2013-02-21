@@ -49,6 +49,7 @@ my $history="@history@";
 my $history_maxsize="@history_maxsize@";
 my $history_maxage="@history_maxage@";
 my $history_minvalues="@history_minvalues@";
+my $history_non_numerical_value="@history_non_numerical_value@";
 my $html_ascii_notification="@html_ascii_notification@";
 my $hostname="@hostname@";
 my $ignore_missing_cmd_file="@ignore_missing_cmd_file@";
@@ -151,6 +152,7 @@ while (my $f = shift @ARGV) {
 		s|\@history_maxsize\@|$history_maxsize|g;
 		s|\@history_maxage\@|$history_maxage|g;
 		s|\@history_minvalues\@|$history_minvalues|g;
+		s|\@history_non_numerical_value\@|$history_non_numerical_value|g;
 		s|\@html_ascii_notification\@|$html_ascii_notification|g;
 		s|\@hostname\@|$hostname|g;
 		s|\@ignore_missing_cmd_file\@|$ignore_missing_cmd_file|g;
