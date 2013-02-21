@@ -2121,7 +2121,7 @@ sub parse_header {
 			$cmds[$i]{host}=substitute_macros($cmds[$i]{host}, "COMPILETIME");
 			$cmds[$i]{command}=$2;
 		} else {
-			$cmds[$i]{host}=$opt{set}{HOSTNAME};
+			$cmds[$i]{host}=($opt{set}{HOSTNAME}) ? $opt{set}{HOSTNAME} : $opt{set}{HOSTADDRESS};
 			$cmds[$i]{command}=$cmd;
 		}
 		$cmds[$i]{plugin}="snmp";
@@ -2509,6 +2509,9 @@ sub exec_command {
 		$cmds[$no]{endtime}=time;
 		$cmds[$no]{runtime}=$cmds[$no]{endtime}-$cmds[$no]{starttime};
 		alarm(0);
+
+		# add value to history
+		history_push($cmds[$no]{name},$cmds[$no]{endtime},$cmds[$no]{output});
 
 		#--- set environment variable states
 		set_env_vars($no);
