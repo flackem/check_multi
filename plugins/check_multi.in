@@ -1702,6 +1702,25 @@ sub writefile {
 }
 
 #---
+#--- clean up too old files
+#---
+sub cleanup_old_files {
+	my $path   = shift;              # search path pattern
+	my $maxage = shift || 60*60*24 ; # age in seconds (default: 1 day)
+	my $count  = 0;
+	foreach my $filename (glob $path) {
+		if ((my $mtime = (stat($filename))[9]) < time - $maxage) {
+			DEBUG4(sprintf "Cleaning up file $filename, last modified at %s", scalar(localtime((stat($filename))[9])));
+			$count += unlink($filename);
+		} else {
+			DEBUG4(sprintf "No need to clean up file $filename, last modified at %s", scalar(localtime((stat($filename))[9])));
+		}
+	}
+	add_error(0,"$count files deleted in $path, please check timeouts\n") if ($count);
+	return $count;
+}
+
+#---
 #--- parse command file and call line parser
 #---
 sub parse_files {
@@ -2359,8 +2378,13 @@ sub exec_command {
 				#--- parent - start timeout for child
 				} else {
 					$SIG{'ALRM'} = sub {
+						#--- clean up old tempfiles, to avoid disk fillup
+						cleanup_old_files("$opt{set}{tmp_dir}/${MYSELF}_std*", 24*60*60);
+
+						#--- return timeout message and set RC to UNKNOWN
 						add_error($no,"timeout encountered after $cmds[$no]{timeout}s");
 						$cmds[$no]{rc}=$UNKNOWN;
+
 						#--- kill both ways: with prepended minus some perl versions kill the
 						#--- whole process group while positive numbers kill exact one process
 						#--- we want to end all child check processes in order to clean up
