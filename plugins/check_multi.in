@@ -4135,7 +4135,7 @@ sub global_result_rating {
 #---
 sub single_result_rating {
 	my $no=shift;
-	my $old_rc=$cmds[$no]{rc};
+	my $original_rc=$cmds[$no]{rc};
 
 	#--- sort in severity order
 	foreach my $index (0..3) {
@@ -4143,12 +4143,6 @@ sub single_result_rating {
 		#--- getting state
 		my $state=$def{s2r}{$index};
 		DEBUG4("examining state $state ($def{llabel}{$state})");
-
-		#--- did we got a child check RC?
-		if ($state == $old_rc) {
-			$cmds[$no]{rc}=$old_rc;
-			DEBUG4("original RC was $old_rc -> moving this RC to child check RC");
-		}
 
 		#--- history substitution
 		if ($opt{set}{history}) {
@@ -4158,12 +4152,17 @@ sub single_result_rating {
 		#--- no special settings for evaluation? then do not evaluate!
 		if (!$cmds[$no]{$def{llabel}{$state}}) {
 			DEBUG4("no expression for $def{llabel}{$state} -> no evaluation");
+
+			#--- did we got a child check RC? Assign it
+			if ($state == $original_rc) {
+				$cmds[$no]{rc}=$original_rc;
+				DEBUG4("original RC was $original_rc -> assigning this RC to child check RC");
+			}
 			next;
 		} else {
 			DEBUG4("expression found for $def{llabel}{$state}: >>>$cmds[$no]{$def{llabel}{$state}}<<<");
 		}
 
-		#my ($result,$message)=eval_result("\'$cmds[$no]{output}\'$cmds[$no]{$def{llabel}{$state}}");
 		my ($result,$message)=eval_result("$cmds[$no]{$def{llabel}{$state}}");
 		DEBUG4("evaluating expression \"$cmds[$no]{$def{llabel}{$state}}\", result is $result");
 
