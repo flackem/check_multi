@@ -1427,7 +1427,7 @@ sub substitute_states {
 	$input=~s/\bCOUNT\s*\(\s*(WARNING)\s*\)/$rc{count}[$WARNING]/ig;
 	$input=~s/\bCOUNT\s*\(\s*(CRITICAL)\s*\)/$rc{count}[$CRITICAL]/ig;
 	$input=~s/\bCOUNT\s*\(\s*(UNKNOWN)\s*\)/$rc{count}[$UNKNOWN]/ig;
-	$input=~s/\bCOUNT\s*\(\s*(ALL)\s*\)/$#cmds/ig;
+	$input=~s/\bCOUNT\s*\(\s*(ALL)\s*\)/$cmds[0]{nchecks}/ig;
 
 	#--- 2. replace all STATES (OK)
 	$input=~s/\b(OK)\b/$OK/ig;
@@ -3711,31 +3711,15 @@ sub history_debug {
 sub history_substitute {
 	my ($name, $expression) = @_;
 
-	# T1   T2    T3 T4      T5
-	# +----+-----+--+-------+
-	# +    +     +  +-------+
-	# +    +     +--+
-	# +    +-----+
-	# +----+
-	#   5s   6s   3s   8s     
+	# Timestamp T5   T4    T3 T2      T1
+	# ...-------+----+-----+--+-------+ <- now
+	#           +----+     +  +       +
+	#                +-----+  +       +
+	#                      +--+       +
+	#                         +-------+
+	#             5s   6s   3a    8s    <- variable interval length
+	# Interval    I4   I3   I2    I1
 		
-	# averaging: multiplying with time interval
-	# weighted averageing: additionally multiplying with position
-
-	#x 1. replace FROM_TO / LAST with automatic detection: 2 parms = from_to, 1 parm = last
-	#x 1. standardize options
-	#x    a. generate sorted partial array
-	#x       - copy, splice for number
-	#x       - loop for from_to
-	#x    b. check array size. bail out if too small
-	#x 3. we have all needed data now:
-	#x    a. Number of Checks
-	#x    b. First timestamp
-	#x    c. Last timestamp
-	#x 4. Create new array with computed values
-	#  5. Do Stats / Reports
-	#  6. Return Value
-
 	my @keywords = (
 		"AVERAGE",
 		"AVERAGE_DELTA",
