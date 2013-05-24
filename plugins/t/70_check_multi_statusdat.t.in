@@ -11,7 +11,7 @@ use testopts;
 
 my $t;
 
-plan tests => 24;
+plan tests => 28;
 
 my $result;
 #my $testopts="-s status_dat=status.dat -s dont_be_paranoid=1";
@@ -137,14 +137,14 @@ like(
 );
 
 #-------------------------------------------------------------------------------
-#--- host host.is.down ---------------------------------------------------------
+#--- host host.is.down with default mapping of RC to $CRITICAL -----------------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
 	"@PERL@ ../check_multi $testopts -x 'statusdat [ host ] = host.is.down'",
 );
 is(
 	$result->return_code, 
-	$result->return_code, 
+	2,
 	"check_multi checks down host in status.dat - RC".$result->return_code." - passed"
 );
 like(
@@ -154,19 +154,53 @@ like(
 );
 
 #-------------------------------------------------------------------------------
-#--- host host.is.unreachable --------------------------------------------------
+#--- host host.is.down with changed mapping of RC to $WARNING ------------------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -x 'statusdat [ host ] = host.is.down' -s map_host_down_state_to=1",
+);
+is(
+	$result->return_code, 
+	1,
+	"check_multi checks down host in status.dat - RC".$result->return_code." - passed"
+);
+like(
+	$result->output,
+	'/WARNING - 1 plugins checked, 1 warning \(host_host.is.down\)\n\[ 1\] host_host.is.down CRITICAL.*/s', 
+	"hosts host.is.down output correct - passed"
+);
+
+#-------------------------------------------------------------------------------
+#--- host host.is.unreachable with default mapping of RC to $UNKNOWN -----------
 #-------------------------------------------------------------------------------
 $result = NPTest->testCmd(
 	"@PERL@ ../check_multi $testopts -x 'statusdat [ host ] = host.is.unreachable'",
 );
 is(
 	$result->return_code, 
-	$result->return_code, 
+	3,
 	"check_multi checks unreachable host in status.dat - RC".$result->return_code." - passed"
 );
 like(
 	$result->output,
 	'/UNKNOWN - 1 plugins checked, 1 unknown \(host_host.is.unreachable\)\n\[ 1\] host_host.is.unreachable CRITICAL.*/s', 
+	"host host.is.unreachable output correct - passed"
+);
+
+#-------------------------------------------------------------------------------
+#--- host host.is.unreachable with changed mapping of RC to $CRITICAL ----------
+#-------------------------------------------------------------------------------
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi $testopts -x 'statusdat [ host ] = host.is.unreachable' -s map_host_unreachable_state_to=2",
+);
+is(
+	$result->return_code, 
+	2,
+	"check_multi checks unreachable host in status.dat - RC".$result->return_code." - passed"
+);
+like(
+	$result->output,
+	'/CRITICAL - 1 plugins checked, 1 critical \(host_host.is.unreachable\)\n\[ 1\] host_host.is.unreachable CRITICAL.*/s', 
 	"host host.is.unreachable output correct - passed"
 );
 

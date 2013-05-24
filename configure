@@ -274,7 +274,7 @@ PACKAGE_STRING='check_multi 0.26'
 PACKAGE_BUGREPORT='matthias.flacke@gmx.de'
 
 ac_default_prefix=/usr/local/nagios
-ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS PKG_NAME PKG_VERSION PKG_AUTHOR PKG_HOME_URL PKG_REL_DATE PKG_ID COMMA SET_MAKE CHMOD CP ETHTOOL GUNZIP ID INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA MAILX PERL client_perl INSTALL INSTALL_OPTS LIBEXECDIR ac_configure_args action_mouseover action_url add_tag_to_list_entries cancel_before_global_timeout child_interval checkresults_dir child_timeout cmdfile_update_interval collapse complain_unknown_macros contrib_dir config_dir cumulate_ignore_zero cumulate_max_rows datarootdir empty_output_is_unknown ethtool exec_open3 extinfo_in_status extended_perfdata feed_passive_autocreate feed_passive_dir feed_passive_dir_permissions findbin file_extension gunzip history history_maxsize history_maxage history_minvalues history_non_numerical_value html_ascii_notification hostname ignore_missing_cmd_file illegal_chars image_path indent_label indent livestatus loose_perfdata name no_checks_rc objects_cache objects_cache_delimiter omd_environment nagios_name notes_url parent_timeout perfdata_pass_through persistent plugin_path pnp_version pnp_add2url pnp_url report report_inherit_mask service_definition_template signal_rc snmp_community snmp_port status_dat style_plus_minus tag_notes_link target tmp_dir tmp_dir_permissions tmp_etc use_hard_state verbose verbose_fields LIBOBJS LTLIBOBJS'
+ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS PKG_NAME PKG_VERSION PKG_AUTHOR PKG_HOME_URL PKG_REL_DATE PKG_ID COMMA SET_MAKE CHMOD CP ETHTOOL GUNZIP ID INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA MAILX PERL client_perl INSTALL INSTALL_OPTS LIBEXECDIR ac_configure_args action_mouseover action_url add_tag_to_list_entries cancel_before_global_timeout child_interval checkresults_dir child_timeout cmdfile_update_interval collapse complain_unknown_macros contrib_dir config_dir cumulate_ignore_zero cumulate_max_rows datarootdir empty_output_is_unknown ethtool exec_open3 extinfo_in_status extended_perfdata feed_passive_autocreate feed_passive_dir feed_passive_dir_permissions findbin file_extension gunzip history history_maxsize history_maxage history_minvalues history_non_numerical_value html_ascii_notification hostname ignore_missing_cmd_file illegal_chars image_path indent_label indent livestatus loose_perfdata map_host_down_state_to map_host_unreachable_state_to name no_checks_rc objects_cache objects_cache_delimiter omd_environment nagios_name notes_url parent_timeout perfdata_pass_through persistent plugin_path pnp_version pnp_add2url pnp_url report report_inherit_mask service_definition_template signal_rc snmp_community snmp_port status_dat style_plus_minus tag_notes_link target tmp_dir tmp_dir_permissions tmp_etc use_hard_state verbose verbose_fields LIBOBJS LTLIBOBJS'
 ac_subst_files=''
 
 # Initialize some variables set by options.
@@ -826,6 +826,8 @@ detail settings:
   --with-indent_label=<0|1>                indentation of child checks? (default:1)
   --with-livestatus=<path>                 /path/to/livestatus-socket (default:${localstatedir}/rw/live)
   --with-loose_perfdata=1                  loose performance data (default:1)
+  --with-map_host_down_state_to=1          RC to which host down state should be mapped (default:2)
+  --with-map_host_unreachable_state_to=1          RC to which host unreachable state should be mapped (default:3)
   --with-name=<name>                       default name for check_multi label (default:"")
   --with-no_checks_rc=<RC>                 RC if no checks are specified (default:3-UNKNOWN)
   --with-notes_url=<URL>                   notes URL (default:"")
@@ -2098,6 +2100,22 @@ else
   loose_perfdata=1
 fi;
 
+# Check whether --with-map_host_down_state_to or --without-map_host_down_state_to was given.
+if test "${with_map_host_down_state_to+set}" = set; then
+  withval="$with_map_host_down_state_to"
+  map_host_down_state_to=$withval
+else
+  map_host_down_state_to=2
+fi;
+
+# Check whether --with-map_host_unreachable_state_to or --without-map_host_unreachable_state_to was given.
+if test "${with_map_host_unreachable_state_to+set}" = set; then
+  withval="$with_map_host_unreachable_state_to"
+  map_host_unreachable_state_to=$withval
+else
+  map_host_unreachable_state_to=3
+fi;
+
 # Check whether --with-name or --without-name was given.
 if test "${with_name+set}" = set; then
   withval="$with_name"
@@ -2355,6 +2373,8 @@ else
 fi;
 
 #--- substitutions
+
+
 
 
 
@@ -3136,6 +3156,8 @@ s,@indent_label@,$indent_label,;t t
 s,@indent@,$indent,;t t
 s,@livestatus@,$livestatus,;t t
 s,@loose_perfdata@,$loose_perfdata,;t t
+s,@map_host_down_state_to@,$map_host_down_state_to,;t t
+s,@map_host_unreachable_state_to@,$map_host_unreachable_state_to,;t t
 s,@name@,$name,;t t
 s,@no_checks_rc@,$no_checks_rc,;t t
 s,@objects_cache@,$objects_cache,;t t

@@ -1,6 +1,9 @@
 
 ===== Changelog =====
 
+	* fixed host check return codes (livestatus, status_dat)
+	  the following variables allow to tweak this behaviour:
+	  map_host_down_state_to and map_host_unreachable_state_to
 	* added history with new computed macros (AVERAGE, WEIGHTED_AVERAGE,
 	  MIN, MAX, DELTA, AVERAGE_DELTA, WEIGHTED_AVERAGE_DELTA)
 	* changed Getopt::Long handling to allow old Perl versions

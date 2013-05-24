@@ -58,6 +58,8 @@ my $image_path="@image_path@";
 my $indent="@indent@";
 my $indent_label=@indent_label@;
 my $livestatus="@livestatus@";
+my $map_host_down_state_to="@map_host_down_state_to@";
+my $map_host_unreachable_state_to="@map_host_unreachable_state_to@";
 my $name="@name@";
 my $no_checks_rc=@no_checks_rc@;
 my $notes_url="@notes_url@";
@@ -160,6 +162,9 @@ while (my $f = shift @ARGV) {
 		s|\@indent_label\@|$indent_label|g;
 		s|\@indent\@|$indent|g;
 		s|\@livestatus\@|$livestatus|g;
+		s|\@map_host_down_state_to\@|$map_host_down_state_to|g;
+		s|\@map_host_unreachable_state_to\@|$map_host_unreachable_state_to|g;
+		s|\@name\@|$name|g;
 		s|\@nagios_name\@|$nagios_name|g;
 		s|\@name\@|$name|g;
 		s|\@no_checks_rc\@|$no_checks_rc|g;

@@ -25,7 +25,7 @@ use Getopt::Long;
 use vars qw(
 $MYSELF @cmds %opt $returncode %def %rc $no $VERSION $tmp_stdout $tmp_stderr $xml $check_multi
 $NAGIOS $nagios $Nagios $status_dat $livestatus_service $livestatus_host $timezero
-$OK $WARNING $CRITICAL $UNKNOWN
+$OK $WARNING $CRITICAL $UNKNOWN $DOWN $UNREACHABLE
 $DETAIL_LIST $DETAIL_LIST_FULL $DETAIL_HTML $DETAIL_STDERR $DETAIL_PERFORMANCE
 $DETAIL_PERFORMANCE_CLASSIC $DETAIL_STATUS $DETAIL_PERFORMANCE_LINK $DETAIL_XML $DETAIL_NAGIOS2
 $DETAIL_NOTES_LINK $DETAIL_SERVICE_DEFINITION $DETAIL_SEND_NSCA $DETAIL_FEED_PASSIVE
@@ -77,6 +77,8 @@ $OK=0;
 $WARNING=1;
 $CRITICAL=2;
 $UNKNOWN=3;
+$DOWN=1;
+$UNREACHABLE=2;
 #
 #--- report defines
 $DETAIL_LIST=1;
@@ -207,6 +209,10 @@ my %opt=(
 		livestatus	=> "@livestatus@",
 		# loose (German) performance data (replace commata by decimal points)
 		loose_perfdata => "@loose_perfdata@",
+		# To which RC should @nagios_name@ host down state should be mapped
+		map_host_down_state_to => @map_host_down_state_to@,
+		# To which RC should @nagios_name@ host unreachable state should be mapped
+		map_host_unreachable_state_to => @map_host_unreachable_state_to@,
 		# pnp_version needed for mouseover: 0.6,0,4
 		perfdata_pass_through => "@perfdata_pass_through@",
 		# pnp_version needed for mouseover: 0.6,0,4
@@ -925,6 +931,8 @@ Set options:
    libexec=</path/to/plugins> - directory to be added to search path: default:$opt{set}{libexec}
    livestatus=<livestatus_path> - Where is the livestatus Unix / TCP socket? default:$opt{set}{livestatus}
    loose_perfdata=<0|1> - accept non standard performance data, e.g. german commata, default:$opt{set}{loose_perfdata}
+   map_host_down_state_to=<RC> - To which check_multi RC will @nagios_name@ host down state be mapped? default:$opt{set}{map_host_down_state_to}
+   map_host_unreachable_state_to=<RC> - To which check_multi RC will @nagios_name@ host unreachable state be mapped? default:$opt{set}{map_host_unreachable_state_to}
    name=<string> - label to be shown in output: <name> OK, default:$opt{set}{name}
    no_checks_rc=<RC> - which RC should be returned if no checks are defined, default:$opt{set}{no_checks_rc}
    notes_url=<URL> - URL to be added to child check, see Nagios notes_url
@@ -2578,12 +2586,6 @@ sub exec_command {
 			if ($cmds[$no]{rc} == -1) {
 				add_error($no,"statusdat $cmds[$no]{name}: cannot find host \'$cmds[$no]{host}\' in \'$opt{set}{status_dat}\'");
 				$cmds[$no]{rc}=$UNKNOWN;
-			#--- DOWN host becomes CRITICAL check_multi service
-			} elsif ($cmds[$no]{rc} == 1) {
-				$cmds[$no]{rc}=$CRITICAL;
-			#--- UNREACHABLE host becomes UNKNOWN check_multi service
-			} elsif ($cmds[$no]{rc} == 2) {
-				$cmds[$no]{rc}=$UNKNOWN;
 			}
 		}
 	} elsif ($cmds[$no]{type} eq "snmp") {
@@ -2876,7 +2878,7 @@ sub get_status_dat_host {
 	} else {
 		DEBUG4("found data for $host_name: RC $status_dat->{hoststatus}->{$host_name}->{last_hard_state} and output \'$status_dat->{hoststatus}->{$host_name}->{plugin_output}\', long_output \'$status_dat->{hoststatus}->{$host_name}->{long_plugin_output}\'");
 		my $output=$status_dat->{hoststatus}->{$host_name}->{plugin_output}."\n".
-         $status_dat->{hoststatus}->{$host_name}->{long_plugin_output};
+			$status_dat->{hoststatus}->{$host_name}->{long_plugin_output};
 		chomp $output;
 		return (
 			($opt{set}{use_hard_state}) 
@@ -3051,8 +3053,18 @@ sub read_status_dat {
 					$r{last_check}=$1;
 				} elsif (/^\tcurrent_state=(.*)/) {
 					$r{current_state}=$1;
+					if ($r{current_state} == $DOWN) {
+						$r{current_state} = $opt{set}{map_host_down_state_to};
+					} elsif ($r{current_state} == $UNREACHABLE) {
+						$r{current_state} = $opt{set}{map_host_unreachable_state_to};
+					}
 				} elsif (/^\tlast_hard_state=(.*)/) {
 					$r{last_hard_state}=$1;
+					if ($r{last_hard_state} == $DOWN) {
+						$r{last_hard_state} = $opt{set}{map_host_down_state_to};
+					} elsif ($r{last_hard_state} == $UNREACHABLE) {
+						$r{last_hard_state} = $opt{set}{map_host_unreachable_state_to};
+					}
 				} elsif (/^\tlast_hard_state_change=(.*)/) {
 					$r{last_hard_state_change}=$1;
 				} elsif (/^\tlast_state_change=(.*)/) {
@@ -3226,8 +3238,20 @@ sub expand_livestatus_host {
 	foreach my $host (@{$livestatus_host}) {
 		if ("$host->{host_name}"=~/$host_name/) {
 			push @result,$host->{host_name};
-			push @result,$host->{current_state};
-			push @result,$host->{last_hard_state};
+			if ($host->{current_state} == $DOWN) {
+				push @result, $opt{set}{map_host_down_state_to};
+			} elsif ($host->{current_state} == $UNREACHABLE) {
+				push @result, $opt{set}{map_host_unreachable_state_to};
+			} else {
+				push @result, $host->{current_state};
+			}
+			if ($host->{last_hard_state} == $DOWN) {
+				push @result, $opt{set}{map_host_down_state_to};
+			} elsif ($host->{last_hard_state} == $UNREACHABLE) {
+				push @result, $opt{set}{map_host_unreachable_state_to};
+			} else {
+				push @result, $host->{last_hard_state};
+			}
 			my $output=defined($host->{plugin_output})?$host->{plugin_output}:""; 
 			chomp($output);
 			$output.=defined($host->{long_plugin_output})?"\n$host->{long_plugin_output}":"";
