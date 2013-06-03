@@ -33,7 +33,6 @@ devclean: distclean
 test: 
 	@PERL@ $(PERLOPTS) \
 		10_check_multi.t \
-		15_check_multi_history.t \
 		20_check_multi_macros.t \
 		30_check_multi_perfdata.t
 test-standard:
