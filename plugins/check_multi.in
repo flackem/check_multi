@@ -4185,10 +4185,10 @@ sub single_result_rating {
 			; # do nothing
 		} elsif ($result < 0) {
 			add_error(0,"single_result_rating: parsing error $message");
-			DEBUG4("parsing error expresstion ($cmds[$no]{output}$cmds[$no]{$state})->($message)");
+			DEBUG4("parsing error expression ($cmds[$no]{output}$cmds[$no]{$state})->($message)");
 		} else {
 			$cmds[$no]{rc}=$state;
-			add_error($no,"$def{label}{$state}: output matched rule \'$cmds[$no]{$def{llabel}{$state}}\'");
+			add_error($no,"$def{label}{$state}: matched rule \'$cmds[$no]{$def{llabel}{$state}}\'");
 			DEBUG4("setting RC of cmds[$no] to $state");
 		}
 	}
