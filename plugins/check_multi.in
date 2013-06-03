@@ -1845,7 +1845,14 @@ sub parse_lines {
 
 		#--- continuation line for previous command
 		} else {
-			if (!defined($last_command)) {
+			if (!defined($last_command) && 
+				$line !~ /\[\s*(\S[$opt{set}{valid_tag_chars}]*\S|\S{1})\s*\]/) {
+				my $tag = $line; $tag =~ s/^[^\[]*\[\s*//; $tag =~ s/\s*\].*//;
+				DEBUG4("invalid tag detected: $tag");
+				add_error(0,"Invalid tag \'$tag\' specified, valid are the following characters: \'$opt{set}{valid_tag_chars}\'");
+				next LINE;
+
+			} elsif (!defined($last_command)) {
 				DEBUG4("continuation line detected - no allowed header before: $line");
 				add_error(0,"parse_lines: invalid format in line $lineno: $line");
 				next LINE;
