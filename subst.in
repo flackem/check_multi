@@ -104,6 +104,34 @@ my $sbindir="@sbindir@";
 my $srcdir="@srcdir@";
 my $sysconfdir="@sysconfdir@";
 
+#--- for preparation of MS Windows version of check_multi
+#--- create sample variable conversion script, if not already there
+#--- this script may be edited and changed by the user afterwards
+#--- to adopt the windows version to his needs
+my %windows_variables = (
+	prefix		=> "\\\$ENV{PROGRAMFILES}\\\\check_multi",
+	client_perl	=> "c:\\\\strawberry\\\\perl\\\\bin\\\\perl.exe",
+	PERL		=> "c:\\\\strawberry\\\\perl\\\\bin\\\\perl.exe",
+	file_extension	=> "txt",
+	plugin_path	=> "\\\$ENV{PROGRAMFILES}\\\\check_multi\\\\plugins",
+	tmp_dir		=> "\\\$ENV{TEMP}\\\\check_multi",
+	tmp_etc		=> "\\\$ENV{TEMP}\\\\check_multi\\\\etc",
+);
+my $winvar_script="custom_windows_variables.pl";
+if (! -f $winvar_script) {
+	open(WINVAR, ">$winvar_script") || die "Cannot create $winvar_script:$!" ;
+	print WINVAR "#---\n";
+	print WINVAR "#--- windows variable customization\n";
+	print WINVAR "#---\n";
+	print WINVAR "#--- note: backslashes are escaped / doubled\n";
+	print WINVAR "#--- and variables \$var are also escaped!\n";
+	print WINVAR "#---\n";
+	foreach my $w (sort keys %windows_variables) {
+		print WINVAR sprintf "\$%-30s = \"%s\";\n", $w, $windows_variables{$w};
+	}
+	close(WINVAR) || die "Cannot write to $winvar_script:$!";
+}
+
 while (my $f = shift @ARGV) {
 
 	if (-x "/bin/mktemp") { 
@@ -113,6 +141,12 @@ while (my $f = shift @ARGV) {
 	} else {
 		$XXXXXX = rand;
 		$TEMP = "$f.$$.$XXXXXX";
+	}
+
+	##--- source winvar script for windows files
+	if ($f =~ /windows/i) {
+		eval `cat $winvar_script`; 
+		die "Error sourcing $winvar_script: $@" if $@;
 	}
 
 	open(IN,"<$f.in") || die "Cannot open input file $f.in:$!";

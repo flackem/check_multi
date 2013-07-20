@@ -234,7 +234,9 @@ AC_OUTPUT
 #--- 
 #--- substitution itself
 $PERL subst plugins/Makefile
+$CP   plugins/check_multi.in plugins/check_multi.windows.in
 $PERL subst plugins/check_multi
+$PERL subst plugins/check_multi.windows
 
 $PERL subst plugins/t/Makefile
 $PERL subst plugins/t/testopts.pm
