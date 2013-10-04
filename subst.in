@@ -109,7 +109,7 @@ my $sysconfdir="@sysconfdir@";
 #--- this script may be edited and changed by the user afterwards
 #--- to adopt the windows version to his needs
 my %windows_variables = (
-	prefix		=> "\\\$ENV{PROGRAMFILES}\\\\check_multi",
+	prefix		=> "\\\\\$ENV{PROGRAMFILES}\\\\check_multi",
 	client_perl	=> "c:\\\\strawberry\\\\perl\\\\bin\\\\perl.exe",
 	PERL		=> "c:\\\\strawberry\\\\perl\\\\bin\\\\perl.exe",
 	file_extension	=> "txt",

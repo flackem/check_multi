@@ -20,6 +20,25 @@ my @plugins=(
 	"echo",
 	"@PERL@",
 );
+
+sub init_hist_file {
+	#--- wait until next seconds begins
+	my $now=time;
+	while (time == $now) {
+        	; # do nothing but waiting
+	}
+	$now=time;
+
+	#--- initialize history file
+	open(HIST,">tmp/history_localhost_number.txt") || die "Cannot open tmp/history_localhost_number.txt:$!";
+	printf HIST "number ";
+	foreach my $n (1..6) {
+		printf HIST "%d:%d ", $now-(6-$n), $n;
+	}
+	printf HIST "\n";
+	close HIST || die "Error writing tmp/history_localhost_number.txt:$!";
+}
+
 foreach my $plugin (@plugins) {
 	my $path_to_plugin=`which $plugin`; chomp $path_to_plugin;
 	if (! -x "$path_to_plugin") {
@@ -35,188 +54,31 @@ my $testopts=testopts::get_testopts("history","HOSTNAME","SERVICEDESC","report",
 #--- special history options
 $testopts.=" -s history=1 -s HOSTNAME=localhost -s SERVICEDESC=number";
 
-#--- wait until next seconds begins
-my $now=time;
-while (time == $now) {
-        ; # do nothing but waiting
-}
-$now=time;
-
-#--- initialize history file
-open(HIST,">tmp/history_localhost_number.txt") || die "Cannot open tmp/history_localhost_number.txt:$!";
-printf HIST "number %d:1 %d:2 %d:3 %d:4 %d:5\n", $now-4, $now-3, $now-2, $now-1, $now;
-close HIST || die "Error writing tmp/history_localhost_number.txt:$!";
-
-#-------------------------------------------------------------------------------
-#--- AVERAGE(4) CRITICAL -------------------------------------------------------
-#-------------------------------------------------------------------------------
-$result = NPTest->testCmd(
-	#"@PERL@ ../check_multi --report 1+4 --verbose $testopts -s verbose_fields=history -x 'command [ number ] = echo 5' -x 'attribute [ number::critical ] = AVERAGE ( 4 ) >= 2' -vvvv | grep history_[sd]",
-	"@PERL@ ../check_multi --report 1+4 --verbose $testopts -s verbose_fields=history -x 'command [ number ] = echo 5' -x 'attribute [ number::critical ] = AVERAGE ( 4 ) >= 2'",
-);
-is(
-	$result->return_code, 
-	2, 
-	"check_multi AVERAGE(4) critical - RC2 - passed"
-);
-like(
-	$result->output,
-	'/CRITICAL - 1 plugins checked, 1 critical \(number\)\n\[ 1\] CRIT number 5 \[CRITICAL: output matched rule \'\d+\.\d+ >= 2\'\]\n\s+history: \d+:2 \d+:3 \d+:4 \d+:5/',
-	"output correct - passed"
-);
-
-#open(HIST,"tmp/history_localhost_number.txt") || die "Cannot open tmp/history_localhost_number.txt:$!";
-#while (<HIST>) { print STDERR "$_"; }
-#close HIST || die "Error reading tmp/history_localhost_number.txt:$!";
-
-#-------------------------------------------------------------------------------
-#--- WEIGHTED_AVERAGE(5) CRITICAL ----------------------------------------------
-#-------------------------------------------------------------------------------
-$result = NPTest->testCmd(
-	#"@PERL@ ../check_multi --report 1+4 --verbose $testopts -s verbose_fields=history -x 'command [ number ] = echo 5' -x 'attribute [ number::critical ] = WEIGHTED_AVERAGE ( 4 ) >= 2' -vvvv | grep history_[sd]",
-	"@PERL@ ../check_multi --report 1+4 --verbose $testopts -s verbose_fields=history -x 'command [ number ] = echo 5' -x 'attribute [ number::critical ] = WEIGHTED_AVERAGE ( 4 ) >= 2'",
-);
-is(
-	$result->return_code, 
-	2, 
-	"check_multi WEIGHTED_AVERAGE(4) critical - RC2 - passed"
-);
-like(
-	$result->output,
-	'/CRITICAL - 1 plugins checked, 1 critical \(number\)\n\[ 1\] CRIT number 5 \[CRITICAL: output matched rule \'\d+\.\d+ >= 2\'\]\n\s+history: \d+:2 \d+:3 \d+:4 \d+:5/',
-	"output correct - passed"
-);
-
-#-------------------------------------------------------------------------------
-#--- AVERAGE_FROM_TO CRITICAL --------------------------------------------------
-#-------------------------------------------------------------------------------
-$result = NPTest->testCmd(
-	"@PERL@ ../check_multi --report 1+4 --verbose $testopts -s verbose_fields=history -x 'command [ number ] = echo 5' -x 'attribute [ number::critical ] = AVERAGE ( time-5 ,time ) >= 2'",
-);
-is(
-	$result->return_code, 
-	2, 
-	"check_multi AVERAGE(time-5,time) critical - RC2 - passed"
-);
-like(
-	$result->output,
-	'/CRITICAL - 1 plugins checked, 1 critical \(number\)\n\[ 1\] CRIT number 5 \[CRITICAL: output matched rule \'\d+\.\d+ >= 2\'\]\n\s+history: \d+:2 \d+:3 \d+:4 \d+:5/',
-	"output correct - passed"
-);
-
-#-------------------------------------------------------------------------------
-#--- WEIGHTED_AVERAGE_FROM_TO CRITICAL --------------------------------------------------
-#-------------------------------------------------------------------------------
-$result = NPTest->testCmd(
-	"@PERL@ ../check_multi --report 1+4 --verbose $testopts -s verbose_fields=history -x 'command [ number ] = echo 5' -x 'attribute [ number::critical ] = WEIGHTED_AVERAGE ( time-5, time ) >= 2'",
-);
-is(
-	$result->return_code, 
-	2, 
-	"check_multi WEIGHTED_AVERAGE(time-5,time) critical - RC2 - passed"
-);
-like(
-	$result->output,
-	'/CRITICAL - 1 plugins checked, 1 critical \(number\)\n\[ 1\] CRIT number 5 \[CRITICAL: output matched rule \'\d+\.\d+ >= 2\'\]\n\s+history: \d+:2 \d+:3 \d+:4 \d+:5/',
-	"output correct - passed"
-);
-
-#-------------------------------------------------------------------------------
-#--- AVERAGE_DELTA_FROM_TO CRITICAL --------------------------------------------
-#-------------------------------------------------------------------------------
-$result = NPTest->testCmd(
-	#"@PERL@ ../check_multi --report 1+4 --verbose $testopts -s verbose_fields=history -x 'command [ number ] = echo 5' -x 'attribute [ number::critical ] = AVERAGE_DELTA( time-5, time ) >= 1' -vvvv | grep history_[sd]",
-	"@PERL@ ../check_multi --report 1+4 --verbose $testopts -s verbose_fields=history -x 'command [ number ] = echo 5' -x 'attribute [ number::critical ] = AVERAGE_DELTA( time-5, time ) >= 1'",
-);
-is(
-	$result->return_code, 
-	2, 
-	"check_multi AVERAGE_DELTA(time-5,time) critical - RC2 - passed"
-);
-like(
-	$result->output,
-	'/CRITICAL - 1 plugins checked, 1 critical \(number\)\n\[ 1\] CRIT number 5 \[CRITICAL: output matched rule \'\d+\.\d+ >= 1\'\]\n\s+history: \d+:2 \d+:3 \d+:4 \d+:5/',
-	"output correct - passed"
-);
-
-#-------------------------------------------------------------------------------
-#--- AVERAGE_DELTA(5) CRITICAL -------------------------------------------------
-#-------------------------------------------------------------------------------
-$result = NPTest->testCmd(
-	#"@PERL@ ../check_multi --report 1+4 --verbose $testopts -s verbose_fields=history -x 'command [ number ] = echo 5' -x 'attribute [ number::critical ] = AVERAGE_DELTA( 4 ) != 0' -vvvv | grep history_[sd]",
-	"@PERL@ ../check_multi --report 1+4 --verbose $testopts -s verbose_fields=history -x 'command [ number ] = echo 5' -x 'attribute [ number::critical ] = AVERAGE_DELTA( 4 ) != 0'",
-);
-is(
-	$result->return_code, 
-	2, 
-	"check_multi AVERAGE_DELTA(4) critical - RC2 - passed"
-);
-like(
-	$result->output,
-	'/CRITICAL - 1 plugins checked, 1 critical \(number\)\n\[ 1\] CRIT number 5 \[CRITICAL: output matched rule \'[-+]*\d+\.\d+ != 0\'\]\n\s+history: \d+:2 \d+:3 \d+:4 \d+:5/',
-	"output correct - passed"
-);
-
-#-------------------------------------------------------------------------------
-#--- MIN(4) CRITICAL -----------------------------------------------------------
-#-------------------------------------------------------------------------------
-$result = NPTest->testCmd(
-	#"@PERL@ ../check_multi --report 1+4 --verbose $testopts -s verbose_fields=history -x 'command [ number ] = echo 5' -x 'attribute [ number::critical ] = MIN( 4 ) == 2' -vvv | grep history_[sd]",
-	"@PERL@ ../check_multi --report 1+4 --verbose $testopts -s verbose_fields=history -x 'command [ number ] = echo 5' -x 'attribute [ number::critical ] = MIN( 4 ) == 2'",
-);
-is(
-	$result->return_code, 
-	2, 
-	"check_multi MIN(5) critical - RC2 - passed"
-);
-like(
-	$result->output,
-	'/CRITICAL - 1 plugins checked, 1 critical \(number\)\n\[ 1\] CRIT number 5 \[CRITICAL: output matched rule \'[-+]*\d+\.\d+ == 2\'\]\n\s+history: \d+:2 \d+:3 \d+:4 \d+:5/',
-	"output correct - passed"
-);
-
-#-------------------------------------------------------------------------------
-#--- MIN(time-5,time) CRITICAL -------------------------------------------------
-#-------------------------------------------------------------------------------
-$result = NPTest->testCmd(
-	#"@PERL@ ../check_multi --report 1+4 --verbose $testopts -s verbose_fields=history -x 'command [ number ] = echo 5' -x 'attribute [ number::critical ] = MIN( time - 5, time ) == 2' -vvv | grep history_[sd]",
-	"@PERL@ ../check_multi --report 1+4 --verbose $testopts -s verbose_fields=history -x 'command [ number ] = echo 5' -x 'attribute [ number::critical ] = MIN( time - 5, time ) == 2'",
-);
-is(
-	$result->return_code, 
-	2, 
-	"check_multi MIN(time - 5, time) critical - RC2 - passed"
-);
-like(
-	$result->output,
-	'/CRITICAL - 1 plugins checked, 1 critical \(number\)\n\[ 1\] CRIT number 5 \[CRITICAL: output matched rule \'[-+]*\d+\.\d+ == 2\'\]\n\s+history: \d+:2 \d+:3 \d+:4 \d+:5/',
-	"output correct - passed"
-);
-
 #-------------------------------------------------------------------------------
 #--- MAX(4) CRITICAL -----------------------------------------------------------
 #-------------------------------------------------------------------------------
+&init_hist_file();
 $result = NPTest->testCmd(
-	#"@PERL@ ../check_multi --report 1+4 --verbose $testopts -s verbose_fields=history -x 'command [ number ] = echo 5' -x 'attribute [ number::critical ] = MAX( 4 ) != 0' -vvvv | grep history_[sd]",
-	"@PERL@ ../check_multi --report 1+4 --verbose $testopts -s verbose_fields=history -x 'command [ number ] = echo 5' -x 'attribute [ number::critical ] = MAX( 4 ) == 5'",
+	"@PERL@ ../check_multi --report 1+4 --verbose $testopts -s verbose_fields=history -x 'command [ number ] = echo 7' -x 'attribute [ number::critical ] = MAX( 4 ) == 7'",
 );
 is(
 	$result->return_code, 
 	2, 
-	"check_multi MAX(4) critical - RC2 - passed"
+	"check_multi MAX( 4 ) critical - RC2 - passed"
 );
 like(
 	$result->output,
-	'/CRITICAL - 1 plugins checked, 1 critical \(number\)\n\[ 1\] CRIT number 5 \[CRITICAL: output matched rule \'[-+]*\d+\.\d+ == 5\'\]\n\s+history: \d+:2 \d+:3 \d+:4 \d+:5/',
+	'/CRITICAL - 1 plugins checked, 1 critical \(number\)\n\[ 1\] CRIT number 7 \[CRITICAL: matched rule \'[-+]*\d+\.\d+ == 7\'\]\n\s+history: \d+:3 \d+:4 \d+:5 \d+:6 \d+:7/',
 	"output correct - passed"
 );
+
 
 #-------------------------------------------------------------------------------
 #--- MAX(time-5,time) CRITICAL -------------------------------------------------
 #-------------------------------------------------------------------------------
+&init_hist_file();
 $result = NPTest->testCmd(
-	#"@PERL@ ../check_multi --report 1+4 --verbose $testopts -s verbose_fields=history -x 'command [ number ] = echo 5' -x 'attribute [ number::critical ] = MAX( time - 5, time ) != 0' -vvvv | grep history_[sd]",
-	"@PERL@ ../check_multi --report 1+4 --verbose $testopts -s verbose_fields=history -x 'command [ number ] = echo 5' -x 'attribute [ number::critical ] = MAX( time - 5, time ) == 5'",
+	"@PERL@ ../check_multi --report 1+4 --verbose $testopts -s verbose_fields=history -x 'command [ number ] = echo 7' -x 'attribute [ number::critical ] = MAX( time - 5, time ) == 7'",
 );
 is(
 	$result->return_code, 
@@ -225,6 +87,151 @@ is(
 );
 like(
 	$result->output,
-	'/CRITICAL - 1 plugins checked, 1 critical \(number\)\n\[ 1\] CRIT number 5 \[CRITICAL: output matched rule \'[-+]*\d+\.\d+ == 5\'\]\n\s+history: \d+:2 \d+:3 \d+:4 \d+:5/',
+	'/CRITICAL - 1 plugins checked, 1 critical \(number\)\n\[ 1\] CRIT number 7 \[CRITICAL: matched rule \'[-+]*\d+\.\d+ == 7\'\]\n\s+history: \d+:3 \d+:4 \d+:5 \d+:6 \d+:7/',
 	"output correct - passed"
 );
+
+#-------------------------------------------------------------------------------
+#--- MIN(4) CRITICAL -----------------------------------------------------------
+#-------------------------------------------------------------------------------
+&init_hist_file();
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi --report 1+4 --verbose $testopts -s verbose_fields=history -x 'command [ number ] = echo 7' -x 'attribute [ number::critical ] = MIN( 4 ) == 4'",
+);
+is(
+	$result->return_code, 
+	2, 
+	"check_multi MIN( 4 ) critical - RC2 - passed"
+);
+like(
+	$result->output,
+	'/CRITICAL - 1 plugins checked, 1 critical \(number\)\n\[ 1\] CRIT number 7 \[CRITICAL: matched rule \'[-+]*\d+\.\d+ == 4\'\]\n\s+history: \d+:3 \d+:4 \d+:5 \d+:6 \d+:7/',
+	"output correct - passed"
+);
+
+#-------------------------------------------------------------------------------
+#--- MIN(time-5,time) CRITICAL -------------------------------------------------
+#-------------------------------------------------------------------------------
+&init_hist_file();
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi --report 1+4 --verbose $testopts -s verbose_fields=history -x 'command [ number ] = echo 7' -x 'attribute [ number::critical ] = MIN( time - 5, time ) == 3'",
+);
+is(
+	$result->return_code, 
+	2, 
+	"check_multi MIN(time - 5, time) critical - RC2 - passed"
+);
+like(
+	$result->output,
+	'/CRITICAL - 1 plugins checked, 1 critical \(number\)\n\[ 1\] CRIT number 7 \[CRITICAL: matched rule \'[-+]*\d+\.\d+ == 3\'\]\n\s+history: \d+:3 \d+:4 \d+:5 \d+:6 \d+:7/',
+	"output correct - passed"
+);
+
+#-------------------------------------------------------------------------------
+#--- AVERAGE(4) CRITICAL -------------------------------------------------------
+#-------------------------------------------------------------------------------
+&init_hist_file();
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi --report 1+4 --verbose $testopts -s verbose_fields=history -x 'command [ number ] = echo 7' -x 'attribute [ number::critical ] = AVERAGE ( 4 ) >= 4'",
+);
+is(
+	$result->return_code, 
+	2, 
+	"check_multi AVERAGE(4) critical - RC2 - passed"
+);
+like(
+	$result->output,
+	'/CRITICAL - 1 plugins checked, 1 critical \(number\)\n\[ 1\] CRIT number 7 \[CRITICAL: matched rule \'\d+\.\d+ >= 4\'\]\n\s+history: \d+:3 \d+:4 \d+:5 \d+:6 \d+:7/',
+	"output correct - passed"
+);
+
+#-------------------------------------------------------------------------------
+#--- WEIGHTED_AVERAGE(4) CRITICAL ----------------------------------------------
+#-------------------------------------------------------------------------------
+&init_hist_file();
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi --report 1+4 --verbose $testopts -s verbose_fields=history -x 'command [ number ] = echo 7' -x 'attribute [ number::critical ] = WEIGHTED_AVERAGE ( 4 ) >= 5'",
+);
+is(
+	$result->return_code, 
+	2, 
+	"check_multi WEIGHTED_AVERAGE( 4 ) critical - RC2 - passed"
+);
+like(
+	$result->output,
+	'/CRITICAL - 1 plugins checked, 1 critical \(number\)\n\[ 1\] CRIT number 7 \[CRITICAL: matched rule \'\d+\.\d+ >= 5\'\]\n\s+history: \d+:3 \d+:4 \d+:5 \d+:6 \d+:7/',
+	"output correct - passed"
+);
+
+#-------------------------------------------------------------------------------
+#--- AVERAGE_FROM_TO CRITICAL --------------------------------------------------
+#-------------------------------------------------------------------------------
+&init_hist_file();
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi --report 1+4 --verbose $testopts -s verbose_fields=history -x 'command [ number ] = echo 7' -x 'attribute [ number::critical ] = AVERAGE ( time-5 ,time ) >= 4'",
+);
+is(
+	$result->return_code, 
+	2, 
+	"check_multi AVERAGE(time-5,time) critical - RC2 - passed"
+);
+like(
+	$result->output,
+	'/CRITICAL - 1 plugins checked, 1 critical \(number\)\n\[ 1\] CRIT number 7 \[CRITICAL: matched rule \'\d+\.\d+ >= 4\'\]\n\s+history: \d+:3 \d+:4 \d+:5 \d+:6 \d+:7/',
+	"output correct - passed"
+);
+
+#-------------------------------------------------------------------------------
+#--- WEIGHTED_AVERAGE_FROM_TO CRITICAL --------------------------------------------------
+#-------------------------------------------------------------------------------
+&init_hist_file();
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi --report 1+4 --verbose $testopts -s verbose_fields=history -x 'command [ number ] = echo 7' -x 'attribute [ number::critical ] = WEIGHTED_AVERAGE ( time-5, time ) >= 5'",
+);
+is(
+	$result->return_code, 
+	2, 
+	"check_multi WEIGHTED_AVERAGE(time-5,time) critical - RC2 - passed"
+);
+like(
+	$result->output,
+	'/CRITICAL - 1 plugins checked, 1 critical \(number\)\n\[ 1\] CRIT number 7 \[CRITICAL: matched rule \'\d+\.\d+ >= 5\'\]\n\s+history: \d+:3 \d+:4 \d+:5 \d+:6 \d+:7/',
+	"output correct - passed"
+);
+
+#-------------------------------------------------------------------------------
+#--- AVERAGE_DELTA_FROM_TO CRITICAL --------------------------------------------
+#-------------------------------------------------------------------------------
+&init_hist_file();
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi --report 1+4 --verbose $testopts -s verbose_fields=history -x 'command [ number ] = echo 7' -x 'attribute [ number::critical ] = AVERAGE_DELTA( time-5, time ) >= 1'",
+);
+is(
+	$result->return_code, 
+	2, 
+	"check_multi AVERAGE_DELTA(time-5,time) critical - RC2 - passed"
+);
+like(
+	$result->output,
+	'/CRITICAL - 1 plugins checked, 1 critical \(number\)\n\[ 1\] CRIT number 7 \[CRITICAL: matched rule \'\d+\.\d+ >= 1\'\]\n\s+history: \d+:3 \d+:4 \d+:5 \d+:6 \d+:7/',
+	"output correct - passed"
+);
+
+#-------------------------------------------------------------------------------
+#--- AVERAGE_DELTA(5) CRITICAL -------------------------------------------------
+#-------------------------------------------------------------------------------
+&init_hist_file();
+$result = NPTest->testCmd(
+	"@PERL@ ../check_multi --report 1+4 --verbose $testopts -s verbose_fields=history -x 'command [ number ] = echo 7' -x 'attribute [ number::critical ] = AVERAGE_DELTA( 4 ) != 0'",
+);
+is(
+	$result->return_code, 
+	2, 
+	"check_multi AVERAGE_DELTA(4) critical - RC2 - passed"
+);
+like(
+	$result->output,
+	'/CRITICAL - 1 plugins checked, 1 critical \(number\)\n\[ 1\] CRIT number 7 \[CRITICAL: matched rule \'[-+]*\d+\.\d+ != 0\'\]\n\s+history: \d+:3 \d+:4 \d+:5 \d+:6 \d+:7/',
+	"output correct - passed"
+);
+
