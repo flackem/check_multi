@@ -5212,7 +5212,7 @@ sub parse_perfdata {
 		}
 
 		$error.= "$label: bad value \'$value\' in data \'$data\' " if ($value && $value !~/^[-0-9.]+$/);
-		$error.= "$label: bad UOM \'$uom\' in data \'$data\' " if ($uom ne "" && ($uom!~/^[um]*s$/i && $uom!~/^%$/ && $uom!~/^[kmgt]*b$/i && $uom!~/^c$/i));
+		$error.= "$label: bad UOM \'$uom\' in data \'$data\' " if ($uom ne "" && ($uom!~/^[um]?s$/i && $uom!~/^%$/ && $uom!~/^[kmgtp]?b$/i && $uom!~/^c$/i));
 		$error.= "$label: bad warning \'$warning\' in data \'$data\' " if ($warning && $warning !~/^[\@\~]?[-0-9.:]+$/);
 		$error.= "$label: bad critical \'$critical\' in data \'$data\' " if ($critical && $critical !~/^[\@\~]?[-0-9.:]+$/);
 		$error.= "$label: bad min \'$min\' in data \'$data\' " if ($min && $min !~/^[-0-9.]+$/);
