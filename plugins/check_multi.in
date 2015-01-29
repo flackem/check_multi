@@ -3196,7 +3196,7 @@ sub expand_livestatus_service {
 		if ($service->{host_name}=~/$host_name/ && $service->{description}=~/$service_description/) {
 			push @result,$service->{host_name};
 			push @result,$service->{description};
-			push @result,$service->{current_state};
+			push @result,$service->{state};
 			push @result,$service->{last_hard_state};
 			my $output=defined($service->{plugin_output})?$service->{plugin_output}:"";
 			chomp($output);
@@ -3209,7 +3209,7 @@ sub expand_livestatus_service {
 			} else {
 				push @result, $service->{check_command};
 			}
-			DEBUG4("$service->{host_name}:$service->{description} matched $host_name:$service_description:$service->{current_state}:$service->{last_hard_state}");
+			DEBUG4("$service->{host_name}:$service->{description} matched $host_name:$service_description:$service->{state}:$service->{last_hard_state}");
 		} else {
 			DEBUG4("$service->{host_name}:$service->{description} did not match $host_name:$service_description");
 		}
