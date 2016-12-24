@@ -617,7 +617,7 @@ sub testCmd {
 	my $command = shift or die "No command passed to testCmd";
 	my $object = $class->new;
 	
-	my $output = `$command`;
+	my $output = `$command 2>&1`;
 	$object->return_code($? >> 8);
 	$_ = $? & 127;
 	if ($_) {
