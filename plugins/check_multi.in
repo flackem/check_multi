@@ -1362,7 +1362,7 @@ sub parse_objects_cache {
 	}
 	while (<OBJECTS_CACHE>) {
 		#--- begin of object, determine type
-		if (/^define ([a-z0-9\_\-]+) {$/) {
+		if (/^define ([a-z0-9\_\-]+) \{$/) {
 			$type="$1";
 			$typelist{$type}++;
 			$objectcount++;
