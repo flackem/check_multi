@@ -2,11 +2,14 @@
 
 Fetch a tarball:
 
-[Current stable version check_multi-stable-0.26.tar.gz](http://my-plugin.de/check_multi/check_multi-stable-0.26.tar.gz) or\\
+[Current stable version check_multi-stable-0.26.tar.gz](http://my-plugin.de/check_multi/check_multi-stable-0.26.tar.gz) or
+
 [Latest development version check_multi-latest-658c62f.tar.gz](http://my-plugin.de/check_multi/check_multi-latest-658c62f.tar.gz)
 
-For developers and testers - clone your own git repository with
-`git clone git://github.com/flackem/check_multi`
+Or clone your own git repository with
+```  
+git clone git://github.com/flackem/check_multi  
+```
 
 ## Browse check_multi
 
@@ -57,6 +60,7 @@ View the sources:
 	* better perfdata error output for invalid UOM
 
 **0.25**	26.02.2011
+
 	* included nail to contrib/notify_service 
 	* report options are inherited from parent check_multi
 	* added floating point support for cumulate
@@ -81,6 +85,7 @@ View the sources:
 	* OMD - check for environment variables OMD_ROOT and OMD_SITE
 
 **0.24**	09.10.2010
+
 	* STDIN (needed for feed_passive) now activated with '-f -'
 	* nested macros allowed: 'normal' macros within objects.cache macros
 	* change in child timeout handling: full time range is used for child checks now
@@ -97,10 +102,12 @@ View the sources:
 	* added check for invalid name characters (allowed are A-Za-z0-9_-)
 
 **0.23**	20.06.2010
+
 	* fixed statusdat for hosts and added numerous test cases
 	* version control system migrated to GIT (github)
 
 **0.22**	19.06.2010
+
 	* fix for correct treatment of empty lines in encoded configurations, thx to Frank Plab
 	* state evaluation for child checks now works as global state evaluation
 
@@ -109,6 +116,7 @@ View the sources:
 	* splitted checkresults report sub to prepare host checkresult files
 
 **0.21**	03.06.2010
+
 	* second version of livestatus [ tag ] = Filter: field ~ pattern (needs Monitoring::Livestatus)
 	* added first version of livestatus [ tag ] = host:service (needs Monitoring::Livestatus)
 	* fixes for eval[ tag::plugin ]. thx again, Henry
@@ -132,6 +140,7 @@ View the sources:
 	* fixed handling of non-existing signals, and non-existing RCs
 
 **0.20**	16.10.2009
+
 	* invisible checks (eval) will not be counted any more, since this confused some people :)
 	* added output [ TAG ] statement, it provides customizeable output everywhere, no more X plugins checked, Y plugins OK...
 	* rewritten parsing code - now trailing backslashes are not necessary any more
@@ -166,6 +175,7 @@ state [ CRITICAL ] = COUNT(CRITICAL) < COUNT(ALL)-1
 	* basename(plugin) - removed /path/from/<pluginname> for proper perfdata, thx. Gerhard
 
 **0.19**	11.02.2009
+
 	* illegal_chars removal also for input (command lines)
 	* added fork for execution of child checks (allows better timeout handling)
 	* fixed main loop error handling (prevent repetition)
@@ -196,6 +206,7 @@ state [ CRITICAL ] = COUNT(CRITICAL) < COUNT(ALL)-1
 	* improved verbose mode also for HTML output
 
 **0.18**	07.08.2008
+
 	* improved verbose mode for ASCII output
 	* removed suppress_perfdata for check_multi perfdata, PNP needs this
 	* ok, convinced ;-) removed forced drop_privileges, warning message is sufficient
@@ -218,6 +229,7 @@ state [ CRITICAL ] = COUNT(CRITICAL) < COUNT(ALL)-1
 	* fixed plugin state for command file not found to UNKNOWN (thx Rudolf)
 
 **0.17**	16.04.2008
+
 	* added recursive call detection
 	* collapse option to hide OK output in HTML view
 	* error messages in plugin output instead of long plugin output
@@ -240,6 +252,7 @@ state [ CRITICAL ] = COUNT(CRITICAL) < COUNT(ALL)-1
 	* splitted eval into eeval (echo eval) and eval
 
 **0.16**	19.01.2008
+
 	* multi label fix backported into stable 0.16
 	* minor cleanups
 	* enhanced performance string error parsing
@@ -262,6 +275,7 @@ state [ CRITICAL ] = COUNT(CRITICAL) < COUNT(ALL)-1
 	* added --verbose (level 0-3) option and DEBUG routine
 
 **0.15**	21.11.2007
+
 	* added 'ignore_missing_cmd_file' option for command overloading
 	* added --set option to add multiple config values
 	* added command overloading mechanism
@@ -279,6 +293,7 @@ state [ CRITICAL ] = COUNT(CRITICAL) < COUNT(ALL)-1
 	* reordered report functions 
 
 **0.14**	21.10.2007
+
 	* added NAGIOS2 report mode with most important info in one line
 	* extra http report function
 	* setting report standard to 13 (verbose header line, stderr and perfdata)
@@ -293,6 +308,7 @@ state [ CRITICAL ] = COUNT(CRITICAL) < COUNT(ALL)-1
 	* added blanks to result lists to provide wrapping in HTML output
 
 **0.13**	16.08.2007
+
 	* bugfix for handling of extended return code
 	* stderr output now trimmed
 	* bugfix for non existing environment vars
@@ -300,11 +316,13 @@ state [ CRITICAL ] = COUNT(CRITICAL) < COUNT(ALL)-1
 	* cleaned up 0 results in summary
 
 **0.12**	25.07.2007
+
 	* performance switch replaced by report flag
 	* output of performance data is now default
 	* substitute macros a la $HOSTNAME$
 	* Time::Hires integrated
 
 **0.11**	22.07.2007
+
 	* first version in SVN
 

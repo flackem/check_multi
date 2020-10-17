@@ -1,5 +1,5 @@
 # check_multi feeds passive checks
-{{check_multi:multi_feeds_passive.png|}}
+![multi_feeds_passive](pictures/multi_feeds_passive.png)  
 
 Large environments are one of the major places to run *check_multi* in order to
 
@@ -32,43 +32,42 @@ This was the basic motivation for the improved implementation with
 ### Basic design
 
 #### How does it work?
-
  1.  *check_multi* acts as a normal active Nagios check and collects checks from a remote host.
  2.  Each child check has a corresponding passive check in Nagios with the same name.
  3.  *check_multi* takes the child checks output and RC and feeds it into the corresponding passive Nagios check.
-That's all.
-#### Implementation details
 
+#### Implementation details
 There is a design problem when executing multiple remote checks within one collector check and then return the results into the passive side of Nagios: the transport. 
 
 *  If you run *check_multi* on the Nagios server, you need an remote connection for each child check: very expensive
 *  If you run *check_multi* on the remote server, you have problems to reach Nagios input queue on the passive side.  
+
 The solution is: use check_multi **twice** in a command chain:
 
+![multi_feeds_passive_remote](pictures/multi_feeds_passive_remote.png)
 
-{{:check_multi:multi_feeds_passive_remote.png|}}
  1.  check_multi on the remote hosts gathers data.
  2.  check_multi on the Nagios server feeds passive services.
 The first check_multi passes its results via XML to the second one.
 
-**Note:** the whole chain is started on the Nagios server. In case of DMZ host monitoring no inbound connections are used.
+''Note:'' the whole chain is started on the Nagios server. In case of DMZ host monitoring no inbound connections are used.
 
 ### Remote examples
 
- 1.  SSH:
+1.  SSH
 ```
 check_by_ssh -H <hostname> -c '/path/to/check_multi -f multi.cmd -r 256' | check_multi -f - -r 8192+8+1
 ```
- 2.  NRPE:
+2.  NRPE
 ```
 check_nrpe -H <hostname> -c check_multi -a '-f multi.cmd -r 256' | check_multi -f - -r 8192+8+1
 ```
- 3.  NSCA
+3.  NSCA
 ```
 check_nrpe -H <hostname> -c check_multi -a '-f multi.cmd -r 4096+8+1'
 ```
 
-This method needs a running nsca daemon on Nagios server. Inbound connections are used, therefore this approach is **not** recommended for DMZ setups.
+This method needs a running nsca daemon on Nagios server. Inbound connections are used, therefore this approach is *not* recommended for DMZ setups.
 
 ## mod_gearman
 
@@ -80,13 +79,13 @@ A specific client 'send_multi' is part of the mod_gearman package and can be use
 
 This client is a small C binary and by far less resource consuming as if you call check_multi itself to pass checks into Nagios. 
 
-**Call example:**
+#### Call example
 ```
 $ check_multi -f multi.cmd -r 256 | \
    send_multi --server=`<job server>` --encryption=no --host="`<hostname>`" --service="`<service>`"
 ```
 
-**Note:** 
+#### Neb module
 
 *  If you want to use only check_multi and no other workers, you can achieve this with the following neb module settings
 
@@ -101,14 +100,17 @@ broker_module=/usr/local/share/nagios/mod_gearman.o \
 ```
 
 *  Encryption is not necessary if you both run the check_multi checks and the nagios check_results queue on the same server.
-======= For the curious: example installation =======
+  
+  
+## For the curious: example installation
 This example installation is part of the sample-config directory in the *check_multi* package.
 
- 
 
-**Note**: it's a setup for one machine, there is no remote access included in the configuration. For the basic understanding of the principle this does not matter anyway ;-)
+*Note*: it's a setup for one machine, there is no remote access included in the configuration.
 
-**Cooking list:**
+For the basic understanding of the principle this does not matter anyway ;-)
+
+**Receipt:**
  1.  download *check_multi*, latest SVN.
  2.  `./configure; make all`{bash}
  3.  `cd sample-config/feed_passive`{bash}
@@ -116,14 +118,13 @@ This example installation is part of the sample-config directory in the *check_m
  5.  add the feed_passive subdirectory as cfg_dir to **nagios.cfg**:`cfg_dir=/usr/local/nagios/etc/check_multi/feed_passive`
  6.  reload / restart Nagios: et voila :-P
 
-{{:check_multi:examples:multi_feeds_passive_sample.png|one of the example hosts}}
-
+![multi_feeds_passive_sample](pictures/examples/multi_feeds_passive_sample.png)
+  
 *  Standard sizing is 10 Hosts with 10 feed services and 100 passive services
 *  If you want to put more load on your system, go to `<nagiosdir>`/etc/check_multi/feed_passive'' and run `perl gencfg nhosts`{bash} then reload nagios.
 
-======= Installation =======
 
-## Prerequisites on the Nagios server
+### Prerequisites on the Nagios server
 
  1.  **mandatory - perl module XML::Simple**
    Install XML::Simple on Nagios server, either from your Linux distribution or directly from [CPAN](http://search.cpan.org/perldoc?XML::Simple). Its only needed for the receiving side (the Nagios server), the senders (remote clients) do not need XML::Simple.
@@ -141,7 +142,7 @@ I recommend to set some attributes for performance tuning and to avoid unnecessa
 
 None of these attributes is mandatory, but it will speed up your infrastructure in large setups.
 
-## check_multi command file
+### check_multi command file
 
 Just as an example, your mileage may vary ;)
 
@@ -165,7 +166,7 @@ state   [ CRITICAL     ] = IGNORE
 state   [ UNKNOWN      ] = IGNORE
 ```
 
-## check_multi active service definition
+### check_multi active service definition
 
 This service runs on the remote host and gathers data:
 
@@ -186,13 +187,14 @@ define service {
 }
 ```
 
-## Passive ''feeded'' service definition
+### Passive ''feeded'' service definition
 
 *  Mandatory: ''passive_checks_enabled  1''
 *  Mandatory: ''active_checks_enabled   0''
 *  and the rest: YMMV
 *  Example:
-```define service {
+```  
+define service {
         service_description     $THIS_NAME$
         host_name               $HOSTNAME$
         passive_checks_enabled  1
@@ -207,11 +209,10 @@ You can *easily* generate these passive services via check_multi report mode 204
 check_multi -f multi.cmd -r 2048 -s service_definition_template=/path/to/service_definition.tpl > services_passive.cfg
 ```
 
-
 Hint: create a oneliner which loops over your hosts and generates bulk service check definitions. Whenever a host is added, you rerun your script and reload Nagios to put the new passive services into effect.
 
 
-======= Troubleshooting =======
+### Troubleshooting
 
 *  if you see the message ''Passive check result was received for service '%s' on host '%s', but the service could not be found!'', you have to double check the passive service definitions.
 *  If you want to test it with a XML file, you have to use a pipe, e.g.`cat test.xml | check_multi -f - -r 8192`.
@@ -220,19 +221,16 @@ Hint: create a oneliner which loops over your hosts and generates bulk service c
 This lets you monitor your Nagios server, not the remote host. Please recall - the pipe has two parts:\\ - the sender part for the remote side, where the information is being gathered (-> input)\\ - the local receiver part on the Nagios server, where the information is presented (-> output).
 (Hint: check_multi -f - reads from STDIN)
 
-======= Performance benchmarking =======
+### Performance benchmarking
 
-**Hardware** 
-
-*  Dual core Athlon X2/64 3600 with 1 GB RAM
-** Nagios configuration **
-*  1000 hosts
-*  1000 active services
-*  25000 feeded passive services
+* Dual core Athlon X2/64 3600 with 1 GB RAM
+* Nagios configuration:
+   - 1000 hosts
+   - 1000 active services
+   - 25000 feeded passive services
 
 
-### SAR states
-
+#### SAR states
 ```
 	# sar -u
 	06:00:00 PM       CPU     %user     %nice   %system   %iowait     %idle
@@ -253,8 +251,7 @@ This lets you monitor your Nagios server, not the remote host. Please recall - t
 	06:50:01 PM         2       165      1.90      2.14      2.14
 ```
 
-### Nagiostats
-
+#### Nagiostats
 ```
 	Nagios Stats 3.1.2
 	Copyright (c) 2003-2008 Ethan Galstad (www.nagios.org)

@@ -58,11 +58,11 @@ This small {{:check_multi:installation:ndomod.c.patch|patch}} solves the problem
 The buffersize for ndomod is defined by NDOMOD_MAX_BUFLEN in ndomod.h and the default value is 4096. If your check_multi output is longer that 4K, please change this value and recompile NDO.
 `</del>`
 
-## Detailed installation
+## Installation details
 
 The check_multi installation is autoconf based, which means you have to use ```configure``` to define your settings and gather system information.
 
- 1. Get your check_multi
+ 1. Get your check_multi copy
  2. Step onto the [download page](download.md). There are two methods getting the SW, either per 'svn' or per tarball: Download the Tarball and unpack it where you want:`tar xpzf check_multi_[...].tar.gz`{bash}
  2.  A new directory with the version information in its name is created. Step into it.
  3.  You will see some file like this:
@@ -107,15 +107,13 @@ drwxr-sr-x 3 nagios nagios  4096 2009-10-23 23:14 t
  9.  Install the plugin on this host with `make install` This places the plugin under `<prefix>`/libexec''.
  10.  If you want to install check_multi on a remote host, there are multiple ways to distribute it: rcp, scp, rsync...
  11.  If you are interested in sample configuration and examples, run `make install-config` or for some contributions like a HTML aware notification script or a custom Nagios query CGI, run `make install-contrib`
- 12.  That's all, enjoy ;-) 
+ 12.  That's all, enjoy ;-)
 
 
- 
 
 ## Upgrade
 
 An upgrade is just a new installation of your plugin with the same configure settings.
-
 
 
 **Note**: If you want do not recall your configure settings, just run 
@@ -125,5 +123,5 @@ check_multi: v$Revision: 289 $ $Date: 2009-10-31 13:56:01 +0100 (Sat, 31 Oct 200
     configure  '--prefix=/var/opt/nagios' '--with-config_dir=/etc/opt/nagios/check_multi'
 ```
 
-As you see, this provides information for the version of check_multi **and** the configure command line. 
+As you see, this provides information for the version of check_multi *and* the configure command line.
 No need to save config.log after installation.
