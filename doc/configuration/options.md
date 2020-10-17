@@ -9,7 +9,7 @@
 
 config file(s) which contain(s) commands to be executed
 
-See the [special section](configuration/file.md) for the format of this config file and compare the sample config file in the contrib directory.  
+See the [special section](configuration/commands.md) for the format of this config file and compare the sample config file in the contrib directory.  
 
 1.  You can specify multiple config files: ```-f `<file1>` -f `<file2>` ...```
 2.  If `<file>` is a directory, all ```*.cmd``` files in this directory are included and parsed in alphabetical order.
@@ -162,34 +162,34 @@ specify all commands on cmdline:
  
 ``` -x 'statusdat [ webserver ] = web*:apache*' ```
 
- This is just a 1:1 copy of the [command definition](configuration/file.md) or [eval definition](configuration/file.md) or any other line of the config file.
+ This is just a 1:1 copy of the [command definition](configuration/commands.md) or [eval definition](configuration/commands.md) or any other line of the config file.
 ### -w, --warning
 
 definition of the criteria for the WARNING state
 
 
-see [state definition](configuration/file.md){:target="state_definition"}
+see [state definition](configuration/commands.md#7.-state:-state-definition)
 
 ### -c, --critical
 
 definition of the criteria for the CRITICAL state
 
 
-see [state definition](configuration/file.md){:target="state_definition"}
+see [state definition](configuration/commands.md)
 
 ### -u, --unknown
 
 definition of the criteria for the UNKNOWN state
 
 
-see [state definition](configuration/file.md){:target="state_definition"}
+see [state definition](configuration/commands.md)
 
 ### -o, --ok
 
 definition of the criteria for the OK state
 
 
-see [state definition](configuration/file.md){:target="state_definition"}
+see [state definition](configuration/commands.md)
 
 ### -h, --help
 

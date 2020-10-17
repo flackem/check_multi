@@ -7,9 +7,9 @@
 ###  [Installation](installation.md)
 
 ###  [Configuration](configuration.md)
-* [Commands](configuration/file.md)
+* [Commands](configuration/commands.md)
 * [Options](configuration/options.md)
-*  [Nagios Integration](configuration/nagios.md)
+* [Nagios Integration](configuration/nagios.md)
 * [Macros](configuration/macros.md)
 * [Performance Data](configuration/performance.md)
 * [Configuration Overloading](configuration/overload.md)
@@ -27,6 +27,6 @@
 * [Examples](examples.md)
 * [FAQ - Troubleshooting](faq.md)
 * [Contributions](contributions.md)
-    [Contact / Issues](contact.md)
+* [Contact / Issues](contact.md)
 
 

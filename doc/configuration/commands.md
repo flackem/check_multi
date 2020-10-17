@@ -33,10 +33,9 @@ The check_multi plugin is configured by a simple NRPE stylish ASCII config file.
 With the attribute command you can specify global variables and child check specific settings.
 
 #### Format
-```
-attribute [ <global variable> ] = <global variable value>
-attribute [ <tag>::<variable> ] = <child check value>
-```
+```attribute [ <global variable> ] = <global variable value>```
+
+```attribute [ <tag>::<variable> ] = <child check value>```
 
 #### Elements
 1.  **tag**:<br/> <tag> is the name of a particular child check. see command or eval.
@@ -46,10 +45,9 @@ attribute [ <tag>::<variable> ] = <child check value>
 #### Examples
 
 1.  Check /tmp/ permissions (should be writeable for everybody, but with sticky bit:
-```
-command   [ tmp_dir_permissions           ] = ls -ld /tmp
-attribute [ tmp_dir_permissions::critical ] = "$tmp_dir_permissions$" !~ /^drwxrwxrwt/
-```
+```command   [ tmp_dir_permissions           ] = ls -ld /tmp```
+
+```attribute [ tmp_dir_permissions::critical ] = "$tmp_dir_permissions$" !~ /^drwxrwxrwt/```
 
 2. Set global variable extinfo_in_status, this replaces nthe ewline between plugin_output and long_plugin_output by HTML `<br />` in order to present all check_multi output in the status view:
 
@@ -89,8 +87,9 @@ Eval is a powerful means to gather information from any source and create flexib
 *  **eeval** (speak: e(cho)eval) does the same as eval but prints the result in the output.  
   
 ### Format
-`eval [ `<tag>` ] = `<perl expression>`
-`eeval [ `<tag>` ] = `<perl expression>`
+```eval [ <tag> ] = <perl expression>```
+
+```eeval [ <tag> ] = <perl expression>```
 
 ### Elements
 
@@ -119,8 +118,9 @@ If you did it with dummy command / echo or dummy eval commands, the disadvantage
 
 ### Format  
 There are multiple forms of info commands:
-`info [ tag::pre[_`<state>`  ] = this text comes before a plugin output`
-`info [ tag::post[_`<state>` ] = and this text comes after the plugin output\nnewlines are allowed`
+```info [ tag::pre[_<state>  ] = this text comes before a plugin output```
+
+```info [ tag::post[_<state> ] = and this text comes after the plugin output\nnewlines are allowed```
   
 | Command                     | Position             | Only if state is  | 
 | -------                     | --------             | ----------------  | 
@@ -150,8 +150,9 @@ There are multiple forms of info commands:
 ## 6. livestatus: read info from livestatus socket
 
 ### Format
-`livestatus [ `<tag>` ] = `<host>`:`<service>`
-`livestatus [ `<tag>` ] = `<host>`
+```livestatus [ <tag> ] = <host>:<service>```
+
+```livestatus [ <tag> ] = <host>```
 
 ### Elements
 
@@ -224,27 +225,28 @@ The evaluation order is from best to worst:
 #### Builtin standard states  
 (evaluated in this order)
 
-```
-state [ OK       ] = 1
-state [ UNKNOWN  ] = COUNT(UNKNOWN)  > 0
-state [ WARNING  ] = COUNT(WARNING)  > 0
-state [ CRITICAL ] = COUNT(CRITICAL) > 0
-```
+```state [ OK       ] = 1```
+
+```state [ UNKNOWN  ] = COUNT(UNKNOWN)  > 0```
+
+```state [ WARNING  ] = COUNT(WARNING)  > 0```
+
+```state [ CRITICAL ] = COUNT(CRITICAL) > 0```
 
 #### Ignore WARNING and UNKNOWN and only rise CRITICAL states:
 
-```
-state [ UNKNOWN  ] = (1==0)
-state [ WARNING  ] = (1==0)
-state [ CRITICAL ] = COUNT(CRITICAL) > 0
-```
+```state [ UNKNOWN  ] = (1==0)```
+
+```state [ WARNING  ] = (1==0)```
+
+```state [ CRITICAL ] = COUNT(CRITICAL) > 0```
+
 
 #### Clustering: only rise critical if *more* than one CRITICAL state encountered, otherwise raise WARNING:
 
-```
-state [ WARNING  ] = COUNT(WARNING) > 0 || COUNT(CRITICAL) > 0
-state [ CRITICAL ] = COUNT(CRITICAL) > 1
-```
+```state [ WARNING  ] = COUNT(WARNING) > 0 || COUNT(CRITICAL) > 0```
+
+```state [ CRITICAL ] = COUNT(CRITICAL) > 1```
 
 #### Config file vs. command line:
 All states can also be specified on the command line with options ''-o/-u/-w/-c `<state expression>`. The precedence in the state evaluation is 
@@ -260,10 +262,11 @@ All states can also be specified on the command line with options ''-o/-u/-w/-c 
 ## 8. statusdat: read info from Nagios status.dat
 
 ### Format
-```statusdat [ `<tag>` ] = `<host>`:`<service>```
+```statusdat [ <tag> ] = <host>:<service>```
+
 (and since 2010/06/04)
 
-```statusdat [ `<tag>` ] = `<host>```
+```statusdat [ <tag> ] = <host>```
 
 ### Elements
 
@@ -304,9 +307,8 @@ You can also specify services with regular expressions.
 
 
 Question at the end: what will happen, if you specify the following?  
-```
-statusdat [ all ] = /.*/:/.*/
-```
+
+```statusdat [ all ] = /.*/:/.*/ ```
 
 Yes, indeed: all services in your status.dat will be combined within one check_multi call...
 

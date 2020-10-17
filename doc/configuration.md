@@ -9,6 +9,6 @@ For the beginning you only need the file option ```-f``` and can start with the 
 ```
 That's all.
 
-For the details have a look into the [format description of the command file](configuration/file.md) and the [plugin call options](configuration/file.md).
+For the details have a look into the [format description of the command file](configuration/commands.md) and the [plugin call options](configuration/commands.md).
 
 The [nagios integration](configuration/nagios.md) is plain forward and the [Macro support](configuration/macros.md) is a feature often used in large installations.
