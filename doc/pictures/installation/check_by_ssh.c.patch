@@ -1,0 +1,12 @@
+--- nagios-plugins-trunk-200708071200/plugins/check_by_ssh.c	2007-06-13 01:18:13.000000000 +0200
++++ nagios-plugins-trunk-200708071200-check_by_ssh_patch/plugins/check_by_ssh.c	2007-08-07 20:31:57.000000000 +0200
+@@ -110,7 +110,8 @@
+ 	 * Wrap up quickly and keep the tricks below */
+ 	if(!passive) {
+ 		if (chld_out.lines > skip_stdout)
+-			puts (chld_out.line[skip_stdout]);
++			for (i = skip_stdout; i < chld_out.lines; i++)
++				puts (chld_out.line[i]);
+ 		else
+ 			printf (_("%s - check_by_ssh: Remote command '%s' returned status %d\n"),
+ 			        state_text(result), remotecmd, result);

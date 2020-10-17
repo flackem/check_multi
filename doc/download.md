@@ -1,0 +1,310 @@
+## Download check_multi
+
+Fetch a tarball:
+
+[Current stable version check_multi-stable-0.26.tar.gz](http://my-plugin.de/check_multi/check_multi-stable-0.26.tar.gz) or\\
+[Latest development version check_multi-latest-658c62f.tar.gz](http://my-plugin.de/check_multi/check_multi-latest-658c62f.tar.gz)
+
+For developers and testers - clone your own git repository with
+`git clone git://github.com/flackem/check_multi`
+
+## Browse check_multi
+
+View the sources:
+
+ 1.  Browse [check_multi git repository](http://github.com/flackem/check_multi) 
+ 2.  Browse [Stable version 0.26](http://github.com/flackem/check_multi/tree/master)
+ 3.  Browse [Latest development version 658c62f](http://github.com/flackem/check_multi/tree/next)
+
+
+## Changelog
+
+	* fixed host check return codes (livestatus, status_dat)
+	  the following variables allow to tweak this behaviour:
+	  map_host_down_state_to and map_host_unreachable_state_to
+
+	* added history with new computed macros (AVERAGE, WEIGHTED_AVERAGE,
+	  MIN, MAX, DELTA, AVERAGE_DELTA, WEIGHTED_AVERAGE_DELTA)
+
+	* changed Getopt::Long handling to allow old Perl versions
+	* new switch html_ascii_notification allows ASCII part in HTML output
+	* reorganized ascii verbose mode, prints selectable fields
+	* info [ tag::pre_nok ] - info text for non OK states
+	* info [ tag::pre_<status> ] adds info texts depending on status
+	* info [ tag::{pre,post} ] provides info texts for child checks
+
+**0.26**	Fri Nov 18 20:27:28 CET 2011
+
+	* fixed macro handling for livestatus command
+	* added perfdata for statusdat command
+	* fixed perfdata column for livestatus command
+	* fixed proper encoding of XML state elements
+	* numerical tags are not allowed
+	* fixed macro handling: complain about non-existing macros and remove
+	* inventory parameter: reduced XML for feed_passive
+	* provide error message if no HOSTNAME is specified for passive service definitions
+	* fixed hostname treatment for PNP urls
+	* spaces in tags and macros are not allowed any more
+	* contrib: notify_html_service.sh uses mime multipart elements
+	* fixed trimming blanks at line end with continuation lines
+	* cumulate perfdata handling fixed
+	* child timeout increased to 11s - no collision with 10s default
+	* fixed handling of non existing child state rules
+	* child checks state rules reorganized
+	* statusdat checks now only consider hard states
+	* print matching state rule in long plugin output
+	* feed_passive with perfdata [ plugin ] at the end
+	* better perfdata error output for invalid UOM
+
+**0.25**	26.02.2011
+	* included nail to contrib/notify_service 
+	* report options are inherited from parent check_multi
+	* added floating point support for cumulate
+	* instant execution of a child check: -i TAG
+	* 'attribute [ key ] = value' now sets internal variables
+	* new option add_tag_to_list_entries provides lists without prefix
+	* fixed host states for statusdat: down->critical,unreachable->unknown
+	* repeat writing of feed_passive config files after time period
+	* tmp_dir with tolerant permissions
+	* fixed 0 value environment variables
+	* new tests (random tags/macros), test restructured
+	* fixed problem with tags parsing
+	* variables set on command line are still exported as MULTI_var
+	* MULTI_<var> replaced by MULTI_set_<var> to avoid collisions
+	* new macro ERROR_<tag> contains STDERR of child check
+	* allowed characters for tags and macros fixed
+	* fixed missing closing </div> for status.cgi, thx to Sebastian Halles
+	* statusdat now handles makros, thx to Jan Mara
+	* fixed empty illegal_chars var handling, thx to Tony Yarusso
+	* tags now can contain any characters: command [ this is a tag ] = ...
+	* added send_gearman client report mode
+	* OMD - check for environment variables OMD_ROOT and OMD_SITE
+
+**0.24**	09.10.2010
+	* STDIN (needed for feed_passive) now activated with '-f -'
+	* nested macros allowed: 'normal' macros within objects.cache macros
+	* change in child timeout handling: full time range is used for child checks now
+	* macro substitution is case insensitive now (thx to Morbid Angel)
+	* fixed empty plugin output in checkresults files (thx to Joerg Krueger)
+	* added livestatus host expansion: livestatus [ tag ] = host.*
+	* fix for checking of warning and critical perfdata fields, thx to makana
+	* objects.cache macros added: $type:field:key:value$ is substituted by objects.cache value
+	* restructured error messaging: messages are assigned to child checks whereever applicable
+	* now accepting perfdata with trailing semicolons (like in PNP)
+	* report mode 32768 now suppresses all OK states in ASCII mode, thx to Joel Brooks
+	* added old XML structure input mode for upgrade issues, thx to Joerg Krueger
+	* passive feeded service definitions can be created automatically now
+	* added check for invalid name characters (allowed are A-Za-z0-9_-)
+
+**0.23**	20.06.2010
+	* fixed statusdat for hosts and added numerous test cases
+	* version control system migrated to GIT (github)
+
+**0.22**	19.06.2010
+	* fix for correct treatment of empty lines in encoded configurations, thx to Frank Plab
+	* state evaluation for child checks now works as global state evaluation
+
+- with complete expression, e.g. '$child$=~/expr/'
+	* statusdat [ test ] = /host.*/ - now supports also including host checks
+	* splitted checkresults report sub to prepare host checkresult files
+
+**0.21**	03.06.2010
+	* second version of livestatus [ tag ] = Filter: field ~ pattern (needs Monitoring::Livestatus)
+	* added first version of livestatus [ tag ] = host:service (needs Monitoring::Livestatus)
+	* fixes for eval[ tag::plugin ]. thx again, Henry
+	* child checks are assigned to own process group (thx to Henry Rolofs)
+	* timeout routine now also kills child checks with positive numbers (thanks to Henry Rolofs)
+	* added new report mode which hides OK states / only shows problem states (thx to Timo Kempkens)
+	* added ok/warning/critical/unknown state rules for particular child checks: check_multi goes check_generic
+	* added fatal exit for two conditions: fork error and tmpfile error
+	* added encode option for providing complete config files via command line, thx to Michael Kraus and Gerhard Lausser
+	* added plugin_path variable, it allows to separate different plugins from libexecdir
+	* restructured pnp variables, pnp_cgi is replaced by pnp_url and pnp_version
+	* pnp popup errors fixed, thanks to Joerg Linge, Sebastian Waitz and Rene Rosenberger
+	* added new variable child_interval to provide time interval between child checks (default: 0.0 seconds)
+	* fixed status output for '-r 64': OK is only displayed, if plugin output does not contain OK itself, thanks to Jens Person
+	* added extended_perfdata, with particular state counters and overall states, thanks to Gerd von Egidy and Joerg Linge
+	* added support for icinga, 'configure --with-nagios_name=icinga'
+	* command file can now be feeded via STDIN, thanks to Joerg Krueger for this idea
+	* added 'snmp [ TAG ] = HOST:OID' (snmpget)
+	* added variable mouseover_type to cover PNP 0.6 and 0.4 differences, default is PNP 0.6
+	* first version of new 'cumulate' function, which aggregates data a la 'top'
+	* fixed handling of non-existing signals, and non-existing RCs
+
+**0.20**	16.10.2009
+	* invisible checks (eval) will not be counted any more, since this confused some people :)
+	* added output [ TAG ] statement, it provides customizeable output everywhere, no more X plugins checked, Y plugins OK...
+	* rewritten parsing code - now trailing backslashes are not necessary any more
+	* replaced pnp_path by pnp_cgi with full path to PNP graph.php (PNP 0.6 coming soon)
+	* '-' as tag-char was broken, thx Hendrik
+	* added showcase / sample-config feed_passive to demonstrate feeding features
+	* added -s suppress_service=<service1>,<service2> to exclude services from report_send_nsca and report_checkresults_file
+	* added STDIN mode: check_multi now can report XML output feeded via STDIN
+	* hopefully userfriendly report mode specification: -r 1+4+8 is the same like -r 13
+	* new report mode 'report_checkresults_file' added for direct injection of child checks as passive service check results
+	* added caching for 'service [ tag ]'
+	* added send_nsca report option 4096, it sends child results to NSCA master
+	* added COUNT(ALL) to provide cluster rules like this one
+
+state [ CRITICAL ] = COUNT(CRITICAL) < COUNT(ALL)-1
+	* added 'service [ tag ] = host:service' to read service states from status.dat
+	* again some fixes for configure
+	* option action_mouseover now allows PNP popups in extinfo, thx to Amit Mor
+	* added example section in documentation - find these examples in sample-config
+	* at last: first configure version (including lots of cleanup and directory moving)
+	* added PERFDATA_<tag> environment var: perfdata for child checks, thx Bjoern Becker
+	* underscore is now allowed tag character
+	* added pnp_path (as replacement for action_url) and image_path, thx Amit Mor
+	* fixed html output for status_in_extinfo mode: <br /> instead of \n, thx Sascha
+	* added query_examples.html with sample queries
+	* status_query.cgi now with multiple combined queries
+	* nagios_status.cgi renamed to status_query.cgi
+	* added nagios_status.cgi to contrib directory, queries for all and everything ;)
+	* added option to provide multi output also in status cgi view, thx Sascha
+	* added LWP for reading config file remotely (http://hostname/path/to/configfile)
+	* added FindBin and changed default libexec path to $FindBin::Bin, thx. Wolfgang
+	* basename(plugin) - removed /path/from/<pluginname> for proper perfdata, thx. Gerhard
+
+**0.19**	11.02.2009
+	* illegal_chars removal also for input (command lines)
+	* added fork for execution of child checks (allows better timeout handling)
+	* fixed main loop error handling (prevent repetition)
+	* better timeout handling: kill process group leader instead of die avoids hang of program
+	* removed newline cleanup for output
+	* replaced old contrib notification template with new notify_service_html
+	* fixed plugin counting (now reflects parent plugin)
+	* fixed eeval treatment of invalid RCs (like command)
+	* first preparation for data persistence
+	* check_multi environment vars begin now all with MULTI_
+	* data structure update: all settings now in $opt{set}
+	* data structure update: parent data now in $cmds{0}
+	* fixed initial RC (thx Henry)
+	* minor fix in HTML verbose output
+	* removed CR from wintel output and stderr (thx Sascha)
+	* add report option DETAIL_SERVICE_DEFINITION for multi_feed_passive
+	* set xml_elements=<list> allows customization of XML output
+	* removed '# comments within lines
+	* orphaned parameters check for command line
+	* proper error handling for creation of tmp directory
+	* fixed treatment of macros (-s-option): upper case -> case sensitive
+	* at last: EPN capability (without 'use strict')
+	* first steps to flexible output definition
+	* added tmp_dir for temporary files
+	* added URL to usage for documentation
+	* commands extensible during runtime -> call parse_lines within eeval
+	* fixed missing escaping for '#'
+	* improved verbose mode also for HTML output
+
+**0.18**	07.08.2008
+	* improved verbose mode for ASCII output
+	* removed suppress_perfdata for check_multi perfdata, PNP needs this
+	* ok, convinced ;-) removed forced drop_privileges, warning message is sufficient
+	* moved drop_privileges before parameter evaluation: needs compile time UID now
+	* drop_privileges if ran as root, default: run as user nagios
+	* old exec with tempfiles is standard until new exec is validated (exec_open3:0)
+	* redesign of exec_command: open3 from IPC module does the trick now ;-)
+	* more indentation for HTML view - indent_label var created
+	* fixed handling of splitted multiline performance data (thx to Lorenz Bucher)
+	* added '#' comments functionality within lines (not complete comment lines)
+	* macro handling: non found $MACRO$ will be replaced by ''
+	* fixed substitute_macros
+	* minor fixes for notes_url links: alternation of link and icon, column spanning
+	* added tag_notes_link to implement notes_url as link behind tag in extinfo
+	* added notes_url for child checks and MULTI_TAG var
+	* fixed perfdata parser (thx Gerhard)
+	* added signal handler to catch terminating signals (cleanup,report)
+	* macro_substitution now also in tags (thx Willi)
+	* added error message if no plugin defined at all
+	* fixed plugin state for command file not found to UNKNOWN (thx Rudolf)
+
+**0.17**	16.04.2008
+	* added recursive call detection
+	* collapse option to hide OK output in HTML view
+	* error messages in plugin output instead of long plugin output
+	* indentation of recursive checks in ASCII mode
+	* perl module version check for Getopt::Long
+	* added control variable for use of HTML::Entities
+	* restrict tag characters to A-Za-z0-9_:
+	* add libexec path to PATH var during check_multi runtime
+	* fixed regex in perfdata check routine (thx denschi)
+	* fixed CSS tags for HTML output (thx TheCry)
+	* print command runtime 0 if command is not executed due to timeout
+	* last rc from eval will also be mentioned for state evaluation
+	* added -x / execute option to provide commandline also for commands
+	* added file_extension setting to specify config file extension
+	* fixed perfdata label sanitizing (thx Jens)
+	* added explicit perfdata plugin specification (thx to Joerg Linge)
+	* fixed state substitution (now only for state statements)
+	* fixed check_multi performance data labels
+	* added ASCII output into HTML comments for notification scripts
+	* splitted eval into eeval (echo eval) and eval
+
+**0.16**	19.01.2008
+	* multi label fix backported into stable 0.16
+	* minor cleanups
+	* enhanced performance string error parsing
+	* performance labels delimiters '::' -> '_'
+	* minor fixes(eval error output, HTML::Entities use in eval...)
+	* added $STATE_<tag>$ vars
+	* fixed ::multi_label:: problems with ::tags
+	* new option -s suppress_perfdata=<tag1>,[<tag2>][,...]
+	* discarding incorrect perfdata (in order to save the other)
+	* fixed HTML::entities (thx to Gerhard Lausser)
+	* added set option: --set ENV_VAR=xyz
+	* added continuation lines capability for config files 
+	* some minor debugging changes
+	* added eval [ TAG ] = PERLEXPR
+	* ePN support removed again (too many error conditions)
+	* fixed HTML issues (table specific, thx to Wolfgang Barth)
+	* ePN support
+	* removed --state option (replaced by state evaluation)
+	* replaced -r 64 (command list) and -r 1024 (state eval) by verbose option
+	* added --verbose (level 0-3) option and DEBUG routine
+
+**0.15**	21.11.2007
+	* added 'ignore_missing_cmd_file' option for command overloading
+	* added --set option to add multiple config values
+	* added command overloading mechanism
+	* removed brackets from HTML view
+	* no MULTI label any more, standard is: no label
+	* multiple config files supported: -f <file> -f <file>...
+	* corrected line (<l10) of ePN optout statement
+	* added state evaluation reporting
+	* replaced ranges with state evaluation
+	* fixed bug with recursive concatenated performance labels
+	* added range support (check_multi now can replace check_cluster!)
+	* prepared recursive calls, added dotted line to HTML view
+	* fixed bug with parent timeout smaller than child timeout
+	* fixed error reporting for missing config file
+	* reordered report functions 
+
+**0.14**	21.10.2007
+	* added NAGIOS2 report mode with most important info in one line
+	* extra http report function
+	* setting report standard to 13 (verbose header line, stderr and perfdata)
+	* in order to get proper output on command line
+	* extended html report mode to full table
+	* performance star to the front (thx Joerg)
+	* added PNP link option for extended info
+	* added HTML coloring for extended info
+	* performance data label separator is now '::' to avoid mismatches
+	* added DISPLAY_COMMAND_LIST to show full list of commands in extended_output
+	* if plugin specified with full path, do not use libexec path
+	* added blanks to result lists to provide wrapping in HTML output
+
+**0.13**	16.08.2007
+	* bugfix for handling of extended return code
+	* stderr output now trimmed
+	* bugfix for non existing environment vars
+	* suppress empty check lists '()' in output
+	* cleaned up 0 results in summary
+
+**0.12**	25.07.2007
+	* performance switch replaced by report flag
+	* output of performance data is now default
+	* substitute macros a la $HOSTNAME$
+	* Time::Hires integrated
+
+**0.11**	22.07.2007
+	* first version in SVN
+

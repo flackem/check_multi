@@ -1,0 +1,28 @@
+--- ndomod.c.org	2009-06-20 10:26:53.000000000 +0200
++++ ndomod.c	2009-06-20 10:34:43.000000000 +0200
+@@ -1664,7 +1664,12 @@
+ 		es[2]=ndo_escape_buffer(scdata->command_name);
+ 		es[3]=ndo_escape_buffer(scdata->command_args);
+ 		es[4]=ndo_escape_buffer(scdata->command_line);
++#ifdef BUILD_NAGIOS_2X
+ 		es[5]=ndo_escape_buffer(scdata->output);
++#endif
++#ifdef BUILD_NAGIOS_3X
++		es[5]=ndo_escape_buffer(scdata->long_output);
++#endif
+ 		es[6]=ndo_escape_buffer(scdata->perf_data);
+ 
+ 		snprintf(temp_buffer,sizeof(temp_buffer)-1
+@@ -1735,7 +1740,12 @@
+ 		es[1]=ndo_escape_buffer(hcdata->command_name);
+ 		es[2]=ndo_escape_buffer(hcdata->command_args);
+ 		es[3]=ndo_escape_buffer(hcdata->command_line);
++#ifdef BUILD_NAGIOS_2X
+ 		es[4]=ndo_escape_buffer(hcdata->output);
++#endif
++#ifdef BUILD_NAGIOS_3X
++		es[4]=ndo_escape_buffer(hcdata->long_output);
++#endif
+ 		es[5]=ndo_escape_buffer(hcdata->perf_data);
+ 
+ 		snprintf(temp_buffer,sizeof(temp_buffer)-1

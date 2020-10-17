@@ -1,11 +1,10 @@
 
-check_multi README 
-------------------
-For the current documentation please see http://my-plugin.de/check_multi
-There's an English and a German version available.
+## check_multi README 
 
-What is check_multi?
---------------------
+For the current documentation please see the [doc/readme.md](doc/readme.md)
+
+## What is check_multi?
+
 check_multi is kind of a wrapper plugin which takes benefit of the 
 Nagios 3.x capability to display multiple lines of plugin output. 
 It calls multiple child plugins and displays their output in the 
@@ -18,7 +17,6 @@ by specifying flexible state evaluation rules.
 The configuration is very simple: a NRPE-stylish config file contains 
 a tag for each child plugin and then the check command line. 
 
-Feedback and help
------------------
+## Feedback and help
 Questions and comments are always welcome at 
 (Matthias.Flacke-at-gmx.de)
