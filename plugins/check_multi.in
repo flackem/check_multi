@@ -3174,7 +3174,7 @@ sub expand_livestatus_service {
 		add_error(0,"expand_livestatus_service: empty host_name=$host_name or service_description=$service_description specified");
 		return (undef,undef);
 	}
-	$livestatus_service=read_livestatus($livestatus_path,"GET services\nColumns: host_name description state last_hard_state plugin_output long_plugin_output perf_data check_command\nFilter: scheduled_downtime_depth=0\nFilter: host_scheduled_downtime_depth=0\n");
+	$livestatus_service=read_livestatus($livestatus_path,"GET services\nColumns: host_name description state last_hard_state plugin_output long_plugin_output perf_data check_command\nFilter: scheduled_downtime_depth = 0\nFilter: host_scheduled_downtime_depth = 0\n");
 	if (!$livestatus_service) {
 		add_error(0,"expand_livestatus_service: could not read $livestatus_path");
 		return (undef,undef);
@@ -3229,7 +3229,7 @@ sub expand_livestatus_host {
 		add_error(0,"expand_livestatus_host: empty host_name=$host_name specified");
 		return (undef,undef);
 	}
-	$livestatus_host=read_livestatus($livestatus_path,"GET hosts\nColumns: host_name last_hard_state plugin_output long_plugin_output perf_data check_command\nFilter: host_scheduled_downtime_depth=0\n");
+	$livestatus_host=read_livestatus($livestatus_path,"GET hosts\nColumns: host_name last_hard_state plugin_output long_plugin_output perf_data check_command\nFilter: scheduled_downtime_depth = 0\n");
 	if (!$livestatus_host) {
 		add_error(0,"expand_livestatus_host: could not read $livestatus_path");
 		return (undef,undef);
