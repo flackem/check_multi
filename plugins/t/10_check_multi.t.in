@@ -931,7 +931,7 @@ is(
 );
 like(
 	$result->output,
-	'/OK - 0 plugins checked,  \[Option s requires an argument.*\]/',
+	'/Option s requires an argument/',
 	"output correct",
 );
 #-------------------------------------------------------------------------------
